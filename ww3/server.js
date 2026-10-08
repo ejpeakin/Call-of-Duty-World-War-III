@@ -3,7 +3,8 @@
 const http = require('http'), fs = require('fs'), path = require('path');
 const { WebSocketServer } = require('ws');
 const PORT = process.env.PORT || 3000;
-const HTML = path.join(__dirname, 'public', 'index.html');
+const HTML = path.join(__dirname, 'index.html');
+
 
 const server = http.createServer((req, res) => {
   const u = req.url.split('?')[0];
