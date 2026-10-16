@@ -3,17 +3,31 @@
 const http = require('http'), fs = require('fs'), path = require('path');
 const { WebSocketServer } = require('ws');
 const PORT = process.env.PORT || 3000;
-const HTML = path.join(__dirname, 'public', 'index.html');
+// finds a game file in public/ (the normal layout) or next to server.js (if it was uploaded flat)
+const find = name => [path.join(__dirname, 'public', name), path.join(__dirname, name)].find(p => fs.existsSync(p));
+const HTML = () => find('index.html');
 
 const server = http.createServer((req, res) => {
   const u = req.url.split('?')[0];
   if (u === '/health') { res.end('ok'); return; }
   if (u === '/' || u === '/index.html') {
-    fs.readFile(HTML, 'utf8', (err, html) => {
-      if (err) { res.writeHead(500); res.end('public/index.html is missing'); return; }
+    const file = HTML();
+    if (!file) { res.writeHead(500); res.end('index.html is missing - upload it into a folder named public next to server.js'); return; }
+    fs.readFile(file, 'utf8', (err, html) => {
+      if (err) { res.writeHead(500); res.end('could not read index.html'); return; }
       html = html.replace('<head>', '<head><script>window.WW3_MP=true</script>'); // switches multiplayer on
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' });
       res.end(html);
+    });
+    return;
+  }
+  if (u === '/soldier.glb') {
+    const glb = find('soldier.glb');
+    if (!glb) { res.writeHead(404); res.end('not found'); return; }
+    fs.readFile(glb, (err, buf) => {
+      if (err) { res.writeHead(404); res.end('not found'); return; }
+      res.writeHead(200, { 'Content-Type': 'model/gltf-binary', 'Cache-Control': 'public, max-age=86400' });
+      res.end(buf);
     });
     return;
   }
