@@ -3,8 +3,7 @@
 const http = require('http'), fs = require('fs'), path = require('path');
 const { WebSocketServer } = require('ws');
 const PORT = process.env.PORT || 3000;
-const HTML = path.join(__dirname, 'index.html');
-
+const HTML = path.join(__dirname, 'public', 'index.html');
 
 const server = http.createServer((req, res) => {
   const u = req.url.split('?')[0];
@@ -69,7 +68,7 @@ wss.on('connection', ws => {
         for (const q of r.p.values()) { q.k = 0; q.d = 0; q.team = (i++) % 2; teams[q.id] = q.team; }
         bc(r, { t: 'start', mode: r.mode, limit: r.limit, teams }); sendPl(r); break;
       }
-      case 's': bc(r, { t: 's', id: p.id, x: m.x, y: m.y, z: m.z, yaw: m.yaw, p: m.p, w: m.w }, p.id); break;
+      case 's': bc(r, { t: 's', id: p.id, x: m.x, y: m.y, z: m.z, yaw: m.yaw, p: m.p, w: m.w, c: m.c }, p.id); break;
       case 'shot': bc(r, { t: 'shot', id: p.id, o: m.o, e: m.e, s: m.s }, p.id); break;
       case 'nade': bc(r, { t: 'nade', id: p.id, p: m.p, v: m.v }, p.id); break;
       case 'hit': { const q = r.p.get(m.to); if (q && r.started && q !== p && q.ws.readyState === 1) q.ws.send(JSON.stringify({ t: 'hit', from: p.id, d: Math.min(150, Math.max(0, +m.d || 0)), hs: m.hs ? 1 : 0 })); break; }
