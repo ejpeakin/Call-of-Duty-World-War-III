@@ -263,7 +263,7 @@ button:focus-visible{outline:2px solid var(--amber);outline-offset:3px}
     <div class="settings">
       <div class="field">Graphics
         <div class="seg" role="radiogroup" aria-label="Graphics quality">
-          <label><input type="radio" name="q" id="qHigh" value="high"><span>Film</span></label>
+          <label><input type="radio" name="q" id="qHigh" value="high"><span>Cinematic</span></label>
           <label><input type="radio" name="q" id="qLow" value="low"><span>Fast</span></label>
         </div>
       </div>
@@ -275,7 +275,7 @@ button:focus-visible{outline:2px solid var(--amber);outline-offset:3px}
       <button class="ghost" id="day1Btn" type="button" disabled>Play day one</button>
       <span id="loading">Building the town…</span>
     </div>
-    <p class="note">Needs a keyboard and mouse. Headphones help: walkers are placed in 3D sound, so you hear them shuffling before you see them. Film mode adds bloom, softer shadows and a sharper picture; switch to Fast if the game stutters. The first time you start, you'll see the town before the outbreak (Space skips it), then play the morning it all came apart. After that, Start goes straight to day 41.</p>
+    <p class="note">Needs a keyboard and mouse. Headphones help: walkers are placed in 3D sound, so you hear them shuffling before you see them. Cinematic mode adds ambient occlusion, sun shafts, soft contact-hardening shadows, motion blur and bloom; switch to Fast if the game stutters. The first time you start, you'll see the town before the outbreak (Space skips it), then play the morning it all came apart. After that, Start goes straight to day 41.</p>
   </div>
 </div>
 
@@ -321,6 +321,7 @@ button:focus-visible{outline:2px solid var(--amber);outline-offset:3px}
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/FXAAShader.js"></script>
 <script>
 (() => {
 'use strict';
@@ -418,6 +419,25 @@ THREE.ShaderChunk.fog_fragment = [
   '\tgl_FragColor.rgb = mix( gl_FragColor.rgb, fogColor, fogFactor );',
   '#endif',
 ].join('\n');
+
+// contact-hardening sun shadows: sharp where things meet the ground, softer the farther the shadow falls.
+// The sun's shadow.radius doubles as the switch: 1 in Cinematic, 0 for the plain filter in Fast.
+THREE.ShaderChunk.shadowmap_pars_fragment = THREE.ShaderChunk.shadowmap_pars_fragment.replace('\tvec2 cubeToUV(', [
+  '\tvec2 sunVogel( int i, float n, float rot ) { float r = sqrt( ( float( i ) + 0.5 ) / n ); float th = float( i ) * 2.399963 + rot; return vec2( cos( th ), sin( th ) ) * r; }',
+  '\tfloat getSunShadow( sampler2D shadowMap, vec2 shadowMapSize, float shadowBias, float shadowRadius, vec4 shadowCoord ) {',
+  '\t\tif ( shadowRadius < 0.5 ) return getShadow( shadowMap, shadowMapSize, shadowBias, shadowRadius, shadowCoord );',
+  '\t\tvec3 sc = shadowCoord.xyz / shadowCoord.w; sc.z += shadowBias;',
+  '\t\tif ( sc.x < 0.0 || sc.x > 1.0 || sc.y < 0.0 || sc.y > 1.0 || sc.z > 1.0 ) return 1.0;',
+  '\t\tfloat texel = 1.0 / shadowMapSize.x, rot = rand( gl_FragCoord.xy ) * 6.2831853, blockers = 0.0, sum = 0.0;',
+  '\t\tfor ( int i = 0; i < 12; i ++ ) { float d = unpackRGBAToDepth( texture2D( shadowMap, sc.xy + sunVogel( i, 12.0, rot ) * texel * 9.0 ) ); if ( d < sc.z ) { sum += d; blockers += 1.0; } }',
+  '\t\tif ( blockers < 0.5 ) return 1.0;',
+  '\t\tfloat pen = clamp( ( sc.z - sum / blockers ) * 0.022, texel * 0.9, texel * 9.0 ), lit = 0.0;',
+  '\t\tfor ( int i = 0; i < 16; i ++ ) lit += texture2DCompare( shadowMap, sc.xy + sunVogel( i, 16.0, rot ) * pen, sc.z );',
+  '\t\treturn lit / 16.0;',
+  '\t}',
+  '\tvec2 cubeToUV(',
+].join('\n'));
+THREE.ShaderChunk.lights_fragment_begin = THREE.ShaderChunk.lights_fragment_begin.replace('getShadow( directionalShadowMap[ i ]', 'getSunShadow( directionalShadowMap[ i ]');
 THREE.ShaderLib.sprite.vertexShader = THREE.ShaderLib.sprite.vertexShader.replace('#include <fog_vertex>', 'vec3 transformed = vec3( 0.0 );\n\t#include <fog_vertex>');
 scene.fog = new THREE.Fog(FOG_D.night.clone(), 0.03, 0);
 const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.03, 3300);
@@ -475,6 +495,65 @@ const FilmShader = {
 };
 let composer = null, bloomPass = null, filmPass = null, usePost = false, PR = 1;
 function basePR() { return SETTINGS.quality === 'low' ? Math.min(devicePixelRatio || 1, 0.9) : Math.min(devicePixelRatio || 1, 1.5); }
+/* ---------------- cinematic pass: ambient occlusion, sun shafts and camera motion blur, all from the depth buffer ---------------- */
+const CinemaShader = {
+  uniforms: {
+    tDiffuse: { value: null }, tDepth: { value: null }, uRes: { value: new THREE.Vector2(1, 1) }, uInvProj: { value: new THREE.Matrix4() }, uProjY: { value: 1 },
+    uReproj: { value: new THREE.Matrix4() }, uSun: { value: new THREE.Vector2(0.5, 0.5) }, uSunVis: { value: 0 },
+    uSunCol: { value: new THREE.Color(1, 0.88, 0.68) }, uAO: { value: 0.9 }, uBlur: { value: 0 },
+  },
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: [
+    'uniform sampler2D tDiffuse, tDepth; uniform vec2 uRes, uSun; uniform mat4 uInvProj, uReproj; uniform float uProjY, uSunVis, uAO, uBlur; uniform vec3 uSunCol;',
+    'varying vec2 vUv;',
+    'float ign(vec2 p){ return fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715)))); }',
+    'vec3 vpos(vec2 uv){ float d = texture2D(tDepth, uv).x; vec4 c = uInvProj * vec4(uv * 2.0 - 1.0, d * 2.0 - 1.0, 1.0); return c.xyz / c.w; }',
+    'void main(){',
+    '  vec2 px = 1.0 / uRes; float n = ign(gl_FragCoord.xy);',
+    '  float d0 = texture2D(tDepth, vUv).x; vec3 col = texture2D(tDiffuse, vUv).rgb; vec3 P = vpos(vUv);',
+    // camera motion blur: where was this pixel last frame?
+    '  if (uBlur > 0.0 && P.z < -0.9) {',
+    '    vec4 pc = uReproj * vec4(P, 1.0); vec2 vel = (vUv - (pc.xy / pc.w * 0.5 + 0.5)) * uBlur; float vl = length(vel);',
+    '    if (vl > 0.03) vel *= 0.03 / vl;',
+    '    if (vl > 0.0015) { vec3 acc = col; for (int i = 1; i < 8; i++) { vec2 su = vUv + vel * ((float(i) + n - 0.5) / 8.0 - 0.5); acc += vpos(su).z < -0.9 ? texture2D(tDiffuse, su).rgb : col; } col = acc / 8.0; }',
+    '  }',
+    // ambient occlusion: creases, corners and contact darkening
+    '  if (d0 < 0.99999 && P.z < -0.9 && uAO > 0.0) {',
+    '    vec3 Pr = vpos(vUv + vec2(px.x, 0.0)), Pl = vpos(vUv - vec2(px.x, 0.0)), Pu = vpos(vUv + vec2(0.0, px.y)), Pd = vpos(vUv - vec2(0.0, px.y));',
+    '    vec3 dx = abs(Pr.z - P.z) < abs(P.z - Pl.z) ? Pr - P : P - Pl, dy = abs(Pu.z - P.z) < abs(P.z - Pd.z) ? Pu - P : P - Pd;',
+    '    vec3 N = normalize(cross(dx, dy));',
+    '    float R = 0.85, rpx = min(R * uProjY * 0.5 * uRes.y / -P.z, 90.0), ao = 0.0;',
+    '    for (int i = 0; i < 14; i++) {',
+    '      float fi = (float(i) + n) / 14.0, a = fi * 37.7 + n * 6.2831853;',
+    '      vec3 v = vpos(vUv + vec2(cos(a), sin(a)) * max(fi * rpx, 1.5) * px) - P; float vv = dot(v, v);',
+    '      ao += max(dot(v, N) * inversesqrt(vv + 1e-4) - 0.06, 0.0) * max(1.0 - vv / (R * R), 0.0);',
+    '    }',
+    '    ao = clamp(1.0 - ao * 2.2 / 14.0, 0.0, 1.0);',
+    '    col *= mix(1.0, ao, uAO * (1.0 - smoothstep(40.0, 70.0, -P.z)));',
+    '  }',
+    // light shafts: march toward the sun through the sky mask
+    '  if (uSunVis > 0.001) {',
+    '    vec2 dl = vUv - uSun, st = dl / 40.0, su = vUv - st * n; float il = 0.0, dec = 1.0;',
+    '    for (int i = 0; i < 40; i++) { su -= st; vec2 cu = clamp(su, 0.0, 1.0); il += step(0.99999, texture2D(tDepth, cu).x) * dec * min(dot(texture2D(tDiffuse, cu).rgb, vec3(0.3333)), 3.0); dec *= 0.955; }',
+    '    col += uSunCol * il / 40.0 * uSunVis * (1.0 - smoothstep(0.0, 0.95, length(dl * vec2(uRes.x / uRes.y, 1.0))));',
+    '  }',
+    '  gl_FragColor = vec4(col, 1.0);',
+    '}',
+  ].join('\n'),
+};
+class CinemaPass extends THREE.Pass {
+  constructor() {
+    super();
+    this.material = new THREE.ShaderMaterial(Object.assign({}, CinemaShader, { uniforms: THREE.UniformsUtils.clone(CinemaShader.uniforms), depthTest: false, depthWrite: false }));
+    this.quad = new (THREE.FullScreenQuad || THREE.Pass.FullScreenQuad)(this.material);
+  }
+  render(renderer, writeBuffer, readBuffer) {
+    const u = this.material.uniforms; u.tDiffuse.value = readBuffer.texture; u.tDepth.value = readBuffer.depthTexture;
+    u.uRes.value.set(readBuffer.width, readBuffer.height);
+    renderer.setRenderTarget(this.renderToScreen ? null : writeBuffer); this.quad.render(renderer);
+  }
+}
+let cinemaPass = null, fxaaPass = null;
 function setupPost() {
   if (!HAS_POST) return false;
   if (composer) return true;
@@ -482,23 +561,32 @@ function setupPost() {
     const w = innerWidth, h = innerHeight, gl2 = renderer.capabilities.isWebGL2;
     const halfOK = gl2 && (renderer.extensions.has('EXT_color_buffer_float') || renderer.extensions.has('EXT_color_buffer_half_float'));
     const params = { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBAFormat, type: halfOK ? THREE.HalfFloatType : THREE.UnsignedByteType };
+    // with WebGL2 both buffers keep their own depth texture so the cinematic pass can read the scene's depth
+    const deep = gl2 && THREE.DepthTexture && THREE.Pass;
     let rt;
-    if (gl2 && THREE.WebGLMultisampleRenderTarget) { rt = new THREE.WebGLMultisampleRenderTarget(w, h, params); rt.samples = 4; }
+    if (deep) { rt = new THREE.WebGLRenderTarget(w, h, params); rt.depthTexture = new THREE.DepthTexture(w, h); rt.depthTexture.type = THREE.FloatType; }
+    else if (gl2 && THREE.WebGLMultisampleRenderTarget) { rt = new THREE.WebGLMultisampleRenderTarget(w, h, params); rt.samples = 4; }
     else rt = new THREE.WebGLRenderTarget(w, h, params);
     composer = new THREE.EffectComposer(renderer, rt);
+    if (deep) { composer.renderTarget2.depthTexture = new THREE.DepthTexture(w, h); composer.renderTarget2.depthTexture.type = THREE.FloatType; }
     composer.addPass(new THREE.RenderPass(scene, camera));
+    if (deep) { cinemaPass = new CinemaPass(); composer.addPass(cinemaPass); }
     bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(w, h), 0.4, 0.35, 0.86);
     composer.addPass(bloomPass);
     filmPass = new THREE.ShaderPass(FilmShader);
     composer.addPass(filmPass);
+    if (deep && THREE.FXAAShader) { fxaaPass = new THREE.ShaderPass(THREE.FXAAShader); composer.addPass(fxaaPass); }
     return true;
-  } catch (e) { composer = null; return false; }
+  } catch (e) { composer = null; cinemaPass = fxaaPass = null; return false; }
 }
 function applySize() {
   const w = innerWidth, h = innerHeight;
   renderer.setPixelRatio(PR); renderer.setSize(w, h, false);
   camera.aspect = w / h; camera.updateProjectionMatrix();
-  if (composer) { composer.setPixelRatio(PR); composer.setSize(w, h); filmPass.uniforms.uAspect.value = w / h; }
+  if (composer) {
+    composer.setPixelRatio(PR); composer.setSize(w, h); filmPass.uniforms.uAspect.value = w / h;
+    if (fxaaPass) fxaaPass.material.uniforms.resolution.value.set(1 / (w * PR), 1 / (h * PR));
+  }
 }
 addEventListener('resize', applySize);
 function toOut(c) { const o = c.clone(); if (usePost) o.convertSRGBToLinear(); return o; }
@@ -4455,7 +4543,7 @@ function updatePlayer(dt) {
   const fov = P.ads ? (P.weapon === 'bow' ? 44 : 50) : P.sprinting ? 76 : 70; camera.fov += (fov - camera.fov) * Math.min(1, dt * 8); camera.updateProjectionMatrix();
   if (P.hp < 38 || P.fever > 0.6) { P.heartT -= dt; if (P.heartT <= 0) { P.heartT = P.hp < 38 ? 0.55 + P.hp / 60 : 0.7; sfx.heart(Math.max(1 - P.hp / 50, P.fever * 0.6)); } }
 }
-const _lq = new THREE.Quaternion(), _lf = new V3();
+const _lq = new THREE.Quaternion(), _lf = new V3(), _vp = new THREE.Matrix4(), _vp2 = new THREE.Matrix4();
 function updateFlashlight(dt) {
   const holder = xbow.visible ? xbow : lamp;
   (xbow.visible ? xLensPt : lensPt).getWorldPosition(_v);
@@ -4637,6 +4725,21 @@ function updatePost(dt) {
     if (G.blinkT <= 0) els.fade.style.transition = '';
   }
   if (!usePost) return;
+  if (cinemaPass) {
+    // per-frame camera data for the depth-driven effects
+    const cu = cinemaPass.material.uniforms, live = G.state !== 'title';
+    camera.updateMatrixWorld();
+    cu.uInvProj.value.copy(camera.projectionMatrixInverse); cu.uProjY.value = camera.projectionMatrix.elements[5];
+    _vp.multiplyMatrices(camera.projectionMatrix, _vp2.copy(camera.matrixWorld).invert());
+    // last frame's view-projection applied to this frame's view space: well conditioned even with a 3 km far plane
+    cu.uReproj.value.multiplyMatrices(G.prevVP || _vp, camera.matrixWorld); G.prevVP = (G.prevVP || new THREE.Matrix4()).copy(_vp);
+    cu.uBlur.value = reduceMotion || G.state === 'sleeping' || G.state === 'cine' ? 0 : 0.5;
+    camFwd(_v2); const facing = _v2.dot(SUN);
+    _v.copy(SUN).multiplyScalar(1000).add(camera.position).project(camera);
+    cu.uSun.value.set(_v.x * 0.5 + 0.5, _v.y * 0.5 + 0.5);
+    cu.uSunVis.value = facing > 0 && SUN.y > -0.03 ? smooth(0.0, 0.35, facing) * G.light * (0.22 + G.gold * 0.5) * (1 - W.rain * 0.9) * (live || G.state === 'title' ? 1 : 0) : 0;
+    cu.uSunCol.value.setRGB(1, lerp(0.88, 0.6, G.gold), lerp(0.68, 0.34, G.gold));
+  }
   const u = filmPass.uniforms, low = P.alive && G.state !== 'title' && P.hp < 35 ? 1 - P.hp / 35 : 0;
   u.uTime.value = G.clock; u.uHurt.value = Math.max(G.hurtA * 0.9, low * 0.5); u.uLow.value = low;
   u.uFever.value = G.state === 'title' ? 0 : P.fever * (P.feverSup > 0 ? 0.5 : 1);
@@ -4708,7 +4811,7 @@ function applyQuality() {
   PR = basePR();
   const ms = high ? 2048 : 1024;
   if (moon.shadow.mapSize.x !== ms) { moon.shadow.mapSize.set(ms, ms); if (moon.shadow.map) { moon.shadow.map.dispose(); moon.shadow.map = null; } }
-  flashHot.castShadow = high;
+  flashHot.castShadow = high; moon.shadow.radius = high ? 1 : 0;
   if (labLight) labLight.castShadow = high;
   applySize();
 }
