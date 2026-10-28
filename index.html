@@ -1,9 +1,4 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Dead Hours</title>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Dead Hours</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@400;500;600;700&family=Reenie+Beanie&family=Special+Elite&display=swap">
@@ -142,6 +137,8 @@ button:focus-visible{outline:2px solid var(--amber);outline-offset:3px}
 .reader-wrap{width:100%;max-width:620px;display:grid;gap:14px}
 .hint{color:var(--dim);font-size:13.5px;text-align:center;margin:0}
 .jsheet{width:100%;max-width:1060px;display:grid;gap:18px}
+.msheet{width:100%;max-width:min(880px,calc(100vh - 150px));min-width:min(100%,320px);display:grid;gap:14px}
+#mapC{width:100%;height:auto;aspect-ratio:1/1;display:block;background:#ddd6c2;box-shadow:0 18px 60px rgba(0,0,0,.55);filter:sepia(.12) contrast(1.02)}
 .jhead{display:flex;justify-content:space-between;align-items:end;gap:16px;flex-wrap:wrap}
 .jgrid{display:grid;grid-template-columns:minmax(220px,300px) minmax(0,1fr);gap:26px;align-items:start}
 @media (max-width:780px){.jgrid{grid-template-columns:1fr}}
@@ -168,9 +165,7 @@ button:focus-visible{outline:2px solid var(--amber);outline-offset:3px}
 #cineSkip{position:absolute;top:calc(11vh + 14px);right:calc(18px + env(safe-area-inset-right,0px));pointer-events:auto;background:rgba(0,0,0,.35)}
 @media (max-width:640px){.ammo{font-size:36px}#compass{width:62vw}}
 @media (prefers-reduced-motion:reduce){.tag.pulse{animation:none}.msg{animation:none}#fade{transition:none}}
-</style>
-</head>
-<body>
+</style></head><body>
 
 <canvas id="c"></canvas>
 <div id="splat"></div>
@@ -237,6 +232,7 @@ button:focus-visible{outline:2px solid var(--amber);outline-offset:3px}
       <div><dt>Oct 9</dt><dd>The state seals three counties as Containment Zone 4. The weather radio has repeated the same message ever since.</dd></div>
     </dl>
     <p class="note">The clock doesn't stop. The sun sets a little before seven, and in daylight they can see you from across a field; in the dark they find you by sound. You'll need to eat, drink, and sleep. Sleep somewhere you can shut a door: the truck cab, or the storeroom at the gas station.</p>
+    <p class="note">Millbrook is only the middle of it. The whole county inside the containment fence is open: farms, a country church, the relief camp, the reservoir, the quarry, miles of jammed interstate, and whatever is still walking around out there. Press <kbd>M</kbd> for the map; places go on it once you've found them.</p>
     <p class="note">The rest is still out there: a warden's log, the clinic's records, a lab report nobody wanted to read. Pick up papers with <kbd>E</kbd> and reread them in your journal with <kbd>J</kbd>.</p>
     <h3 class="sec">Controls</h3>
     <div class="keys">
@@ -256,6 +252,7 @@ button:focus-visible{outline:2px solid var(--amber);outline-offset:3px}
       <div><kbd>G</kbd>Eat or drink</div>
       <div><kbd>V</kbd>Painkillers</div>
       <div><kbd>J</kbd>Journal</div>
+      <div><kbd>M</kbd>Map of the county</div>
       <div><kbd>H</kbd>Hide HUD</div>
       <div><kbd>Esc</kbd>Pause</div>
     </div>
@@ -294,6 +291,15 @@ button:focus-visible{outline:2px solid var(--amber);outline-offset:3px}
   </div>
 </div>
 
+<div class="screen" id="map" hidden>
+  <div class="msheet">
+    <div class="jhead">
+      <div><div class="eyebrow">Pell County · Containment Zone 4</div><h2>Survey map</h2></div>
+      <div class="actions"><span class="note" id="mapNote"></span><button class="ghost" id="mapClose">Back to it</button></div>
+    </div>
+    <canvas id="mapC" width="900" height="900" aria-label="Map of the county"></canvas>
+  </div>
+</div>
 <div class="screen" id="journal" hidden>
   <div class="jsheet">
     <div class="jhead">
@@ -384,11 +390,42 @@ function vnoise3(x, y, z) {
 function fbm(x, z) { return vnoise(x, z) * 0.6 + vnoise(x * 2.07 + 17.3, z * 2.07 - 9.1) * 0.28 + vnoise(x * 4.3 - 5.2, z * 4.3 + 3.7) * 0.12; }
 const LOTS = [[3.5, 28.5, -101.5, -76.5], [4, 48, 3.5, 25.5]];
 function inLot(x, z) { for (const l of LOTS) if (x > l[0] && x < l[1] && z > l[2] && z < l[3]) return true; return false; }
+// the county inside the containment fence: Millbrook in the middle, the farms and the places it went wrong around it
+const WORLD = 900;
+const POIS = [
+  { id: 'town', name: 'Millbrook', x: 0, z: 0, r: 0 },
+  { id: 'camp', name: 'Camp Whitlock', sub: 'FEMA RELIEF CENTER', x: 560, z: -520, r: 95 },
+  { id: 'res', name: 'Millbrook Reservoir', sub: 'WATER SUPPLY · NO TRESPASSING', x: -470, z: -430, r: 100, lake: 66 },
+  { id: 'trench', name: 'Cole Creek bottoms', sub: 'COUNTY ROAD DEPT · KEEP OUT', x: -300, z: -610, r: 34 },
+  { id: 'farm1', name: 'Haskell farm', sub: 'EST. 1951', x: -250, z: -220, r: 50 },
+  { id: 'farm2', name: 'Dunmore farm', sub: 'HAY · EGGS · PECANS', x: 310, z: -210, r: 50 },
+  { id: 'farm3', name: 'The Pruitt place', sub: 'PRIVATE DRIVE', x: -560, z: 280, r: 50 },
+  { id: 'farm4', name: 'Tull farm', sub: 'NO HUNTING', x: 430, z: 340, r: 50 },
+  { id: 'farm5', name: 'Oakes farm', sub: 'FRESH PEACHES IN SEASON', x: -220, z: 560, r: 50 },
+  { id: 'church', name: 'Pell Creek Baptist Church', sub: 'SUNDAY 11 AM · ALL WELCOME', x: 250, z: 62, r: 44 },
+  { id: 'trailers', name: 'Shady Pines', sub: 'MOBILE HOME PARK', x: -330, z: -70, r: 48 },
+  { id: 'heli', name: 'The helicopter crash', sub: '', x: 140, z: 430, r: 30 },
+  { id: 'tower', name: 'The cell tower', sub: 'PELL WIRELESS · SITE 114', x: -130, z: -430, r: 16 },
+  { id: 'quarry', name: 'The quarry', sub: 'PELL COUNTY AGGREGATES', x: 700, z: -150, r: 60, pit: 9 },
+];
 function heightAt(x, z) {
-  const d = Math.min(Math.abs(x), Math.abs(z));
+  const ax = Math.abs(x), az = Math.abs(z), d = Math.min(ax, az), R = Math.max(ax, az);
   let h = 0;
-  if (d > 26) h = smooth(26, 44, d) * (fbm(x * 0.016 + 3.1, z * 0.016 - 7.7) * 1.4 + vnoise(x * 0.13, z * 0.13) * 0.08);
-  if (d > 4.6 && d < 9.5 && !inLot(x, z)) h -= Math.exp(-(((d - 6.7) / 1.1) ** 2)) * 0.28;
+  if (d > 26) {
+    h = smooth(26, 44, d) * (fbm(x * 0.016 + 3.1, z * 0.016 - 7.7) * 1.4 + vnoise(x * 0.13, z * 0.13) * 0.08);
+    // out past town the land rolls: long low ridges and creek hollows
+    if (R > 150) h += fbm(x * 0.0032 + 1.7, z * 0.0032 - 4.2) * 10 * smooth(150, 330, R) * smooth(26, 70, d);
+    // every place out there sits on a level pad; the reservoir and the quarry pit are dug into theirs
+    for (let i = 1; i < POIS.length; i++) {
+      const p = POIS[i], dx = x - p.x, dz = z - p.z, e = p.r + 40;
+      if (dx > e || dx < -e || dz > e || dz < -e) continue;
+      const q = Math.sqrt(dx * dx + dz * dz);
+      h *= smooth(p.r, e, q);
+      if (p.lake) h -= 4.2 * (1 - smooth(p.lake * 0.45, p.lake + 4, q));
+      if (p.pit) { const k = (1 - smooth(p.r * 0.25, p.r * 0.75, q)) * 3, n = Math.min(Math.floor(k), 2); h -= p.pit * (n + smooth(0.5, 0.95, k - n)) / 3; }
+    }
+  }
+  if (d > 4.6 && d < 9.5 && R < 175 && !inLot(x, z)) h -= Math.exp(-(((d - 6.7) / 1.1) ** 2)) * 0.28 * (1 - smooth(140, 175, R));
   // the interstate corridor south of town is graded flat
   if (z > 98) h *= smooth(14, 30, Math.abs(z - 129));
   return h;
@@ -440,7 +477,7 @@ THREE.ShaderChunk.shadowmap_pars_fragment = THREE.ShaderChunk.shadowmap_pars_fra
 THREE.ShaderChunk.lights_fragment_begin = THREE.ShaderChunk.lights_fragment_begin.replace('getShadow( directionalShadowMap[ i ]', 'getSunShadow( directionalShadowMap[ i ]');
 THREE.ShaderLib.sprite.vertexShader = THREE.ShaderLib.sprite.vertexShader.replace('#include <fog_vertex>', 'vec3 transformed = vec3( 0.0 );\n\t#include <fog_vertex>');
 scene.fog = new THREE.Fog(FOG_D.night.clone(), 0.03, 0);
-const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.03, 3300);
+const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.03, 4600);
 camera.rotation.order = 'YXZ';
 scene.add(camera);
 
@@ -923,6 +960,11 @@ const DOCS = [
     'Contents: roughly 300 deer carcasses from the state cull. Method: lime and cover.',
     'Incinerator quote ($48,000) not approved by the county commission.'],
     hand: ['Ground’s soaked down there and it’s 200 yards upstream of the reservoir intake. Told them twice. — R.T.'] },
+  { id: 'reservoir', sort: 3.5, date: 'Sept 15', title: 'Raw water log, Intake 2', src: 'Clipboard in the reservoir pump house', style: 'print', body: [
+    'Millbrook Reservoir, raw water. Turbidity up sharply after the rain on the 14th. Coliform within limits.',
+    'Complaint from the Haskell farm: cattle refusing the trough water and pacing the fence line.',
+    'Unidentified protein fraction in the filter backwash. Sample sent to the state lab. Chlorine dose raised 20 percent.'],
+    hand: ['The cull trench is right up Cole Creek from the intake. Whatever is in those deer is coming down with the runoff. Nobody upstairs wants to hear it. — Marv'] },
   { id: 'intake', sort: 4, date: 'Sept 19 · 06:40', title: 'Patient intake', src: 'Millbrook Medical Clinic', style: 'print', body: [
     'Patient: PRUITT, Dale. 52, male.',
     'Complaint: fever 104.1°F, chills, confusion, tremor.',
@@ -951,6 +993,12 @@ const DOCS = [
     'Buses leave Millbrook Elementary at 8:00 AM on October 3. One bag per person. No pets. No firearms.',
     'Anyone with a bite or scratch wound will not be transported.'],
     hand: ['People are hiding their bites.'] },
+  { id: 'roster', sort: 9.5, date: 'Oct 3 · 03:55', title: 'Arrivals screening, medical tent', src: 'Clipboard at Camp Whitlock', style: 'print', body: [
+    'Camp Whitlock relief center. Arrivals since 22:00 on Oct 2: 311 persons.',
+    'Screening: temperature and a visual check only. Hands, forearms, neck, ankles.',
+    '03:10. Tent 14, female, about 30. Temp 103.1. Bandage on the left calf, says she cut it on a fence. No bite visible. Released to her family tent per policy.',
+    '03:55. Tent 14. Security requested. Security requested. Security'],
+    hand: ['By morning they had chained the gates from the outside.'] },
   { id: 'sheriff', sort: 10, date: 'Oct 3', title: 'Patrol notebook', src: 'Found on the cruiser seat', style: 'hand', body: [
     '8:40. Buses left on time. Four of them, 112 people.',
     '11:15. Radio from Bus 2. Somebody turned on board. The driver lost it at the county line.',
@@ -1011,7 +1059,8 @@ function collide(p, r) {
       if (d2 < rr * rr && d2 > 1e-8) { const d = Math.sqrt(d2); p.x = c.x + dx / d * rr; p.z = c.z + dz / d * rr; }
     }
   }
-  p.x = clamp(p.x, -103, 103); p.z = clamp(p.z, -103, 143);
+  const lim = PRO.on ? 150 : WORLD - 1.5;
+  p.x = clamp(p.x, -lim, lim); p.z = clamp(p.z, -lim, lim);
 }
 function blocked(x, z, m) {
   for (let i = 0; i < boxes.length; i++) { const b = boxes[i]; if (x > b.minX - m && x < b.maxX + m && z > b.minZ - m && z < b.maxZ + m) return true; }
@@ -1044,7 +1093,7 @@ function addMesh(geo, mat, x, y, z, parent, o) {
   m.castShadow = o.cast !== false; m.receiveShadow = o.recv !== false;
   parent.add(m);
   if (o.bake === false) { if (o.solid !== false) solids.push(m); }
-  else bakeList.push({ m, solid: o.solid !== false });
+  else bakeList.push({ m, solid: o.solid !== false, global: !!o.global });
   return m;
 }
 function ensureUV(g) { if (!g.attributes.uv) g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count * 2), 2)); }
@@ -1074,19 +1123,22 @@ function flatClone(m, matrix) {
 }
 function bakeStatic() {
   scene.updateMatrixWorld(true);
-  const buckets = new Map();
-  for (const { m, solid } of bakeList) {
+  const buckets = new Map(), wp = new V3();
+  for (const { m, solid, global } of bakeList) {
     if (!m.parent) continue;
     if (Array.isArray(m.material)) { if (solid) solids.push(m); continue; }
-    const key = m.material.uuid + (m.castShadow ? 'c' : 'n') + (solid ? 's' : 'x');
-    if (!buckets.has(key)) buckets.set(key, { mat: m.material, cast: m.castShadow, solid, geos: [] });
+    // the town and anything long (roads, rails) stay in view; the rest goes with the chunk it stands in
+    wp.setFromMatrixPosition(m.matrixWorld);
+    const ch = global || inTown(wp.x, wp.z) ? null : chunkAt(wp.x, wp.z);
+    const key = m.material.uuid + (m.castShadow ? 'c' : 'n') + (solid ? 's' : 'x') + (ch ? ch.i : global ? 'G' : 'T');
+    if (!buckets.has(key)) buckets.set(key, { mat: m.material, cast: m.castShadow, solid, geos: [], ch: ch || (global ? null : TOWN) });
     buckets.get(key).geos.push(flatClone(m, m.matrixWorld));
     m.parent.remove(m);
   }
   for (const b of buckets.values()) {
     const mesh = new THREE.Mesh(mergeFlat(b.geos), b.mat);
     mesh.castShadow = b.cast; mesh.receiveShadow = true; mesh.matrixAutoUpdate = false; mesh.updateMatrix();
-    scene.add(mesh); if (b.solid) solids.push(mesh);
+    scene.add(mesh); if (b.solid) solids.push(mesh); if (b.ch) b.ch.objs.push(mesh);
   }
   bakeList.length = 0;
 }
@@ -1273,8 +1325,8 @@ function updateDoors(dt) {
 /* ---------------- ground, roads, puddles ---------------- */
 function groundPatch(cx, cz, sx, sz, nx, nz, yo) {
   const geo = new THREE.PlaneGeometry(sx, sz, nx, nz); geo.rotateX(-PI / 2); geo.translate(cx, 0, cz);
-  const p = geo.attributes.position;
-  for (let i = 0; i < p.count; i++) p.setY(i, heightAt(p.getX(i), p.getZ(i)) + (yo || 0));
+  const p = geo.attributes.position, guv = geo.attributes.uv;
+  for (let i = 0; i < p.count; i++) { p.setY(i, heightAt(p.getX(i), p.getZ(i)) + (yo || 0)); guv.setXY(i, (p.getX(i) + 160) / 320, (160 - p.getZ(i)) / 320); }
   geo.computeVertexNormals();
   const gc = new Float32Array(p.count * 3);
   for (let i = 0; i < p.count; i++) {
@@ -1282,21 +1334,26 @@ function groundPatch(cx, cz, sx, sz, nx, nz, yo) {
     const dry = smooth(0.05, 0.6, vnoise(x * 0.045 + 11, z * 0.045 - 3)), dark = smooth(0.2, 0.7, vnoise(x * 0.09 - 7, z * 0.09 + 5));
     let r = lerp(1, 1.28, dry), gg = lerp(1, 1.12, dry), b = lerp(1, 0.72, dry);
     r *= 1 - dark * 0.25; gg *= 1 - dark * 0.18; b *= 1 - dark * 0.25;
+    // out in the county: whole fields gone to seed, gold against the green
+    const R = Math.max(Math.abs(x), Math.abs(z));
+    if (R > 140) { const f = smooth(-0.1, 0.45, vnoise(x * 0.0065 + 5.3, z * 0.0065 - 2.1)) * smooth(140, 260, R); r = lerp(r, 1.42, f * 0.75); gg = lerp(gg, 1.2, f * 0.75); b = lerp(b, 0.62, f * 0.75); }
     const dirt = d < 7.5 ? 1 - smooth(4.6, 7.5, d) : 0;
     r = lerp(r, 1.15, dirt * 0.6); gg = lerp(gg, 0.95, dirt * 0.6); b = lerp(b, 0.8, dirt * 0.6);
     gc[i * 3] = r; gc[i * 3 + 1] = gg; gc[i * 3 + 2] = b;
   }
   geo.setAttribute('color', new THREE.BufferAttribute(gc, 3));
   const g = new THREE.Mesh(geo, M.grass); g.receiveShadow = true; scene.add(g);
+  return g;
 }
 function buildGround() {
-  groundPatch(0, 0, 320, 320, 220, 220);
-  groundPatch(-360, 150, 400, 300, 70, 52, -0.02); groundPatch(280, 150, 240, 300, 42, 52, -0.02); groundPatch(0, 230, 320, 140, 56, 24, -0.02);
-  const flat = (geo2, mat, x, y, z, rz) => { const m = addMesh(geo2, mat, x, y, z, scene, { cast: false, solid: false }); m.rotation.set(-PI / 2, 0, rz || 0); return m; };
-  flat(new THREE.PlaneGeometry(9.5, 236), M.gravel, 0, 0.012, 0);
-  flat(new THREE.PlaneGeometry(9.5, 236), M.gravel, 0, 0.013, 0, PI / 2);
-  flat(new THREE.PlaneGeometry(8, 240), M.road, 0, 0.02, 0);
-  flat(new THREE.PlaneGeometry(8, 240), M.road, 0, 0.022, 0, PI / 2);
+  TOWN.objs.push(groundPatch(0, 0, 320, 320, 220, 220));
+  const flat = (geo2, mat, x, y, z, rz) => { const m = addMesh(geo2, mat, x, y, z, scene, { cast: false, solid: false, global: true }); m.rotation.set(-PI / 2, 0, rz || 0); return m; };
+  // the two county roads run out through the fence and on to the horizon; the texture keeps its scale along them
+  const long = (w, len, base) => { const g2 = new THREE.PlaneGeometry(w, len), uv = g2.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setY(i, uv.getY(i) * len / base); return g2; };
+  flat(long(9.5, 3000, 236), M.gravel, 0, 0.012, 0);
+  flat(long(9.5, 3000, 236), M.gravel, 0, 0.013, 0, PI / 2);
+  flat(long(8, 3000, 240), M.road, 0, 0.02, 0);
+  flat(long(8, 3000, 240), M.road, 0, 0.022, 0, PI / 2);
   flat(planeUV(8, 8, 8), M.asph, 0, 0.026, 0);
   flat(planeUV(23, 22, 8), M.asph, 15.5, 0.018, -89);
   flat(planeUV(21, 7.6, 8), M.asph, 36.5, 0.018, 7.8);
@@ -1769,7 +1826,7 @@ function trees() {
     if ((Math.abs(x) < 8 && Math.abs(z) > 98) || (Math.abs(z) < 8 && Math.abs(x) > 98)) continue;
     const r = Math.random(); spots.push([x, z, r < 0.66 ? 'lob' : r < 0.86 ? 'pine' : 'oak']);
   }
-  for (let i = 0; i < 260; i++) { const x = rand(-200, 200), z = rand(147, 240); spots.push([x, z, Math.random() < 0.7 ? 'lob' : 'pine']); }
+  for (let i = 0; i < 260; i++) { const x = rand(-200, 200), z = rand(147, 240); if (Math.abs(x) < 9) continue; spots.push([x, z, Math.random() < 0.7 ? 'lob' : 'pine']); }
   for (let i = 0; i < 360; i++) {
     const x = rand(-95, 95), z = rand(-95, 95);
     if (Math.abs(x) < 25 || Math.abs(z) < 25 || blocked(x, z, 2.6) || inLot(x, z)) continue;
@@ -1788,7 +1845,7 @@ function trees() {
   const kinds = { lob: [], pine: [], oak: [] };
   for (const sp of spots) kinds[sp[2]].push(sp);
   const m = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new V3(), p = new V3(), up = new V3(0, 1, 0), col = new THREE.Color();
-  const inst = (geo, mat, n, cast) => { const im = new THREE.InstancedMesh(geo, mat, Math.max(1, n)); im.count = n; im.castShadow = cast !== false; im.receiveShadow = true; im.frustumCulled = false; scene.add(im); return im; };
+  const inst = (geo, mat, n, cast) => { const im = new THREE.InstancedMesh(geo, mat, Math.max(1, n)); im.count = n; im.castShadow = cast !== false; im.receiveShadow = true; im.frustumCulled = false; scene.add(im); TOWN.inst.push(im); return im; };
   const tint = (im, i, r0, r1) => { col.setRGB(rand(r0, r1), rand(r0, r1 + 0.05), rand(r0 - 0.08, r1 - 0.06)); im.setColorAt(i, col); };
   // loblolly pines: tall bare trunks with their crowns high up
   const lob = kinds.lob, lobT = inst(new THREE.CylinderGeometry(0.12, 0.21, 1, 8), M.bark, lob.length);
@@ -1801,7 +1858,7 @@ function trees() {
     const v = i % 3, cs = rand(0.9, 1.35) * k;
     p.set(x + rand(-0.3, 0.3), y0 + H * 0.88, z + rand(-0.3, 0.3)); sc.set(cs, cs * rand(0.9, 1.2), cs); m.compose(p, q, sc);
     lobC[v].setMatrixAt(lobN[v], m); tint(lobC[v], lobN[v], 0.82, 1.0); lobN[v]++;
-    if (Math.max(Math.abs(x), Math.abs(z)) < 112) circles.push({ x, z, r: 0.24 * k });
+    circles.push({ x, z, r: 0.24 * k });
   });
   // young pines
   const pine = kinds.pine, pT = inst(new THREE.CylinderGeometry(0.1, 0.17, 1, 7), M.bark, pine.length);
@@ -1812,7 +1869,7 @@ function trees() {
     p.set(x, y0 + th / 2, z); sc.set(k, th, k); m.compose(p, q, sc); pT.setMatrixAt(i, m);
     p.set(x, y0 + th + 1.5 * k, z); sc.set(1.7 * k, 3.4 * k, 1.7 * k); m.compose(p, q, sc); pA.setMatrixAt(i, m); tint(pA, i, 0.8, 1.0);
     p.set(x, y0 + th + 3.3 * k, z); sc.set(1.15 * k, 2.7 * k, 1.15 * k); m.compose(p, q, sc); pB.setMatrixAt(i, m); tint(pB, i, 0.85, 1.05);
-    if (Math.max(Math.abs(x), Math.abs(z)) < 112) circles.push({ x, z, r: 0.2 * k });
+    circles.push({ x, z, r: 0.2 * k });
   });
   // live oaks: thick trunks and wide, heavy crowns
   const oak = kinds.oak, oT = inst(new THREE.CylinderGeometry(0.24, 0.42, 1, 9), M.bark, oak.length);
@@ -1825,10 +1882,14 @@ function trees() {
     const v = i % 2, cs = rand(0.85, 1.2) * k;
     p.set(x, y0 + H + 1.0 * cs, z); sc.set(cs, cs, cs); m.compose(p, q, sc);
     oC[v].setMatrixAt(oN[v], m); tint(oC[v], oN[v], 0.78, 1.0); oN[v]++;
-    if (Math.max(Math.abs(x), Math.abs(z)) < 112) circles.push({ x, z, r: 0.38 * k });
+    circles.push({ x, z, r: 0.38 * k });
   });
   for (const im of [lobT, pT, oT]) solids.push(im);
   for (const im of [lobT, pT, pA, pB, oT, ...lobC, ...oC]) { im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true; }
+  // seen from out in the county the town's crowns swap to the simple ones too
+  const big = [...lobC, ...oC]; TOWN.inst = TOWN.inst.filter(im => !big.includes(im)); TOWN.hi.push(...big);
+  const [LOBL, OAKL] = lowCrowns();
+  for (const im of big) { const lo = new THREE.InstancedMesh(lobC.includes(im) ? LOBL : OAKL, im.material, 1); lo.instanceMatrix = im.instanceMatrix; lo.instanceColor = im.instanceColor; lo.count = im.count; lo.frustumCulled = false; lo.receiveShadow = true; lo.visible = false; scene.add(lo); TOWN.lo.push(lo); }
   // dead trees in the fields
   const dparts = [];
   const tk = new THREE.CylinderGeometry(0.1, 0.2, 5, 6); tk.translate(0, 2.5, 0); dparts.push(tk.toNonIndexed());
@@ -1897,11 +1958,12 @@ function grass() {
   }
   mesh.count = i; mesh.frustumCulled = false; mesh.receiveShadow = true;
   mesh.instanceMatrix.needsUpdate = true; if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-  scene.add(mesh);
+  scene.add(mesh); TOWN.grass.push(mesh);
 }
 function poles() {
   const tops = [];
-  for (let z = -100; z <= 100; z += 25) {
+  for (let z = -875; z <= 875; z += 25) {
+    if (z > 102 && z < 152) continue;
     const lean = rand(-0.05, 0.05), y0 = heightAt(6.6, z);
     const pm = addMesh(new THREE.CylinderGeometry(0.11, 0.15, 8.6, 7), M.pole, 6.6, y0 + 4.2, z); pm.rotation.z = lean;
     const tx = 6.6 - Math.sin(lean) * 7.8;
@@ -1910,9 +1972,11 @@ function poles() {
   }
   const wireMat = new THREE.LineBasicMaterial({ color: 0x050607 });
   for (let i = 0; i < tops.length - 1; i++) for (const off of [-0.8, 0.8]) {
+    if (tops[i + 1][1] - tops[i][1] > 26) continue;
     const pts = [];
     for (let k = 0; k <= 10; k++) { const t = k / 10; pts.push(new V3(tops[i][0] + (tops[i + 1][0] - tops[i][0]) * t + off, lerp(tops[i][2], tops[i + 1][2], t) - Math.sin(t * PI) * 0.9, tops[i][1] + 25 * t)); }
-    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), wireMat));
+    const l = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), wireMat); scene.add(l);
+    if (!inTown(6.6, tops[i][1])) chunkAt(6.6, tops[i][1]).objs.push(l);
   }
 }
 let jerseyG = null;
@@ -1992,7 +2056,7 @@ FX.puff = radial([[0, 'rgba(220,220,225,.6)'], [0.5, 'rgba(200,200,205,.25)'], [
 
 
 /* ---------------- the interstate south of town: outbound jammed solid, inbound empty, the city on the horizon ---------------- */
-const HWY = { zc: 129, west: -560, east: 400 };
+const HWY = { zc: 129, west: -1500, east: 1500 };
 // a low-poly car with painted body, dark glass, tyres and lights, one instanced mesh per body style
 function carShape(kind) {
   const P = [1, 1, 1], GL = [0.05, 0.06, 0.07], TY = [0.03, 0.03, 0.03], TR = [0.12, 0.12, 0.12], TL = [0.9, 0.12, 0.1], HL = [1.3, 1.25, 1.1], DK = [0.15, 0.14, 0.13];
@@ -2036,49 +2100,57 @@ function highway() {
   }, 512);
   const mat = std({ map: tex(lc, len / 12, 1), normalMap: nmap(lc, 2.5, len / 12, 1), normalScale: v2(0.7), roughness: 0.88, envMap: ENV, envMapIntensity: 0 });
   WET_MATS.push(mat); ENV_MATS.push(mat);
-  addMesh(new THREE.PlaneGeometry(len, 12.6), mat, cx, 0.03, 122.4, scene, { cast: false, solid: false }).rotation.set(-PI / 2, 0, 0);
-  addMesh(new THREE.PlaneGeometry(len, 12.6), mat, cx, 0.03, 135.6, scene, { cast: false, solid: false }).rotation.set(-PI / 2, 0, PI);
+  addMesh(new THREE.PlaneGeometry(len, 12.6), mat, cx, 0.03, 122.4, scene, { cast: false, solid: false, global: true }).rotation.set(-PI / 2, 0, 0);
+  addMesh(new THREE.PlaneGeometry(len, 12.6), mat, cx, 0.03, 135.6, scene, { cast: false, solid: false, global: true }).rotation.set(-PI / 2, 0, PI);
   // the concrete median barrier and the guardrails
   const js = new THREE.Shape(); [[-0.3, 0], [0.3, 0], [0.3, 0.08], [0.11, 0.3], [0.08, 0.81], [-0.08, 0.81], [-0.11, 0.3], [-0.3, 0.08]].forEach((p, i) => (i ? js.lineTo(p[0], p[1]) : js.moveTo(p[0], p[1])));
   const jg = new THREE.ExtrudeGeometry(js, { depth: len, bevelEnabled: false }); jg.translate(0, 0, -len / 2); jg.rotateY(PI / 2);
-  addMesh(jg, std({ map: T.concrete, color: 0xd8d2c4, roughness: 0.92 }), cx, 0.03, HWY.zc, scene, { solid: false });
-  const railG = (a, b) => addMesh(B(b - a, 0.32, 0.06), M.steel, (a + b) / 2, 0.62, 0, scene, { solid: false });
-  railG(HWY.west, -6).position.z = 115.8; railG(6, HWY.east).position.z = 115.8; railG(HWY.west, HWY.east).position.z = 142.2;
-  const posts = []; for (let x = HWY.west; x < HWY.east; x += 3.8) { if (Math.abs(x) > 6.5) posts.push([x, 115.86]); posts.push([x, 142.14]); }
+  addMesh(jg, std({ map: T.concrete, color: 0xd8d2c4, roughness: 0.92 }), cx, 0.03, HWY.zc, scene, { solid: false, global: true });
+  const railG = (a, b) => addMesh(B(b - a, 0.32, 0.06), M.steel, (a + b) / 2, 0.62, 0, scene, { solid: false, global: true });
+  for (const rz of [115.8, 142.2]) { railG(HWY.west, -6).position.z = rz; railG(6, HWY.east).position.z = rz; }
+  const posts = []; for (let x = HWY.west; x < HWY.east; x += 3.8) if (Math.abs(x) > 6.5) posts.push([x, 115.86], [x, 142.14]);
   const pm = new THREE.InstancedMesh(B(0.15, 0.75, 0.1), M.metal, posts.length), m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new V3(1, 1, 1), p = new V3(), col = new THREE.Color();
   posts.forEach(([x, z], i) => { p.set(x, 0.4, z); m4.compose(p, q.identity(), sc); pm.setMatrixAt(i, m4); });
   pm.castShadow = true; pm.frustumCulled = false; scene.add(pm);
   // waist-high rails: they stop you, not the eyes of the dead
-  for (let x = -110; x <= 110; x += 0.45) { if (Math.abs(x) > 6.3) circles.push({ x, z: 115.8, r: 0.22 }); circles.push({ x, z: 142.2, r: 0.22 }); }
+  for (let x = -WORLD; x <= WORLD; x += 0.45) if (Math.abs(x) > 6.3) circles.push({ x, z: 115.8, r: 0.22 }, { x, z: 142.2, r: 0.22 });
   // the jam: everyone who tried to drive out east, bumper to bumper for miles
   const kinds = ['sedan', 'suv', 'pickup', 'box'].map(carShape), lists = kinds.map(() => []);
   const pickKind = () => { const r = Math.random(); return r < 0.56 ? 0 : r < 0.82 ? 1 : r < 0.94 ? 2 : 3; };
   for (const [lz, dens] of [[132.6, 0.95], [135.6, 0.94], [138.6, 0.93], [141.0, 0.45]]) {
     let x = HWY.west + rand(0, 5);
-    while (x < 150) {
+    while (x < WORLD - 22) {
       const k = pickKind(), L = kinds[k].L; x += L / 2;
       if (Math.random() < dens) lists[k].push([x, lz + rand(-0.35, 0.35), PI / 2 + (Math.random() < 0.1 ? rand(-0.4, 0.4) : rand(-0.05, 0.05))]);
       x += L / 2 + rand(0.8, 2.8);
     }
   }
   // a few left on the empty side, and a jackknifed semi closing the westbound lanes
-  for (let i = 0; i < 6; i++) lists[pickKind() % 3].push([rand(-300, 100), pick([119.4, 122.4, 125.4, 117.2]), -PI / 2 + rand(-0.6, 0.6)]);
+  for (let i = 0; i < 22; i++) lists[pickKind() % 3].push([rand(-850, 850), pick([119.4, 122.4, 125.4, 117.2]), -PI / 2 + rand(-0.6, 0.6)]);
   const loots = [];
+  // one instanced mesh per body style per chunk of road, so the miles of it out of sight cost nothing
   kinds.forEach((K, k) => {
-    const im = new THREE.InstancedMesh(K.geo, new THREE.MeshPhysicalMaterial({ vertexColors: true, map: T.carDirt, roughness: 0.5, metalness: 0.1, clearcoat: 1, clearcoatRoughness: 0.1, envMap: ENV, envMapIntensity: 1 }), lists[k].length);
-    ENV_MATS.push(im.material);
-    lists[k].forEach(([x, z, r], i) => {
-      p.set(x, 0.03, z); q.setFromAxisAngle(new V3(0, 1, 0), r); m4.compose(p, q, sc); im.setMatrixAt(i, m4);
-      const pc = k === 3 ? [0.62, 0.62, 0.6] : pick(PAINTS); col.setRGB(pc[0], pc[1], pc[2]); im.setColorAt(i, col);
-      if (Math.abs(x) < 108) {
-        const fx = Math.sin(r), fz = Math.cos(r);
-        for (const o of k === 3 ? [-2.6, 0, 2.6] : [-K.L * 0.28, K.L * 0.28]) circles.push({ x: x + fx * o, z: z + fz * o, r: k === 3 ? 1.25 : 1.0 });
-        if (k < 3 && Math.abs(x) < 95 && Math.random() < 0.14) loots.push([x - fz * 1.5, z + fx * 1.5]);
-      }
-    });
-    im.castShadow = true; im.receiveShadow = true; im.frustumCulled = false; im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true; scene.add(im);
+    const mat = new THREE.MeshPhysicalMaterial({ vertexColors: true, map: T.carDirt, roughness: 0.5, metalness: 0.1, clearcoat: 1, clearcoatRoughness: 0.1, envMap: ENV, envMapIntensity: 1 });
+    ENV_MATS.push(mat);
+    const groups = new Map();
+    for (const c of lists[k]) { const key = inTown(c[0], 129) ? -1 : chunkAt(c[0], 129).i; if (!groups.has(key)) groups.set(key, []); groups.get(key).push(c); }
+    for (const [key, list] of groups) {
+      const im = new THREE.InstancedMesh(K.geo, mat, list.length);
+      list.forEach(([x, z, r], i) => {
+        p.set(x, 0.03, z); q.setFromAxisAngle(new V3(0, 1, 0), r); m4.compose(p, q, sc); im.setMatrixAt(i, m4);
+        const pc = k === 3 ? [0.62, 0.62, 0.6] : pick(PAINTS); col.setRGB(pc[0], pc[1], pc[2]); im.setColorAt(i, col);
+        if (Math.abs(x) < WORLD + 4) {
+          const fx = Math.sin(r), fz = Math.cos(r);
+          for (const o of k === 3 ? [-2.6, 0, 2.6] : [-K.L * 0.28, K.L * 0.28]) circles.push({ x: x + fx * o, z: z + fz * o, r: k === 3 ? 1.25 : 1.0 });
+          if (k < 3 && Math.abs(x) < WORLD - 30 && Math.random() < (Math.abs(x) < 95 ? 0.14 : 0.025)) loots.push([x - fz * 1.5, z + fx * 1.5]);
+        }
+      });
+      im.castShadow = true; im.receiveShadow = true; im.frustumCulled = false; im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true; scene.add(im);
+      (key >= 0 ? chunks[key] : TOWN).inst.push(im);
+    }
   });
-  for (const [x, z] of loots.slice(0, 12)) addLoot(x, z, 'Search the abandoned car', null, 2.2);
+  const near = loots.filter(l => Math.abs(l[0]) < 95), far = loots.filter(l => Math.abs(l[0]) >= 95);
+  for (const [x, z] of near.slice(0, 12).concat(far.sort(() => Math.random() - 0.5).slice(0, 24))) addLoot(x, z, 'Search the abandoned car', null, 2.2);
   const trailer = addMesh(boxUV(2.5, 3.0, 13.5, 2), std({ color: 0xb9b7b0, roughness: 0.7, metalness: 0.2 }), -101, 2.0, 121.5); trailer.rotation.y = 1.15;
   const cab = addMesh(boxUV(2.4, 2.6, 2.8, 1), std({ color: 0x7a1b16, roughness: 0.5, metalness: 0.3 }), -96.6, 1.7, 127.4); cab.rotation.y = 0.4;
   addBox(-101, 121.5, 11, 6); addBox(-96.6, 127.4, 3, 3);
@@ -2113,7 +2185,7 @@ function highway() {
 // a dead city on the horizon, hazed by distance, with smoke still rising out of it
 let skylineMat = null; const smokeCols = [];
 function skyline() {
-  const parts = [], bx = -1500, bz = HWY.zc;
+  const parts = [], bx = -2900, bz = HWY.zc;
   const box = (w, h, d, x, y, z) => { const g = new THREE.BoxGeometry(w, h, d); g.translate(x, y + h / 2, z); parts.push(g.toNonIndexed()); };
   for (let i = 0; i < 46; i++) {
     const zz = bz + (Math.random() - 0.5) * rand(300, 950), xx = bx + rand(-200, 200), core = 1 - Math.min(1, Math.abs(zz - bz) / 480);
@@ -2204,7 +2276,7 @@ function sky() {
   const dome = new THREE.Mesh(new THREE.SphereGeometry(600, 32, 16), skyMat); dome.renderOrder = -10; dome.frustumCulled = false; scene.add(dome);
   const n = 1600, pos = new Float32Array(n * 3), col = new Float32Array(n * 3);
   for (let i = 0; i < n; i++) {
-    const t = Math.random() * TAU, u = rand(0.08, 1), r = 2900, s = Math.sqrt(1 - u * u); pos[i * 3] = Math.cos(t) * s * r; pos[i * 3 + 1] = u * r; pos[i * 3 + 2] = Math.sin(t) * s * r;
+    const t = Math.random() * TAU, u = rand(0.08, 1), r = 4300, s = Math.sqrt(1 - u * u); pos[i * 3] = Math.cos(t) * s * r; pos[i * 3 + 1] = u * r; pos[i * 3 + 2] = Math.sin(t) * s * r;
     const k = 0.15 + 0.85 * Math.pow(Math.random(), 4); col[i * 3] = col[i * 3 + 1] = col[i * 3 + 2] = k;
   }
   const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.BufferAttribute(pos, 3)); sg.setAttribute('color', new THREE.BufferAttribute(col, 3));
@@ -2281,6 +2353,7 @@ function buildWorld() {
   clutter();
   puddles();
   highway();
+  openWorld();
   trees();
   mistBanks();
   sky();
@@ -2301,6 +2374,636 @@ function buildWorld() {
   grass();
 }
 const X_STORE_GLASS = 16.84;
+
+/* ---------------- the open county: everything inside the containment fence, streamed in 160 m chunks ---------------- */
+const CH = 160, CHN = 12, CH0 = -960;
+const chunks = [];
+for (let iz = 0; iz < CHN; iz++) for (let ix = 0; ix < CHN; ix++) {
+  const cx = CH0 + (ix + 0.5) * CH, cz = CH0 + (iz + 0.5) * CH;
+  chunks.push({ i: chunks.length, cx, cz, objs: [], trunks: [], hi: [], lo: [], grass: [], inst: [], vis: true, d: 0, box: new THREE.Box3(new V3(cx - CH / 2, -16, cz - CH / 2), new V3(cx + CH / 2, 46, cz + CH / 2)) });
+}
+function chunkAt(x, z) { const ix = clamp(Math.floor((x - CH0) / CH), 0, CHN - 1), iz = clamp(Math.floor((z - CH0) / CH), 0, CHN - 1); return chunks[iz * CHN + ix]; }
+const inTown = (x, z) => Math.abs(x) < 170 && Math.abs(z) < 170;
+// Millbrook itself is one more chunk, a big one: from out in the county none of it needs drawing
+const TOWN = { cx: 0, cz: 0, half: 170, objs: [], trunks: [], hi: [], lo: [], grass: [], inst: [], vis: true, d: 0, box: new THREE.Box3(new V3(-170, -16, -170), new V3(170, 46, 170)) };
+let chunkT = 0;
+const _fr = new THREE.Frustum(), _frM = new THREE.Matrix4(), tcells = [];
+const setVis = (o, v) => { if (o.visible !== v) o.visible = v; };
+// land within sight (the fog decides how far that is), trees a little closer and simpler far off, grass only up close
+function updateChunks(dt) {
+  camera.updateMatrixWorld(); _frM.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse); _fr.setFromProjectionMatrix(_frM);
+  chunkT -= dt; const redo = chunkT <= 0; if (redo) chunkT = 0.3;
+  const px = camera.position.x, pz = camera.position.z, low = SETTINGS.quality === 'low';
+  const R = clamp(2.8 / Math.max(scene.fog.near, 0.001), 170, low ? 320 : 480), TR = Math.min(R, low ? 240 : 340), GR = low ? 60 : 100;
+  for (const c of chunks.concat(TOWN, tcells)) {
+    if (redo) {
+      const hf = c.half || CH / 2;
+      c.d = Math.hypot(Math.max(Math.abs(px - c.cx) - hf, 0), Math.max(Math.abs(pz - c.cz) - hf, 0));
+      const vis = c.d < R; if (vis !== c.vis) { c.vis = vis; for (const o of c.objs) o.visible = vis; }
+      const sh = c.d < 36; for (const t of c.trunks.concat(c.hi, c.inst)) if (t.castShadow !== sh) t.castShadow = sh;
+    }
+    const seen = c.vis && (c.d < 40 || _fr.intersectsBox(c.box)), tv = seen && c.d < TR, near = c.d < 50;
+    for (const t of c.trunks) setVis(t, tv);
+    for (const t of c.hi) setVis(t, tv && near);
+    for (const t of c.lo) setVis(t, tv && !near);
+    for (const t of c.inst) setVis(t, seen);
+    for (const g of c.grass) setVis(g, seen && c.d < GR);
+  }
+}
+const forestAt = (x, z) => smooth(0.02, 0.32, fbm(x * 0.0042 + 9.1, z * 0.0042 - 3.3));
+function nearPOI(x, z, pad) { for (const p of POIS) if (p.r && Math.abs(x - p.x) < p.r + pad && Math.abs(z - p.z) < p.r + pad && Math.hypot(x - p.x, z - p.z) < p.r + pad) return p; return null; }
+const DIRT = [], dirtCells = new Map();
+function onDirt(x, z, m) {
+  const ix = Math.floor(x / 8), iz = Math.floor(z / 8), r = m + 2.4;
+  for (let a = ix - 1; a <= ix + 1; a++) for (let b = iz - 1; b <= iz + 1; b++) {
+    const l = dirtCells.get(ckey(a, b)); if (!l) continue;
+    for (const p of l) if ((p[0] - x) ** 2 + (p[1] - z) ** 2 < r * r) return true;
+  }
+  return false;
+}
+function wildOK(x, z) {
+  const d = Math.min(Math.abs(x), Math.abs(z));
+  if (d <= 13 || (z > 106 && z < 152) || inTown(x, z) || Math.abs(Math.abs(x) - WORLD) <= 7 || Math.abs(Math.abs(z) - WORLD) <= 7 || onDirt(x, z, 3)) return false;
+  // the woods come right down to the reservoir, short of the water and the pump house
+  const p = nearPOI(x, z, 10);
+  return !p || (!!p.lake && Math.hypot(x - p.x, z - p.z) > p.lake + 6 && !(p.hut && Math.hypot(x - p.hut[0], z - p.hut[1]) < 16));
+}
+
+/* materials for the county */
+const dirtC = cnv(128, (g, w, h) => {
+  g.fillStyle = '#7a6448'; g.fillRect(0, 0, w, h);
+  speck(g, w, 5000, ['#8d7656', '#5f4c35', '#9a8466', '#6b563c'], 1, 3, 0.8, h);
+  g.fillStyle = 'rgba(40,30,20,.28)'; g.fillRect(w * 0.18, 0, w * 0.16, h); g.fillRect(w * 0.66, 0, w * 0.16, h);
+  g.fillStyle = 'rgba(90,110,60,.35)'; g.fillRect(w * 0.44, 0, w * 0.12, h);
+  for (let i = 0; i < 40; i++) { g.fillStyle = 'rgba(60,80,40,.4)'; g.fillRect(rand(0, 8), rand(0, h), rand(2, 10), rand(4, 16)); g.fillRect(w - rand(0, 10), rand(0, h), rand(2, 10), rand(4, 16)); }
+}, 256);
+const chainC = cnv(128, (g, w) => {
+  g.clearRect(0, 0, w, w); g.strokeStyle = 'rgba(170,175,178,1)'; g.lineWidth = 2;
+  for (let i = -w; i < w * 2; i += 16) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i + w, w); g.stroke(); g.beginPath(); g.moveTo(i, w); g.lineTo(i + w, 0); g.stroke(); }
+});
+const MW = {
+  dirt: std({ map: tex(dirtC, 1, 1), roughness: 1, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }),
+  chain: std({ map: tex(chainC, 1, 1), alphaTest: 0.4, side: THREE.DoubleSide, roughness: 0.5, metalness: 0.6 }),
+  barn: std({ map: T.wood, color: 0xb0412b, roughness: 0.9 }),
+  tin: std({ map: T.steel, color: 0x9a9c9e, roughness: 0.5, metalness: 0.65, envMap: ENV, envMapIntensity: 0.6 }),
+  rust: std({ color: 0x6b4a32, roughness: 0.85, metalness: 0.3 }),
+  canvas: std({ color: 0xd2cab6, roughness: 0.95, side: THREE.DoubleSide }),
+  olive: std({ color: 0x1e2318, roughness: 0.75, metalness: 0.25 }),
+  hay: std({ color: 0xb59a5a, roughness: 1 }),
+  stone: std({ map: T.concrete, color: 0xd0ccc2, roughness: 0.95 }),
+  rock: std({ map: T.concrete, color: 0x9a948a, roughness: 1, flatShading: true }),
+  pile: std({ map: T.concrete, color: 0x8f8a80, roughness: 1 }),
+  white: std({ map: T.wood, color: 0xece8de, roughness: 0.85 }),
+  trailer: std({ color: 0xd8d2c2, roughness: 0.6, metalness: 0.3 }),
+  yellow: std({ color: 0xc9971c, roughness: 0.6, metalness: 0.3 }),
+  water: std({ color: 0x18241f, roughness: 0.22, metalness: 0.05, envMap: ENV, envMapIntensity: 0.2, transparent: true, opacity: 0.97 }),
+  green: std({ color: 0x1d3326, roughness: 0.2, metalness: 0.05, envMap: ENV, envMapIntensity: 0.22, transparent: true, opacity: 0.97 }),
+  qfloor: std({ map: (() => { const t = T.concrete.clone(); t.repeat.set(18, 18); t.needsUpdate = true; return t; })(), color: 0xb3ab9b, roughness: 1, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }),
+  soil: std({ color: 0x5a4632, roughness: 1 }),
+  tape: std({ color: 0xd8b01a, roughness: 0.6 }),
+  hide: std({ color: 0x5a412b, roughness: 1 }),
+  beacon: new THREE.MeshBasicMaterial({ color: 0xff2a14, toneMapped: false }),
+};
+ENV_MATS.push(MW.tin, MW.water, MW.green);
+
+/* helpers */
+const gp = (x, z, rot) => { const g = new THREE.Group(); g.position.set(x, heightAt(x, z), z); g.rotation.y = rot || 0; scene.add(g); g.updateMatrixWorld(true); return g; };
+const wpos = (g, lx, lz) => { g.updateMatrixWorld(true); return new V3(lx, 0, lz).applyMatrix4(g.matrixWorld); };
+const yawOf = g => { let a = 0; for (let o = g; o && o !== scene; o = o.parent) a += o.rotation.y; return a; };
+const solidBox = (g, lx, lz, w, d) => { const c = wpos(g, lx, lz), sw = Math.abs(Math.sin(yawOf(g))) > 0.5; addBox(c.x, c.z, sw ? d : w, sw ? w : d); };
+const solidCircle = (g, lx, lz, r) => { const c = wpos(g, lx, lz); circles.push({ x: c.x, z: c.z, r }); };
+const lootAt = (g, lx, lz, label, time, extra) => { const c = wpos(g, lx, lz); return addLoot(c.x, c.z, label, null, time || 2.2, extra); };
+const facing = (p, tx, tz) => Math.round(Math.atan2(tx - p.x, tz - p.z) / (PI / 2)) * (PI / 2);
+const UP = new V3(0, 1, 0);
+function strut(a, b, r, mat) { const d = new V3().subVectors(b, a), m = addMesh(new THREE.CylinderGeometry(r, r, d.length(), 6), mat, (a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2); m.quaternion.setFromUnitVectors(UP, d.normalize()); return m; }
+function postSign(x, z, ry, w, h, mat) {
+  const y = heightAt(x, z), c = Math.cos(ry), s = Math.sin(ry);
+  addMesh(new THREE.PlaneGeometry(w, h), mat, x, y + 1.25 + h / 2, z, scene, { cast: false }).rotation.y = ry;
+  for (const o of [-w * 0.38, w * 0.38]) addMesh(B(0.1, 1.3 + h, 0.1), M.trunk, x + c * o - s * 0.06, y + (1.3 + h) / 2, z - s * o - c * 0.06);
+  circles.push({ x, z, r: 0.25 });
+}
+const roadSign = (name, sub) => signMat(384, 150, (c, w, hh) => {
+  c.fillStyle = '#3d3a32'; c.fillRect(0, 0, w, hh); c.fillStyle = '#5a5244'; c.fillRect(6, 6, w - 12, hh - 12);
+  c.fillStyle = '#ece4cc'; c.textAlign = 'center'; c.font = 'bold 40px Georgia, serif'; c.fillText(name.toUpperCase(), w / 2, 66, w - 30);
+  c.font = '24px Arial, sans-serif'; c.fillText(sub || '', w / 2, 116, w - 30);
+  speck(c, w, 1400, ['rgba(0,0,0,.3)', 'rgba(255,255,255,.08)'], 1, 3, 0.5, hh);
+});
+
+/* dirt roads draped over the land */
+function ribbon(pts, w, mat) {
+  const pos = [], uv = [], idx = []; let v = 0;
+  pts.forEach(([x, z], i) => {
+    const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)]; let dx = b[0] - a[0], dz = b[1] - a[1]; const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
+    if (i) v += Math.hypot(x - pts[i - 1][0], z - pts[i - 1][1]);
+    for (const sd of [-1, 1]) { const px = x - dz * w / 2 * sd, pz = z + dx * w / 2 * sd; pos.push(px, heightAt(px, pz) + 0.1, pz); uv.push(sd < 0 ? 0 : 1, v / 7); }
+    if (i) { const o = i * 2; idx.push(o - 2, o - 1, o, o - 1, o + 1, o); }
+  });
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals();
+  const m = new THREE.Mesh(g, mat); m.receiveShadow = true; scene.add(m); return m;
+}
+function dirtRoad(pts) {
+  const full = [];
+  for (let i = 0; i < pts.length - 1; i++) { const [ax, az] = pts[i], [bx, bz] = pts[i + 1], n = Math.max(1, Math.ceil(Math.hypot(bx - ax, bz - az) / 4)); for (let k = 0; k < n; k++) full.push([lerp(ax, bx, k / n), lerp(az, bz, k / n)]); }
+  full.push(pts[pts.length - 1]); DIRT.push(full);
+  for (const p of full) { const k = ckey(Math.floor(p[0] / 8), Math.floor(p[1] / 8)); let l = dirtCells.get(k); if (!l) dirtCells.set(k, (l = [])); l.push(p); }
+  for (let s = 0; s < full.length - 1; s += 36) { const seg = full.slice(s, Math.min(full.length, s + 37)), mid = seg[seg.length >> 1]; chunkAt(mid[0], mid[1]).objs.push(ribbon(seg, 3.8, MW.dirt)); }
+}
+// a spur from the nearest paved road to the place, with its name on a sign where it turns off;
+// south of the interstate everything hangs off the north-south road
+function spur(p, reach) {
+  const w = rand(-18, 18), r = reach || p.r;
+  if (p.z > 150 || Math.abs(p.x) < Math.abs(p.z) && p.z < 100) {
+    const sx = Math.sign(p.x), z0 = p.z + w * 0.3; dirtRoad([[sx * 5.5, z0], [p.x * 0.45, p.z + w], [p.x * 0.8, p.z + w * 0.4], [p.x - sx * r * 0.5, p.z]]);
+    postSign(sx * 7.6, z0 - 4.5, sx > 0 ? -PI / 2 : PI / 2, 2.2, 0.86, roadSign(p.name, p.sub));
+    return [p.x - sx * p.r, p.z];
+  }
+  const sz = Math.sign(p.z), x0 = p.x + w * 0.3; dirtRoad([[x0, sz * 5.5], [p.x + w, p.z * 0.45], [p.x + w * 0.4, p.z * 0.8], [p.x, p.z - sz * r * 0.5]]);
+  postSign(x0 + 4.5, sz * 7.6, sz > 0 ? PI : 0, 2.2, 0.86, roadSign(p.name, p.sub));
+  return [p.x, p.z - sz * p.r];
+}
+
+/* the land itself, out to the horizon past the fence */
+function groundCells() {
+  for (const c of chunks) { if (Math.abs(c.cx) < 160 && Math.abs(c.cz) < 160) continue; c.objs.push(groundPatch(c.cx, c.cz, CH, CH, 40, 40, -0.03)); }
+  const E = 960, F = 1560, span = F - E;
+  for (const [cx, cz, sx, sz] of [[0, -(E + span / 2), F * 2, span], [0, E + span / 2, F * 2, span], [-(E + span / 2), 0, span, E * 2], [E + span / 2, 0, span, E * 2]]) groundPatch(cx, cz, sx, sz, Math.round(sx / 24), Math.round(sz / 24), -0.06);
+}
+let lowCrownG = null;
+const lowCrowns = () => lowCrownG || (lowCrownG = [crownGeo([[0, 0.25, 0, 1.75]], 0.8), crownGeo([[0, 0.5, 0, 3.0]], 0.72)]);
+function wildTrees() {
+  const LOBC = crownGeo(blobRing(6, 0.5, 1.5, -0.5, 1.1, 1.0, 1.6, 1.25), 0.8), OAKC = crownGeo(blobRing(9, 1.0, 3.1, -0.4, 1.7, 1.5, 2.5, 2.1), 0.78);
+  const [LOBL, OAKL] = lowCrowns();
+  const lobTG = new THREE.CylinderGeometry(0.12, 0.21, 1, 6), oakTG = new THREE.CylinderGeometry(0.24, 0.42, 1, 7);
+  const GRASS_G = (() => { const planes = [0, PI / 3, 2 * PI / 3].map(a => { const pl = new THREE.PlaneGeometry(1, 0.6); pl.translate(0, 0.3, 0); pl.rotateY(a); return pl.toNonIndexed(); }); const g = mergeFlat(planes), n = g.attributes.normal; for (let i = 0; i < n.count; i++) n.setXYZ(i, 0, 1, 0); return g; })();
+  const m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new V3(), p = new V3(), col = new THREE.Color();
+  const mk = (geo, mat, n, list) => { const im = new THREE.InstancedMesh(geo, mat, Math.max(1, n)); im.count = n; im.frustumCulled = false; im.receiveShadow = true; scene.add(im); list.push(im); return im; };
+  // the far crown shares the near one's per-tree transforms and tints
+  const twin = (geo, src, list) => { const im = new THREE.InstancedMesh(geo, src.material, 1); im.instanceMatrix = src.instanceMatrix; im.instanceColor = src.instanceColor; im.count = src.count; im.frustumCulled = false; im.receiveShadow = true; scene.add(im); list.push(im); return im; };
+  // trees go in 80 m cells, finer than the chunks, so the detailed crowns only draw close by
+  for (const c0 of chunks) for (const [ox, oz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+    if (Math.abs(c0.cx) < 160 && Math.abs(c0.cz) < 160) continue;
+    const cx = c0.cx + ox * 40, cz = c0.cz + oz * 40;
+    const c = { cx, cz, half: 40, objs: [], trunks: [], hi: [], lo: [], grass: [], inst: [], vis: true, d: 0, box: new THREE.Box3(new V3(cx - 40, -16, cz - 40), new V3(cx + 40, 46, cz + 40)) };
+    tcells.push(c);
+    const lob = [], oak = [];
+    for (let i = 0; i < 140; i++) {
+      const x = cx + rand(-40, 40), z = cz + rand(-40, 40);
+      if (Math.random() > forestAt(x, z) * 0.85 + 0.012 || !wildOK(x, z)) continue;
+      (Math.random() < 0.78 ? lob : oak).push([x, z]);
+    }
+    if (lob.length) {
+      const T1 = mk(lobTG, M.bark, lob.length, c.trunks), C1 = mk(LOBC, M.needles, lob.length, c.hi);
+      lob.forEach(([x, z], i) => {
+        const k = rand(0.85, 1.35), H = rand(10, 16) * k, y0 = heightAt(x, z) - 0.2; q.setFromAxisAngle(UP, Math.random() * TAU);
+        p.set(x, y0 + H / 2, z); s.set(k, H, k); m.compose(p, q, s); T1.setMatrixAt(i, m);
+        const cs = rand(0.9, 1.35) * k; p.set(x, y0 + H * 0.88, z); s.set(cs, cs * rand(0.9, 1.2), cs); m.compose(p, q, s); C1.setMatrixAt(i, m);
+        col.setRGB(rand(0.8, 1), rand(0.82, 1.05), rand(0.72, 0.92)); C1.setColorAt(i, col);
+        circles.push({ x, z, r: 0.25 * k });
+      });
+      twin(LOBL, C1, c.lo);
+    }
+    if (oak.length) {
+      const T2 = mk(oakTG, M.bark, oak.length, c.trunks), C2 = mk(OAKC, M.leaf, oak.length, c.hi);
+      oak.forEach(([x, z], i) => {
+        const k = rand(0.8, 1.3), H = rand(3.4, 5) * k, y0 = heightAt(x, z) - 0.2; q.setFromAxisAngle(UP, Math.random() * TAU);
+        p.set(x, y0 + H / 2, z); s.set(k, H, k); m.compose(p, q, s); T2.setMatrixAt(i, m);
+        const cs = rand(0.85, 1.25) * k; p.set(x, y0 + H + cs, z); s.set(cs, cs, cs); m.compose(p, q, s); C2.setMatrixAt(i, m);
+        col.setRGB(rand(0.76, 1), rand(0.78, 1.05), rand(0.7, 0.92)); C2.setColorAt(i, col);
+        circles.push({ x, z, r: 0.4 * k });
+      });
+      twin(OAKL, C2, c.lo);
+    }
+    for (const im of c.trunks.concat(c.hi)) { im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true; }
+    // tall grass in the open fields
+    const gr = [];
+    for (let i = 0; i < 175 && gr.length < 105; i++) { const x = cx + rand(-40, 40), z = cz + rand(-40, 40); if (forestAt(x, z) > 0.55 || Math.min(Math.abs(x), Math.abs(z)) < 6 || (z > 112 && z < 146) || onDirt(x, z, 1) || nearPOI(x, z, -8)) continue; gr.push([x, z]); }
+    if (gr.length) {
+      const G2 = new THREE.InstancedMesh(GRASS_G, M.grassClump, gr.length); G2.frustumCulled = false; G2.receiveShadow = true;
+      gr.forEach(([x, z], i) => { const k = rand(0.7, 1.4), tall = Math.random() < 0.25; q.setFromAxisAngle(UP, Math.random() * TAU); p.set(x, heightAt(x, z) - 0.04, z); s.set(k, k * (tall ? rand(1.5, 2.4) : rand(0.8, 1.3)), k); m.compose(p, q, s); G2.setMatrixAt(i, m); col.setRGB(rand(0.85, 1.12), rand(0.85, 1.05), rand(0.65, 0.88)); G2.setColorAt(i, col); });
+      G2.instanceMatrix.needsUpdate = true; if (G2.instanceColor) G2.instanceColor.needsUpdate = true; scene.add(G2); c.grass.push(G2);
+    }
+  }
+  // past the fence: the rest of Georgia, pine woods going off into the haze
+  const out = [];
+  for (let i = 0; i < 9000 && out.length < 2800; i++) {
+    const x = rand(-1500, 1500), z = rand(-1500, 1500);
+    if (Math.max(Math.abs(x), Math.abs(z)) < WORLD + 14 || Math.min(Math.abs(x), Math.abs(z)) < 10 || (z > 106 && z < 152)) continue;
+    if (Math.random() > forestAt(x, z) * 0.9 + 0.05) continue;
+    out.push([x, z]);
+  }
+  const oT = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.12, 0.2, 1, 5), M.bark, out.length), oA = new THREE.InstancedMesh(new THREE.ConeGeometry(1, 1, 7), M.needles, out.length), oB = new THREE.InstancedMesh(new THREE.ConeGeometry(1, 1, 7), M.needles, out.length);
+  out.forEach(([x, z], i) => {
+    const k = rand(0.9, 1.6), y0 = heightAt(x, z) - 0.2, th = 5 * k; q.setFromAxisAngle(UP, Math.random() * TAU);
+    p.set(x, y0 + th / 2, z); s.set(k, th, k); m.compose(p, q, s); oT.setMatrixAt(i, m);
+    p.set(x, y0 + th + 2.2 * k, z); s.set(2.3 * k, 6 * k, 2.3 * k); m.compose(p, q, s); oA.setMatrixAt(i, m);
+    p.set(x, y0 + th + 5.6 * k, z); s.set(1.5 * k, 4.4 * k, 1.5 * k); m.compose(p, q, s); oB.setMatrixAt(i, m);
+    col.setRGB(rand(0.75, 0.95), rand(0.8, 1.0), rand(0.7, 0.9)); oA.setColorAt(i, col); oB.setColorAt(i, col);
+  });
+  for (const im of [oT, oA, oB]) { im.frustumCulled = false; im.receiveShadow = true; im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true; scene.add(im); }
+}
+
+/* places */
+let farmN = 0;
+function postRail(x0, z0, x1, z1, gap) {
+  const L = Math.hypot(x1 - x0, z1 - z0), n = Math.max(1, Math.round(L / 3)), a = Math.atan2(x1 - x0, z1 - z0);
+  for (let i = 0; i <= n; i++) {
+    const t = i / n; if (gap && Math.abs(t - 0.5) * L < gap) continue;
+    const x = lerp(x0, x1, t), z = lerp(z0, z1, t); addMesh(B(0.14, 1.3, 0.14), M.trunk, x, heightAt(x, z) + 0.65, z); circles.push({ x, z, r: 0.12 });
+    if (i < n && !(gap && Math.abs(t + 0.5 / n - 0.5) * L < gap)) {
+      const xm = lerp(x0, x1, t + 0.5 / n), zm = lerp(z0, z1, t + 0.5 / n);
+      for (const y of [0.55, 1.05]) addMesh(B(0.06, 0.1, L / n), M.wood, xm, heightAt(xm, zm) + y, zm).rotation.y = a;
+      for (const f of [0.33, 0.67]) circles.push({ x: lerp(x0, x1, t + f / n), z: lerp(z0, z1, t + f / n), r: 0.12 });
+    }
+  }
+}
+function barn(x, z, rot) {
+  const g = gp(x, z, rot);
+  addMesh(boxUV(12, 5.5, 16, 3), MW.barn, 0, 2.75, 0, g);
+  const sh = new THREE.Shape(); [[-6.4, 0], [6.4, 0], [5.0, 2.3], [0, 3.8], [-5.0, 2.3]].forEach((q, i) => (i ? sh.lineTo(q[0], q[1]) : sh.moveTo(q[0], q[1])));
+  const rg = new THREE.ExtrudeGeometry(sh, { depth: 16.8, bevelEnabled: false }); rg.translate(0, 0, -8.4);
+  addMesh(rg, MW.tin, 0, 5.5, 0, g);
+  addMesh(B(4.4, 4.4, 0.14), M.door, 0, 2.2, 8.04, g);
+  for (const s of [-1, 1]) addMesh(B(0.14, 5.9, 0.06), MW.white, 0, 2.2, 8.12, g).rotation.z = s * 0.79;
+  addMesh(B(1.7, 1.7, 0.1), M.door, 0, 6.6, 8.05, g);
+  solidBox(g, 0, 0, 12.2, 16.2);
+  return g;
+}
+function silo(x, z) {
+  addMesh(new THREE.CylinderGeometry(2.4, 2.4, 12, 18), MW.tin, x, heightAt(x, z) + 6, z);
+  addMesh(new THREE.SphereGeometry(2.45, 18, 8, 0, TAU, 0, PI / 2), MW.tin, x, heightAt(x, z) + 12, z);
+  circles.push({ x, z, r: 2.5 });
+}
+function tractor(x, z, rot) {
+  const g = gp(x, z, rot), paint = std({ color: pick([0x7a1a12, 0x2f5a2a, 0x1e3a6a]), roughness: 0.55, metalness: 0.3 });
+  addMesh(B(1.3, 1.0, 2.6), paint, 0, 1.3, 0.3, g); addMesh(B(1.1, 1.4, 1.1), paint, 0, 2.2, -0.6, g); addMesh(B(1.0, 0.06, 1.2), M.void, 0, 2.95, -0.6, g);
+  for (const s of [-1, 1]) {
+    const bw = new THREE.CylinderGeometry(0.85, 0.85, 0.5, 14); bw.rotateZ(PI / 2); addMesh(bw, M.rubber, s * 0.95, 0.85, -0.7, g);
+    const fw = new THREE.CylinderGeometry(0.45, 0.45, 0.3, 12); fw.rotateZ(PI / 2); addMesh(fw, M.rubber, s * 0.7, 0.45, 1.3, g);
+  }
+  addMesh(new THREE.CylinderGeometry(0.06, 0.06, 1.2, 6), M.metal, 0.4, 2.5, 1.0, g);
+  solidCircle(g, 0, -0.4, 1.4); solidCircle(g, 0, 1.0, 1.0);
+  return g;
+}
+function farm(p) {
+  const [ex, ez] = spur(p), rot = facing(p, ex, ez), g = gp(p.x, p.z, rot);
+  const h = wpos(g, -11, 6); house(200 + farmN++, h.x, h.z, rot, { openDoor: Math.random() < 0.5 });
+  const b = wpos(g, 13, -6); barn(b.x, b.z, rot);
+  const s = wpos(g, 24, -14); silo(s.x, s.z);
+  const t = wpos(g, 2, -18); tractor(t.x, t.z, rot + rand(-0.4, 0.4));
+  for (let i = 0; i < 7; i++) {
+    const c = wpos(g, rand(-24, 26), rand(-36, -28)), bale = new THREE.CylinderGeometry(0.75, 0.75, 1.25, 14); bale.rotateZ(PI / 2);
+    addMesh(bale, MW.hay, c.x, heightAt(c.x, c.z) + 0.72, c.z).rotation.y = Math.random() * TAU; circles.push({ x: c.x, z: c.z, r: 0.9 });
+  }
+  const f0 = wpos(g, -30, -24), f1 = wpos(g, 30, -24), f2 = wpos(g, 30, -46), f3 = wpos(g, -30, -46);
+  postRail(f0.x, f0.z, f1.x, f1.z, 3); postRail(f1.x, f1.z, f2.x, f2.z); postRail(f2.x, f2.z, f3.x, f3.z); postRail(f3.x, f3.z, f0.x, f0.z);
+  lootAt(g, 13, 2.8, 'Search the barn', 2.4);
+  lootAt(g, 2, -15.6, 'Search the tractor toolbox', 1.6);
+  return g;
+}
+function church(p) {
+  const [ex, ez] = spur(p), rot = facing(p, ex, ez), g = gp(p.x, p.z, rot);
+  addMesh(boxUV(9, 6.5, 17, 3), MW.white, 0, 3.25, 0, g);
+  const sh = new THREE.Shape(); [[-5.1, 0], [5.1, 0], [0, 4.2]].forEach((q, i) => (i ? sh.lineTo(q[0], q[1]) : sh.moveTo(q[0], q[1])));
+  const rg = new THREE.ExtrudeGeometry(sh, { depth: 17.6, bevelEnabled: false }); rg.translate(0, 0, -8.8); addMesh(rg, M.roof, 0, 6.5, 0, g);
+  addMesh(boxUV(3.2, 5, 3.2, 2), MW.white, 0, 9, 7.2, g);
+  const sp = new THREE.ConeGeometry(2.3, 8, 4); sp.rotateY(PI / 4); addMesh(sp, M.roof, 0, 15.5, 7.2, g);
+  addMesh(B(0.18, 1.6, 0.18), M.metal, 0, 20.3, 7.2, g); addMesh(B(0.9, 0.16, 0.16), M.metal, 0, 20.6, 7.2, g);
+  addMesh(B(1.8, 2.8, 0.1), M.door, 0, 1.4, 8.54, g);
+  for (const s of [-1, 1]) for (let i = 0; i < 4; i++) addMesh(B(0.08, 2.4, 1.0), M.glass, s * 4.53, 3.4, -5.5 + i * 3.4, g, { cast: false });
+  solidBox(g, 0, 0, 9.2, 17.2);
+  addMesh(new THREE.PlaneGeometry(3.2, 1.6), signMat(512, 256, (c, w, hh) => {
+    c.fillStyle = '#efeadc'; c.fillRect(0, 0, w, hh); c.fillStyle = '#1d2a44'; c.textAlign = 'center';
+    c.font = 'bold 40px Georgia, serif'; c.fillText('PELL CREEK BAPTIST', w / 2, 60); c.font = '28px Georgia, serif'; c.fillText('EST. 1887', w / 2, 100);
+    c.font = 'bold 44px Arial, sans-serif'; c.fillText('HE IS RISEN', w / 2, 170); c.font = '26px Arial'; c.fillText('ALL ARE WELCOME', w / 2, 220);
+    speck(c, w, 1500, ['rgba(0,0,0,.3)'], 1, 3, 0.5, hh);
+  }), 5.5, 1.6, 12, g);
+  addMesh(B(0.12, 1.4, 0.12), M.wood, 4.1, 0.7, 12, g); addMesh(B(0.12, 1.4, 0.12), M.wood, 6.9, 0.7, 12, g); solidCircle(g, 5.5, 12, 0.3);
+  // the graveyard behind, some of it dug up from the inside
+  for (let r = 0; r < 5; r++) for (let k = 0; k < 9; k++) {
+    const lx = -11 + k * 2.7 + rand(-0.3, 0.3), lz = -14 - r * 3.2 + rand(-0.3, 0.3);
+    if (Math.random() < 0.14) { addMesh(B(1.0, 0.05, 2.1), M.void, lx, 0.03, lz - 1.2, g, { cast: false, solid: false }); addMesh(new THREE.SphereGeometry(0.9, 8, 6), MW.soil, lx + 1.0, 0.0, lz - 1.2, g).scale.set(0.6, 0.35, 1.3); }
+    const st = addMesh(B(0.6, rand(0.6, 1.0), 0.16), MW.stone, lx, 0.4, lz, g); st.rotation.set(rand(-0.12, 0.12), rand(-0.1, 0.1), rand(-0.1, 0.1)); solidCircle(g, lx, lz, 0.35);
+  }
+  lootAt(g, 0, 9.6, 'Search the church steps', 1.8, { fixed: [['bandage', 1]] });
+  return g;
+}
+function trailers(p) {
+  const [ex, ez] = spur(p), rot = facing(p, ex, ez), g = gp(p.x, p.z, rot);
+  const spots = [[-20, -10, 0], [-7, -14, 0.05], [7, -12, -0.04], [20, -9, 0], [-24, 12, PI / 2], [24, 12, -PI / 2], [0, 18, PI]];
+  spots.forEach(([lx, lz, r], i) => {
+    const tg = new THREE.Group(); tg.position.set(lx, 0, lz); tg.rotation.y = r; g.add(tg);
+    const burned = i === 3, tipped = i === 5;
+    const body = addMesh(boxUV(4.2, 2.7, 14, 2), burned ? M.burnt : MW.trailer, 0, 2.0, 0, tg); if (tipped) { body.rotation.z = 1.35; body.position.y = 2.2; body.position.x = 1.1; }
+    if (!tipped) {
+      for (const s of [-1, 1]) addMesh(B(0.06, 0.7, 9), M.void, s * 2.13, 2.4, 0.6, tg, { cast: false });
+      addMesh(B(0.06, 2.0, 0.9), M.door, 2.13, 1.6, -3.5, tg); addMesh(B(1.0, 0.6, 1.2), M.wood, 2.8, 0.3, -3.5, tg);
+      for (let k = -5; k <= 5; k += 2.5) addMesh(B(0.4, 0.66, 0.4), M.block, 0, 0.33, k, tg);
+    }
+    const c = wpos(tg, tipped ? 1.6 : 0, 0), sw = Math.abs(Math.sin(r + rot)) > 0.5; addBox(c.x, c.z, sw ? 14.2 : (tipped ? 3.6 : 4.4), sw ? (tipped ? 3.6 : 4.4) : 14.2);
+    if (!burned && !tipped && i % 2 === 0) { const l = wpos(tg, 3.6, -3.5); addLoot(l.x, l.z, 'Search the trailer', null, 2.4); }
+  });
+  const grill = wpos(g, 4, 4); addMesh(new THREE.SphereGeometry(0.35, 10, 6), M.metal, grill.x, heightAt(grill.x, grill.z) + 0.8, grill.z); circles.push({ x: grill.x, z: grill.z, r: 0.4 });
+  const sg = wpos(g, 0, 32);
+  postSign(sg.x, sg.z, rot, 3, 1.2, signMat(512, 200, (c, w, hh) => { c.fillStyle = '#28462a'; c.fillRect(0, 0, w, hh); c.fillStyle = '#e8e2c8'; c.textAlign = 'center'; c.font = 'bold 56px Georgia, serif'; c.fillText('Shady Pines', w / 2, 90); c.font = '30px Arial'; c.fillText('MOBILE HOME PARK · NO VACANCY', w / 2, 150); }));
+  return g;
+}
+function camp(p) {
+  const [ex, ez] = spur(p), rot = facing(p, ex, ez), g = gp(p.x, p.z, rot);
+  // the fence, with the gate facing the road
+  const W2 = 70, D2 = 58;
+  const fence = (ax, az, bx, bz, gap) => {
+    const L = Math.hypot(bx - ax, bz - az), segs = gap ? [[0, 0.5 - gap / L / 2], [0.5 + gap / L / 2, 1]] : [[0, 1]];
+    for (const [t0, t1] of segs) {
+      const x0 = lerp(ax, bx, t0), z0 = lerp(az, bz, t0), x1 = lerp(ax, bx, t1), z1 = lerp(az, bz, t1), l = Math.hypot(x1 - x0, z1 - z0), n = Math.ceil(l / 3);
+      const pl = new THREE.PlaneGeometry(l, 2.6), uv = pl.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * l / 1.2, uv.getY(i) * 2.6 / 1.2);
+      addMesh(pl, MW.chain, (x0 + x1) / 2, 1.3, (z0 + z1) / 2, g, { cast: false, solid: false }).rotation.y = -Math.atan2(z1 - z0, x1 - x0);
+      for (let k = 0; k <= n; k++) addMesh(B(0.08, 2.8, 0.08), M.metal, lerp(x0, x1, k / n), 1.4, lerp(z0, z1, k / n), g);
+      for (let k = 0; k <= n * 8; k++) solidCircle(g, lerp(x0, x1, k / (n * 8)), lerp(z0, z1, k / (n * 8)), 0.12);
+    }
+  };
+  fence(-W2, D2, W2, D2, 9); fence(W2, D2, W2, -D2); fence(W2, -D2, -W2, -D2); fence(-W2, -D2, -W2, D2);
+  const sideways = Math.abs(Math.sin(rot)) > 0.5;
+  // rows of relief tents, some of them torn down
+  for (let r = 0; r < 4; r++) for (let k = 0; k < 6; k++) {
+    const lx = -45 + k * 18, lz = -40 + r * 19, down = Math.random() < 0.2, tg = new THREE.Group(); tg.position.set(lx, 0, lz); tg.rotation.y = rand(-0.05, 0.05); g.add(tg);
+    if (down) addMesh(B(4.8, 0.3, 7.2), MW.canvas, 0, 0.15, 0, tg).rotation.z = rand(-0.05, 0.05);
+    else {
+      addMesh(B(4.6, 1.8, 7), MW.canvas, 0, 0.9, 0, tg);
+      const sh = new THREE.Shape(); [[-2.4, 0], [2.4, 0], [0, 1.4]].forEach((q, i) => (i ? sh.lineTo(q[0], q[1]) : sh.moveTo(q[0], q[1])));
+      const rg = new THREE.ExtrudeGeometry(sh, { depth: 7.2, bevelEnabled: false }); rg.translate(0, 0, -3.6); addMesh(rg, MW.canvas, 0, 1.8, 0, tg);
+      addMesh(B(1.2, 1.6, 0.05), M.void, 0, 0.85, 3.52, tg, { cast: false });
+      const c = wpos(tg, 0, 0); addBox(c.x, c.z, sideways ? 7.2 : 4.8, sideways ? 4.8 : 7.2);
+      if (Math.random() < 0.3) { const l = wpos(tg, 0, 4.4); addLoot(l.x, l.z, 'Search the tent', null, 2.0); }
+    }
+  }
+  // the medical tent where somebody hid a bite, the trucks, the floodlights, the generator
+  addMesh(B(9, 3.2, 15), MW.canvas, 30, 1.6, 40, g); const mc = wpos(g, 30, 40); addBox(mc.x, mc.z, sideways ? 15.4 : 9.4, sideways ? 9.4 : 15.4);
+  addMesh(new THREE.PlaneGeometry(2.4, 2.4), signMat(256, 256, (c, w) => { c.fillStyle = '#fff'; c.fillRect(0, 0, w, w); c.fillStyle = '#c21d12'; c.fillRect(w * 0.38, w * 0.12, w * 0.24, w * 0.76); c.fillRect(w * 0.12, w * 0.38, w * 0.76, w * 0.24); }), 30, 2.2, 47.56, g, { cast: false, solid: false });
+  addMesh(B(1.6, 0.8, 0.8), M.wood, 30, 0.4, 49.4, g); solidCircle(g, 30, 49.4, 0.6);
+  const dp = wpos(g, 30.3, 49.4); addDocSpot('roster', dp.x, heightAt(dp.x, dp.z) + 0.82, dp.z);
+  for (const [lx, lz, r] of [[-52, 48, 0.3], [52, 44, -0.2], [12, 49, 1.4]]) {
+    const tg = new THREE.Group(); tg.position.set(lx, 0, lz); tg.rotation.y = r; g.add(tg);
+    addMesh(B(2.4, 2.0, 2.4), MW.olive, 0, 1.4, 3.0, tg); addMesh(B(2.5, 0.9, 5.4), MW.olive, 0, 1.0, -1.2, tg); addMesh(B(2.2, 0.8, 0.06), M.glass, 0, 1.9, 4.22, tg, { cast: false });
+    const cov = new THREE.CylinderGeometry(1.3, 1.3, 5.2, 12, 1, true, 0, PI); cov.rotateZ(PI / 2); cov.rotateY(PI / 2); addMesh(cov, MW.canvas, 0, 1.6, -1.2, tg);
+    for (const s of [-1, 1]) for (const wz of [3, -0.5, -2.8]) { const wg = new THREE.CylinderGeometry(0.5, 0.5, 0.35, 12); wg.rotateZ(PI / 2); addMesh(wg, M.rubber, s * 1.2, 0.5, wz, tg); }
+    solidCircle(tg, 0, 2.2, 1.5); solidCircle(tg, 0, -0.6, 1.5); solidCircle(tg, 0, -3.0, 1.5);
+  }
+  for (const [lx, lz] of [[-60, -48], [60, 48], [-60, 48]]) { addMesh(new THREE.CylinderGeometry(0.15, 0.2, 8, 6), M.metal, lx, 4, lz, g); addMesh(B(1.6, 0.8, 0.6), M.metal, lx, 8.2, lz, g); solidCircle(g, lx, lz, 0.3); }
+  for (const s of [-1, 1]) for (let k = 0; k < 8; k++) addMesh(boxUV(0.55, 0.22, 0.32, 0.5), M.sandbag, s * (6 + k * 0.56), 0.11 + (k % 2) * 0.22, D2 + 2, g);
+  addMesh(B(1.8, 1.2, 1.1), MW.olive, 40, 0.6, -20, g); solidCircle(g, 40, -20, 1.2);
+  const fc = wpos(g, 40, -18.2); fuelCan(fc.x, fc.z, 'by the generator at Camp Whitlock'); fuels[fuels.length - 1].poi = 'camp';
+  for (const [lx, lz] of [[-50, -20], [-14, 24], [20, -30], [46, 10]]) { addMesh(boxUV(1.0, 0.8, 1.4, 0.8), MW.olive, lx, 0.4, lz, g); solidCircle(g, lx, lz, 0.75); lootAt(g, lx + 1.2, lz, 'Search the supply crate', 2.0, { fixed: [['ammo', 6]] }); }
+  const sg = wpos(g, 14, D2 + 6);
+  postSign(sg.x, sg.z, rot, 3.2, 1.4, signMat(512, 224, (c, w, hh) => { c.fillStyle = '#e8e4d8'; c.fillRect(0, 0, w, hh); c.fillStyle = '#20324e'; c.fillRect(0, 0, w, 64); c.fillStyle = '#fff'; c.textAlign = 'center'; c.font = 'bold 36px Arial'; c.fillText('FEMA · GEORGIA EMA', w / 2, 44); c.fillStyle = '#1b1b1b'; c.font = 'bold 40px Arial'; c.fillText('CAMP WHITLOCK', w / 2, 120); c.font = '26px Arial'; c.fillText('RELIEF CENTER · ALL ARRIVALS SCREENED', w / 2, 170); speck(c, w, 1500, ['rgba(0,0,0,.25)'], 1, 3, 0.5, hh); }));
+  return g;
+}
+// walk out from the middle until the ground rises above the water
+function shoreAt(p, wl) { let q = 0; while (q < p.r && heightAt(p.x + q, p.z) < wl) q += 0.5; return q; }
+function reservoir(p) {
+  spur(p, 2 * (p.lake + 14));
+  const wl = -1.3, shore = shoreAt(p, wl), wm = new THREE.Mesh(new THREE.CircleGeometry(shore + 14, 56), MW.water);
+  wm.rotation.x = -PI / 2; wm.position.set(p.x, wl, p.z); wm.receiveShadow = true; scene.add(wm); chunkAt(p.x, p.z).objs.push(wm);
+  circles.push({ x: p.x, z: p.z, r: shore - 1.4 });
+  // the pump house on the shore, with the sampling report on the step
+  const a = 0.3, hr = shore + 16, hx = p.x + Math.sin(a) * hr, hz = p.z + Math.cos(a) * hr, g = gp(hx, hz, a); p.hut = [hx, hz];
+  addMesh(boxUV(4.2, 3.2, 5.2, 2), M.block, 0, 1.6, 0, g); addMesh(B(4.8, 0.3, 5.8), M.concrete, 0, 3.35, 0, g); addMesh(B(1.0, 2.1, 0.08), M.door, 0, 1.05, 2.64, g);
+  solidBox(g, 0, 0, 4.4, 5.4);
+  addMesh(B(0.8, 0.7, 0.6), M.wood, 1.8, 0.35, 3.4, g); solidCircle(g, 1.8, 3.4, 0.45); const d = wpos(g, 1.8, 3.4); addDocSpot('reservoir', d.x, heightAt(d.x, d.z) + 0.72, d.z);
+  lootAt(g, -1.2, 3.6, 'Search the pump house', 2.0);
+  const sg = wpos(g, -3.6, 5.4);
+  postSign(sg.x, sg.z, a, 1.6, 1.0, signMat(256, 160, (c, w, hh) => { c.fillStyle = '#e8e4d8'; c.fillRect(0, 0, w, hh); c.fillStyle = '#b21e14'; c.textAlign = 'center'; c.font = 'bold 34px Arial'; c.fillText('NO SWIMMING', w / 2, 60); c.fillStyle = '#222'; c.font = '20px Arial'; c.fillText('MILLBROOK WATER SUPPLY', w / 2, 110); }));
+  // the intake pipe running out under the water
+  const pi = new THREE.CylinderGeometry(0.35, 0.35, 22, 10); pi.rotateX(PI / 2); addMesh(pi, MW.rust, p.x + Math.sin(a) * (shore + 1), wl + 0.2, p.z + Math.cos(a) * (shore + 1)).rotation.y = a;
+}
+function trench(p) {
+  const [ex, ez] = spur(p), rot = facing(p, ex, ez), g = gp(p.x, p.z, rot);
+  addMesh(B(6, 0.04, 44), M.void, 0, 0.03, 0, g, { cast: false, solid: false });
+  for (const s of [-1, 1]) for (let k = -20; k <= 20; k += 4) addMesh(new THREE.SphereGeometry(2.0, 10, 6), MW.soil, s * 5.2, 0, k + rand(-1, 1), g).scale.set(1.0, 0.45, 1.4);
+  for (const s of [-1, 1]) solidBox(g, s * 5.2, 0, 3, 44);
+  // the deer, half under the lime
+  for (let i = 0; i < 16; i++) {
+    const tg = new THREE.Group(); tg.position.set(rand(-2.4, 2.4), 0.25, rand(-19, 19)); tg.rotation.set(rand(-0.3, 0.3), Math.random() * TAU, PI / 2 + rand(-0.3, 0.3)); g.add(tg);
+    addMesh(B(0.5, 1.4, 0.45), MW.hide, 0, 0, 0, tg); for (const s of [-1, 1]) addMesh(B(0.07, 0.7, 0.07), MW.hide, 0.3, s * 0.45, 0.1, tg);
+  }
+  const ex2 = new THREE.Group(); ex2.position.set(9, 0, 10); ex2.rotation.y = -0.6; g.add(ex2);
+  addMesh(B(3, 0.9, 4.2), M.rubber, 0, 0.45, 0, ex2); addMesh(B(2.8, 1.4, 3.2), MW.yellow, 0, 1.6, -0.3, ex2); addMesh(B(1.3, 1.5, 1.4), MW.yellow, -0.7, 3.0, 0.6, ex2); addMesh(B(1.2, 1.2, 0.05), M.glass, -0.7, 3.1, 1.32, ex2, { cast: false });
+  addMesh(B(0.5, 0.5, 5.5), MW.yellow, 0.6, 3.4, 3.6, ex2).rotation.x = -0.6; addMesh(B(0.4, 0.4, 3.8), MW.yellow, 0.6, 3.0, 7.2, ex2).rotation.x = 0.9;
+  addMesh(B(1.4, 0.9, 1.0), MW.rust, 0.6, 1.0, 8.2, ex2);
+  solidCircle(ex2, 0, 0, 2.4); solidCircle(ex2, 0.6, 8.2, 0.8);
+  lootAt(ex2, 2.4, 0.6, 'Search the excavator cab', 1.8);
+  for (let k = -22; k <= 22; k += 4.4) for (const s of [-1, 1]) { addMesh(B(0.06, 1.0, 0.06), M.wood, s * 8, 0.5, k, g); if (k < 22) addMesh(B(0.02, 0.08, 4.4), MW.tape, s * 8, 0.9, k + 2.2, g, { cast: false }); }
+}
+const HELI = { x: 0, z: 0, smoke: [] };
+function heliCrash(p) {
+  const g = gp(p.x, p.z, rand(0, TAU));
+  addMesh(new THREE.PlaneGeometry(26, 26), M.blob, 0, 0.05, 0, g, { cast: false, solid: false }).rotation.x = -PI / 2;
+  const body = new THREE.Group(); body.position.set(0, 1.2, 0); body.rotation.set(0.12, 0, 0.5); g.add(body);
+  const fus = new THREE.CylinderGeometry(1.35, 1.2, 7.5, 14); fus.rotateX(PI / 2); addMesh(fus, MW.olive, 0, 0, 0, body);
+  const nose = new THREE.SphereGeometry(1.3, 14, 10); nose.scale(1, 0.9, 1.1); addMesh(nose, MW.olive, 0, 0, 3.8, body);
+  addMesh(new THREE.SphereGeometry(1.0, 12, 8, 0, TAU, 0, PI / 2), M.glass, 0, 0.3, 4.1, body).rotation.x = 0.9;
+  const boom = new THREE.CylinderGeometry(0.35, 0.65, 7, 10); boom.rotateX(PI / 2); addMesh(boom, MW.olive, 0, 0.6, -7.0, body).rotation.y = 0.35;
+  addMesh(B(0.15, 2.2, 1.4), MW.olive, 1.2, 1.4, -10.2, body);
+  for (let i = 0; i < 4; i++) { const a = i * PI / 2 + 0.4, bl = addMesh(B(0.5, 0.06, 7.5), M.gun, Math.sin(a) * 2.8, 1.5, Math.cos(a) * 2.8, body); bl.rotation.set(rand(-0.25, 0.15), a, rand(-0.2, 0.2)); }
+  for (const [lx, lz] of [[0, 0], [0, -4.5], [1.5, -8]]) solidCircle(g, lx, lz, 1.7);
+  lootAt(g, 2.6, 1.5, 'Search the helicopter', 2.4, { fixed: [['ammo', 14], ['bandage', 1]] });
+  HELI.x = p.x; HELI.z = p.z;
+}
+let towerLight = null;
+function cellTower(p) {
+  const x = p.x, z = p.z, y0 = heightAt(x, z), Hh = 46;
+  for (let i = 0; i < 3; i++) { const a = i * TAU / 3; strut(new V3(x + Math.sin(a) * 2.6, y0, z + Math.cos(a) * 2.6), new V3(x + Math.sin(a) * 0.5, y0 + Hh, z + Math.cos(a) * 0.5), 0.1, M.metal); circles.push({ x: x + Math.sin(a) * 2.6, z: z + Math.cos(a) * 2.6, r: 0.3 }); }
+  for (let y = 4; y < Hh; y += 4.5) { const r = lerp(2.6, 0.5, y / Hh); for (let i = 0; i < 3; i++) { const a = i * TAU / 3, b = a + TAU / 3; strut(new V3(x + Math.sin(a) * r, y0 + y, z + Math.cos(a) * r), new V3(x + Math.sin(b) * r, y0 + y, z + Math.cos(b) * r), 0.04, M.metal); } }
+  for (let i = 0; i < 3; i++) { const a = i * TAU / 3 + 0.5; addMesh(B(0.5, 2.0, 0.15), MW.white, x + Math.sin(a) * 1.1, y0 + Hh - 3, z + Math.cos(a) * 1.1).rotation.y = a; }
+  towerLight = new THREE.Mesh(new THREE.SphereGeometry(0.35, 8, 6), MW.beacon); towerLight.position.set(x, y0 + Hh + 0.6, z); scene.add(towerLight);
+  const g = gp(x, z, 0);
+  addMesh(boxUV(3, 2.6, 3.6, 2), M.block, 5, 1.3, 4, g); addMesh(B(0.9, 2.0, 0.06), M.door, 5, 1.0, 5.83, g); solidBox(g, 5, 4, 3.2, 3.8);
+  lootAt(g, 5, 6.6, 'Search the equipment shed', 1.8, { fixed: [['battery', 1]] });
+}
+// the quarry the survivors wrote about, and the old logging road out the back of it
+const GATE = { x: 0, z: 0 };
+function quarry(p) {
+  spur(p);
+  const lz = p.z - 30; GATE.x = WORLD - 3; GATE.z = lz;
+  dirtRoad([[p.x + p.r * 0.75, p.z + 12], [p.x + p.r + 30, p.z - 4], [790, p.z - 26], [850, lz + 6], [WORLD - 1, lz]]);
+  // a pit pond, boulders on the benches, gravel piles, the conveyor and a haul truck
+  // bare rock and gravel over the benches, down to the green water at the bottom
+  const fl = new THREE.RingGeometry(3, p.r * 0.95, 72, 26); fl.rotateX(-PI / 2); fl.translate(p.x, 0, p.z);
+  const fp = fl.attributes.position; for (let i = 0; i < fp.count; i++) fp.setY(i, heightAt(fp.getX(i), fp.getZ(i)) + 0.07); fl.computeVertexNormals();
+  const fm = new THREE.Mesh(fl, MW.qfloor); fm.receiveShadow = true; scene.add(fm); chunkAt(p.x, p.z).objs.push(fm);
+  const wl = -p.pit + 0.8, shore = shoreAt(p, wl), wm = new THREE.Mesh(new THREE.CircleGeometry(shore + 6, 40), MW.green);
+  wm.rotation.x = -PI / 2; wm.position.set(p.x, wl, p.z); scene.add(wm); chunkAt(p.x, p.z).objs.push(wm); circles.push({ x: p.x, z: p.z, r: shore - 1 });
+  for (let i = 0; i < 14; i++) {
+    const a = i / 14 * TAU + rand(-0.2, 0.2), r = rand(p.r * 0.32, p.r * 0.7), x = p.x + Math.sin(a) * r, z = p.z + Math.cos(a) * r, s = rand(1.4, 3.4);
+    const b = addMesh(new THREE.IcosahedronGeometry(s, 0), MW.rock, x, heightAt(x, z) + s * 0.25, z); b.scale.set(rand(1, 1.8), rand(0.5, 0.9), rand(0.8, 1.3)); b.rotation.y = Math.random() * TAU;
+    circles.push({ x, z, r: s * 1.1 });
+  }
+  for (const [a, s] of [[2.2, 7], [2.7, 5.5], [3.4, 6.5]]) { const r = p.r * 0.9, x = p.x + Math.sin(a) * r, z = p.z + Math.cos(a) * r; addMesh(new THREE.ConeGeometry(s, s * 0.75, 16), MW.pile, x, heightAt(x, z) + s * 0.37, z); circles.push({ x, z, r: s * 0.85 }); }
+  const ca = 2.2, cx0 = p.x + Math.sin(ca) * (p.r * 0.9 - 12), cz0 = p.z + Math.cos(ca) * (p.r * 0.9 - 12), cy = heightAt(cx0, cz0);
+  const belt = addMesh(B(1.0, 0.3, 14), M.metal, cx0, cy + 2.8, cz0); belt.rotation.order = 'YXZ'; belt.rotation.set(-0.35, ca, 0);
+  for (const t of [-0.4, 0.15]) { const lx = cx0 + Math.sin(ca) * t * 14, lz2 = cz0 + Math.cos(ca) * t * 14; addMesh(B(0.12, 3 + t * 6, 0.12), M.metal, lx, cy + (3 + t * 6) / 2, lz2); circles.push({ x: lx, z: lz2, r: 0.3 }); }
+  const tg = gp(p.x + Math.sin(1.4) * p.r * 0.86, p.z + Math.cos(1.4) * p.r * 0.86, 0.4);
+  addMesh(B(3.4, 1.6, 4), MW.yellow, 0, 1.9, -1.4, tg); addMesh(B(3.4, 1.4, 2), MW.yellow, 0, 2.4, 2.4, tg); addMesh(B(3.0, 0.8, 0.05), M.glass, 0, 2.7, 3.42, tg, { cast: false });
+  for (const sx of [-1, 1]) for (const wz of [-2.4, 2.2]) { const wg = new THREE.CylinderGeometry(1.0, 1.0, 0.7, 14); wg.rotateZ(PI / 2); addMesh(wg, M.rubber, sx * 1.6, 1.0, wz, tg); }
+  solidCircle(tg, 0, -1.4, 2.4); solidCircle(tg, 0, 2.2, 2.0);
+  lootAt(tg, 2.8, 2.4, 'Search the haul truck cab', 1.8);
+  // the site office: a trailer on blocks
+  const oa = 0.9, og = gp(p.x + Math.sin(oa) * p.r * 0.9, p.z + Math.cos(oa) * p.r * 0.9, oa + PI / 2);
+  addMesh(boxUV(3.6, 2.6, 10, 2), MW.trailer, 0, 1.8, 0, og); addMesh(B(0.06, 2.0, 0.9), M.door, 1.83, 1.4, 2, og); addMesh(B(1.0, 0.5, 1.2), M.wood, 2.4, 0.25, 2, og);
+  for (let k = -4; k <= 4; k += 2.6) addMesh(B(0.4, 0.5, 0.4), M.block, 0, 0.25, k, og);
+  solidBox(og, 0, 0, 3.8, 10.2);
+  lootAt(og, 3.2, 2, 'Search the site office', 2.2, { fixed: [['battery', 1]] });
+  const sg = wpos(og, 5, -4);
+  postSign(sg.x, sg.z, oa + PI / 2, 3, 1.2, signMat(512, 200, (c, w, hh) => { c.fillStyle = '#1f3f6a'; c.fillRect(0, 0, w, hh); c.fillStyle = '#f1ece0'; c.textAlign = 'center'; c.font = 'bold 44px Arial'; c.fillText('PELL COUNTY AGGREGATES', w / 2, 80, w - 30); c.font = 'bold 30px Arial'; c.fillStyle = '#e8b81a'; c.fillText('HARD HAT AREA · BLASTING', w / 2, 140); speck(c, w, 1500, ['rgba(0,0,0,.3)'], 1, 3, 0.5, hh); }));
+  // at the fence: a cattle gate on a chain, and the timber company's sign
+  for (const s of [-1, 1]) { addMesh(B(0.16, 1.5, 0.16), M.metal, WORLD - 1.4, 0.75, lz + s * 2.6); circles.push({ x: WORLD - 1.4, z: lz + s * 2.6, r: 0.2 }); }
+  for (const y of [0.45, 0.8, 1.15]) addMesh(new THREE.CylinderGeometry(0.04, 0.04, 5.2, 6), M.steel, WORLD - 1.4, y, lz).rotation.x = PI / 2;
+  postSign(WORLD - 9, lz + 6.5, -PI / 2, 2.2, 0.9, roadSign('Pell Timber Co.', 'PRIVATE ROAD · NO THRU TRAFFIC'));
+}
+// the containment fence along the county line, and the closed roads through it
+function containment() {
+  const Wd = WORLD, post = [], H = 3.4, wire = new THREE.LineBasicMaterial({ color: 0x2a2c2e });
+  const strip = (ax, az, bx, bz) => {
+    const L = Math.hypot(bx - ax, bz - az), n = Math.ceil(L / 6);
+    for (let s = 0; s < n; s += 30) {
+      const e = Math.min(n, s + 30), pos = [], uv = [], idx = [];
+      for (let i = s; i <= e; i++) {
+        const t = i / n, x = lerp(ax, bx, t), z = lerp(az, bz, t), y = heightAt(x, z);
+        pos.push(x, y, z, x, y + H, z); uv.push(t * L / 1.3, 0, t * L / 1.3, H / 1.3); if (i < e) post.push([x, y, z]);
+        if (i > s) { const o = (i - s) * 2; idx.push(o - 2, o, o - 1, o - 1, o, o + 1); }
+      }
+      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals();
+      const m = new THREE.Mesh(g, MW.chain), c = chunkAt(lerp(ax, bx, (s + e) / 2 / n), lerp(az, bz, (s + e) / 2 / n)); scene.add(m); c.objs.push(m);
+      for (let k = 0; k < 3; k++) {
+        const pts = []; for (let i = s; i <= e; i += 2) { const t = i / n, x = lerp(ax, bx, t), z = lerp(az, bz, t); pts.push(new V3(x, heightAt(x, z) + H + 0.12 + k * 0.18, z)); }
+        const l = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), wire); scene.add(l); c.objs.push(l);
+      }
+    }
+  };
+  strip(-Wd, -Wd, Wd, -Wd); strip(Wd, -Wd, Wd, Wd); strip(Wd, Wd, -Wd, Wd); strip(-Wd, Wd, -Wd, -Wd);
+  const pm = new THREE.InstancedMesh(B(0.12, H + 0.3, 0.12), M.metal, post.length), m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new V3(1, 1, 1), pp = new V3();
+  post.forEach(([x, y, z], i) => { pp.set(x, y + (H + 0.3) / 2, z); m4.compose(pp, q, sc); pm.setMatrixAt(i, m4); });
+  pm.frustumCulled = false; pm.receiveShadow = true; scene.add(pm);
+  const signM = signMat(512, 300, (c, w, hh) => {
+    c.fillStyle = '#e9e4d6'; c.fillRect(0, 0, w, hh); c.fillStyle = '#b3241a'; c.fillRect(0, 0, w, 74); c.fillStyle = '#fff'; c.textAlign = 'center';
+    c.font = 'bold 46px Arial, sans-serif'; c.fillText('WARNING', w / 2, 54); c.fillStyle = '#1b1b1b'; c.font = 'bold 36px Arial'; c.fillText('CONTAINMENT ZONE 4', w / 2, 130);
+    c.font = '27px Arial'; c.fillText('DO NOT APPROACH THE FENCE', w / 2, 185); c.fillText('LETHAL FORCE IS AUTHORIZED', w / 2, 225); c.font = '20px Arial'; c.fillText('STATE OF GEORGIA · GEORGIA NATIONAL GUARD', w / 2, 270);
+    speck(c, w, 2500, ['rgba(0,0,0,.25)', 'rgba(120,80,40,.3)'], 1, 3, 0.5, hh);
+  }, 0.7);
+  const sg = new THREE.PlaneGeometry(1.7, 1.0);
+  for (let s = -Wd + 75; s < Wd; s += 150) for (const [x, z, ry] of [[s, -Wd + 0.12, 0], [s, Wd - 0.12, PI], [-Wd + 0.12, s, PI / 2], [Wd - 0.12, s, -PI / 2]]) addMesh(sg, signM, x, heightAt(x, z) + 1.7, z, scene, { cast: false, solid: false }).rotation.y = ry;
+  // closed roads: barriers stacked across each crossing, a guard tower beside it
+  for (const [x, z, alongX] of [[0, -Wd, false], [0, Wd, false], [-Wd, 0, true], [Wd, 0, true], [-Wd, 129, true], [Wd, 129, true]]) {
+    const span = z === 129 ? 13 : 5;
+    for (let o = -span; o <= span; o += 3.1) jersey(alongX ? x - Math.sign(x) * 2 : x + o, alongX ? z + o : z - Math.sign(z) * 2, alongX ? PI / 2 : 0);
+    const tx = alongX ? x - Math.sign(x) * 7 : x + 11, tz = alongX ? z + span + 5 : z - Math.sign(z) * 7, y0 = heightAt(tx, tz);
+    for (const [lx, lz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) addMesh(B(0.18, 6, 0.18), M.metal, tx + lx * 1.2, y0 + 3, tz + lz * 1.2);
+    addMesh(boxUV(3.2, 2.2, 3.2, 1), MW.olive, tx, y0 + 7.1, tz); addMesh(B(3.8, 0.2, 3.8), MW.olive, tx, y0 + 8.3, tz);
+    circles.push({ x: tx, z: tz, r: 2 });
+  }
+}
+
+/* the whole county, in build order: land, places and the roads to them, the fence, the woods */
+function openWorld() {
+  gridCircles();
+  groundCells();
+  for (const p of POIS) {
+    if (p.id.startsWith('farm')) farm(p);
+    else if (p.id === 'church') church(p);
+    else if (p.id === 'trailers') trailers(p);
+    else if (p.id === 'camp') camp(p);
+    else if (p.id === 'res') reservoir(p);
+    else if (p.id === 'trench') trench(p);
+    else if (p.id === 'heli') heliCrash(p);
+    else if (p.id === 'tower') cellTower(p);
+    else if (p.id === 'quarry') quarry(p);
+  }
+  const pf = POIS.find(p => p.id === 'farm3'); fuelCan(pf.x + 6, pf.z - 2, 'in the yard at the Pruitt place'); fuels[fuels.length - 1].poi = 'farm3';
+  containment();
+  wildTrees();
+}
+// the ones who never left: walkers at each place, bodies where it went worst
+const POI_PEOPLE = { camp: [14, ['military', 'scrubs', 'gown', 'casual', 'casual']], church: [5, ['dress', 'casual']], trailers: [6, ['casual', 'worker']], heli: [3, ['military']], trench: [3, ['worker']], res: [3, ['casual']], tower: [1, ['worker']], quarry: [3, ['worker']], farm1: [3, ['casual', 'worker']], farm2: [3, ['casual', 'worker']], farm3: [3, ['casual', 'worker']], farm4: [3, ['casual', 'worker']], farm5: [3, ['casual', 'worker']] };
+function spawnWorld() {
+  for (const p of POIS) {
+    const def = POI_PEOPLE[p.id]; if (!def) continue;
+    for (let n = 0, k = 0; n < def[0] && k < 60; k++) {
+      const a = Math.random() * TAU, r = rand(4, p.r * 0.8), x = p.x + Math.sin(a) * r, z = p.z + Math.cos(a) * r;
+      if (blocked(x, z, 0.8) || Math.hypot(x - P.pos.x, z - P.pos.z) < 30) continue;
+      const Z = makeZombie(x, z, { outfit: pick(def[1]), state: Math.random() < 0.5 ? 'idle' : 'wander' }); Z.home = p.id; n++;
+    }
+  }
+}
+function worldBodies() {
+  for (const [id, n, outfit] of [['camp', 10, 'casual'], ['heli', 2, 'military'], ['church', 2, 'dress'], ['trailers', 2, 'casual'], ['quarry', 1, 'worker']]) {
+    const p = POIS.find(q => q.id === id);
+    for (let i = 0, k = 0; i < n && k < 40; k++) {
+      const a = Math.random() * TAU, r = rand(3, p.r * 0.7), x = p.x + Math.sin(a) * r, z = p.z + Math.cos(a) * r;
+      if (blocked(x, z, 0.6) || Math.abs(heightAt(x, z)) > 0.3) continue;
+      bodies.push(makeZombie(x, z, { noAI: true, heading: Math.random() * TAU, lie: makeLie(pick(['back', 'front', 'left'])), outfit: Math.random() < 0.5 ? outfit : undefined })); addPool(x, z, rand(0.5, 0.9), true); i++;
+    }
+  }
+}
+// each frame out in the county: what's in view, what you've found, smoke off the wreck, the tower light
+let openT = 0;
+function updateOpen(dt) {
+  updateChunks(dt);
+  if (towerLight) towerLight.visible = Math.sin(fireT * 2.4) > 0.2 && G.light < 0.6;
+  if (HELI.x && HELI.smoke.length === 0) for (let j = 0; j < 6; j++) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: FX.smoke, color: 0x2a2826, transparent: true, depthWrite: false, opacity: 0.4 })); s.userData = { j, ph: Math.random() }; scene.add(s); HELI.smoke.push(s); }
+  const hv = Math.abs(camera.position.x - HELI.x) < 600 && Math.abs(camera.position.z - HELI.z) < 600;
+  for (const s of HELI.smoke) { s.visible = hv; if (!hv) continue; const d = s.userData; d.ph = (d.ph + dt * 0.05) % 1; const k = (d.j + d.ph) / 6; s.position.set(HELI.x + k * 14, heightAt(HELI.x, HELI.z) + 2 + k * 40, HELI.z + k * 4); s.scale.setScalar(4 + k * 26); s.material.opacity = 0.42 * Math.sin(Math.min(1, k * 1.3) * PI) * (1 - W.rain * 0.7); }
+  openT -= dt; if (openT > 0 || G.state !== 'play' || PRO.on) return; openT = 0.5;
+  for (const p of POIS) if (p.r && !G.found.has(p.id) && Math.hypot(P.pos.x - p.x, P.pos.z - p.z) < p.r + 30) { G.found.add(p.id); msg(`${p.name}. It's on your map now (M).`); }
+  if (!G.said.fence && (Math.abs(P.pos.x) > WORLD - 25 || Math.abs(P.pos.z) > WORLD - 25)) { G.said.fence = true; msg('The containment fence. Past it, the Guard shoots anything that moves.'); }
+  if (!G.said.gate && Math.hypot(P.pos.x - GATE.x, P.pos.z - GATE.z) < 14) { G.said.gate = true; msg('The logging road runs right up to the fence, and here it is only a cattle gate on a chain. A truck could take that.'); }
+}
+
+/* the map: a county survey sheet with what you've found marked on it */
+let mapBase = null;
+function buildMapBase() {
+  const N = 360, c = document.createElement('canvas'); c.width = c.height = N; const g = c.getContext('2d'), img = g.createImageData(N, N), d = img.data;
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+    const x = -WORLD + (i + 0.5) * (2 * WORLD / N), z = -WORLD + (j + 0.5) * (2 * WORLD / N), h = heightAt(x, z), sh = clamp(1 + (h - heightAt(x + 5, z - 5)) * 0.12, 0.78, 1.18);
+    let r = 222, gg = 214, b = 186;
+    const f = forestAt(x, z); if (f > 0.45 && wildOK(x, z)) { const k = smooth(0.45, 0.8, f); r = lerp(r, 150, k); gg = lerp(gg, 170, k); b = lerp(b, 124, k); }
+    for (const p of POIS) if ((p.lake && Math.hypot(x - p.x, z - p.z) < p.lake - 11) || (p.pit && Math.hypot(x - p.x, z - p.z) < p.r * 0.3)) { r = 118; gg = 150; b = 162; }
+    const o = (j * N + i) * 4; d[o] = r * sh; d[o + 1] = gg * sh; d[o + 2] = b * sh; d[o + 3] = 255;
+  }
+  g.putImageData(img, 0, 0); mapBase = c;
+}
+function drawMap() {
+  if (!mapBase) buildMapBase();
+  const cv = $('#mapC'), g = cv.getContext('2d'), S = cv.width, k = S / (2 * WORLD), X = x => (x + WORLD) * k, Z = z => (z + WORLD) * k;
+  g.imageSmoothingEnabled = true; g.drawImage(mapBase, 0, 0, S, S);
+  g.lineCap = 'round'; g.lineJoin = 'round';
+  g.strokeStyle = '#8a6c46'; g.lineWidth = 2.2; g.setLineDash([5, 4]);
+  for (const L of DIRT) { g.beginPath(); L.forEach(([x, z], i) => (i ? g.lineTo(X(x), Z(z)) : g.moveTo(X(x), Z(z)))); g.stroke(); }
+  g.setLineDash([]);
+  g.strokeStyle = '#4a4744'; g.lineWidth = 3.5; g.beginPath(); g.moveTo(X(0), Z(-WORLD)); g.lineTo(X(0), Z(WORLD)); g.moveTo(X(-WORLD), Z(0)); g.lineTo(X(WORLD), Z(0)); g.stroke();
+  g.strokeStyle = '#d8b04a'; g.lineWidth = 7; g.beginPath(); g.moveTo(X(-WORLD), Z(129)); g.lineTo(X(WORLD), Z(129)); g.stroke();
+  g.strokeStyle = '#4a4744'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(X(-WORLD), Z(129)); g.lineTo(X(WORLD), Z(129)); g.stroke();
+  // the buildings you know about
+  g.fillStyle = 'rgba(58,54,50,.85)';
+  for (const b of boxes) { const cx = (b.minX + b.maxX) / 2, cz = (b.minZ + b.maxZ) / 2, w = b.maxX - b.minX, dd = b.maxZ - b.minZ; if (w < 1.5 || dd < 1.5) continue; const p = nearPOI(cx, cz, 4); if (!inTown(cx, cz) && !(p && G.found.has(p.id))) continue; g.fillRect(X(b.minX), Z(b.minZ), Math.max(2, w * k), Math.max(2, dd * k)); }
+  g.strokeStyle = '#b3241a'; g.lineWidth = 3; g.setLineDash([10, 6]); g.strokeRect(3, 3, S - 6, S - 6); g.setLineDash([]);
+  g.textAlign = 'center'; g.fillStyle = '#2a2a28'; g.font = '600 15px "Barlow Semi Condensed", Arial';
+  g.fillText('I-75 · ← ATLANTA', X(-WORLD + 110), Z(129) - 10); g.fillText('MACON →', X(WORLD - 70), Z(129) - 10);
+  g.fillStyle = '#b3241a'; g.fillText('CONTAINMENT FENCE', S / 2, 22);
+  for (const p of POIS) {
+    const found = p.id === 'town' || G.found.has(p.id), x = X(p.x), y = Z(p.z);
+    if (p.r) { g.fillStyle = found ? '#1d1c1a' : 'rgba(42,42,40,.35)'; g.beginPath(); g.arc(x, y, 4.5, 0, TAU); g.fill(); }
+    g.font = found ? '700 16px "Barlow Semi Condensed", Arial' : '600 15px "Barlow Semi Condensed", Arial';
+    g.fillStyle = found ? '#1d1c1a' : 'rgba(42,42,40,.55)'; g.fillText(found ? p.name : '?', x, p.r ? y - 10 : y - 62);
+  }
+  for (const f of fuels) if (!f.taken && f.poi && G.found.has(f.poi)) { g.fillStyle = '#b3241a'; g.fillRect(X(f.x) - 4, Z(f.z) - 4, 8, 8); }
+  g.fillStyle = '#e0a63e'; g.strokeStyle = '#2a2a28'; g.lineWidth = 2; g.fillRect(X(truckI.x) - 6, Z(truckI.z) - 4, 12, 8); g.strokeRect(X(truckI.x) - 6, Z(truckI.z) - 4, 12, 8);
+  const px = X(P.pos.x), py = Z(P.pos.z), fx = -Math.sin(P.yaw), fz = -Math.cos(P.yaw);
+  g.fillStyle = '#ffffff'; g.strokeStyle = '#111'; g.lineWidth = 2; g.beginPath(); g.moveTo(px + fx * 13, py + fz * 13); g.lineTo(px - fz * 7 - fx * 7, py + fx * 7 - fz * 7); g.lineTo(px + fz * 7 - fx * 7, py - fx * 7 - fz * 7); g.closePath(); g.fill(); g.stroke();
+  g.fillStyle = '#2a2a28'; g.font = '700 18px "Barlow Semi Condensed", Arial'; g.fillText('N', S - 30, 44); g.beginPath(); g.moveTo(S - 30, 50); g.lineTo(S - 36, 64); g.lineTo(S - 24, 64); g.fill();
+  g.fillRect(24, S - 28, 500 * k, 4); g.font = '600 14px "Barlow Semi Condensed", Arial'; g.textAlign = 'left'; g.fillText('500 m', 24, S - 36);
+  $('#mapNote').textContent = `${G.found.size} of ${POIS.length - 1} places found`;
+}
+function openMap() { G.state = 'map'; show('#map', true); if (locked) document.exitPointerLock(); drawMap(); setTimeout(() => $('#mapClose').focus(), 0); }
+function closeMap() { show('#map', false); G.state = 'play'; if (!lockFailed) requestLock(); }
 
 /* ---------------- particles and blood ---------------- */
 const _q = new THREE.Quaternion(), _e = new THREE.Euler(), _s = new V3(), _m4 = new THREE.Matrix4(), _c = new THREE.Color(), _v = new V3(), _v2 = new V3();
@@ -2355,7 +3058,7 @@ function addPool(x, z, size, instant) {
   m.scale.set(size, size * rand(0.7, 1), 1); if (!instant) m.scale.multiplyScalar(0.05);
   m.receiveShadow = true; scene.add(m);
   const P0 = { m, t: instant ? 1 : 0, size }; pools.push(P0);
-  if (pools.length > 50) { const o = pools.shift(); scene.remove(o.m); }
+  if (pools.length > 80) { const o = pools.shift(); scene.remove(o.m); }
   return m;
 }
 const puffs = [];
@@ -3042,12 +3745,20 @@ function updateZombies(dt) {
       }
       continue;
     }
+    // out past what you can see, the dead stand where they are; the ones that wandered in drift off for good
+    const fx = Math.abs(P.pos.x - Z.pos.x), fz = Math.abs(P.pos.z - Z.pos.z), far = fx > 160 || fz > 160;
+    if (far && Z.state !== 'chase' && Z.state !== 'investigate') {
+      Z.frozen = true; if (Z.g.visible && !G.before) Z.g.visible = false;
+      if (Z.roam && (fx > 240 || fz > 240)) { zombies.splice(i, 1); disposeWalker(Z); }
+      continue;
+    }
+    if (Z.frozen) { Z.frozen = false; if (!G.before) Z.g.visible = true; }
     updateZombie(Z, dt, t);
   }
   for (let i = 0; i < zombies.length; i++) {
-    const a = zombies[i]; if (a.state === 'dead' || a.state === 'grab' || a.state === 'sleep' || a.state === 'feed') continue;
+    const a = zombies[i]; if (a.frozen || a.state === 'dead' || a.state === 'grab' || a.state === 'sleep' || a.state === 'feed') continue;
     for (let j = i + 1; j < zombies.length; j++) {
-      const b = zombies[j]; if (b.state === 'dead' || b.state === 'grab' || b.state === 'sleep' || b.state === 'feed') continue;
+      const b = zombies[j]; if (b.frozen || b.state === 'dead' || b.state === 'grab' || b.state === 'sleep' || b.state === 'feed') continue;
       const dx = a.pos.x - b.pos.x, dz = a.pos.z - b.pos.z, d2 = dx * dx + dz * dz;
       if (d2 < 0.36 && d2 > 1e-6) { const d = Math.sqrt(d2), o = (0.6 - d) / 2; a.pos.x += dx / d * o; a.pos.z += dz / d * o; b.pos.x -= dx / d * o; b.pos.z -= dz / d * o; }
     }
@@ -3056,7 +3767,7 @@ function updateZombies(dt) {
   if (shadowT <= 0) {
     shadowT = 0.5;
     const cx = camera.position.x, cz = camera.position.z, lim = SETTINGS.quality === 'low' ? 18 : 30;
-    for (const L of [zombies, corpses, bodies]) for (const Z of L) Z.mesh.castShadow = Math.hypot(Z.pos.x - cx, Z.pos.z - cz) < lim;
+    for (const L of [zombies, corpses, bodies]) for (const Z of L) { const d = Math.hypot(Z.pos.x - cx, Z.pos.z - cz); Z.mesh.castShadow = d < lim; if (L !== zombies && !G.before) Z.g.visible = d < 200; }
   }
 }
 function clearZombies() {
@@ -3070,12 +3781,13 @@ function spawnRandom(initial) {
     if (initial) { x = rand(-98, 98); z = rand(-98, 98); if (Math.hypot(x - P.pos.x, z - P.pos.z) < 32) continue; }
     else {
       const a = Math.random() * TAU, d = rand(45, 75); x = P.pos.x + Math.sin(a) * d; z = P.pos.z + Math.cos(a) * d;
-      if (Math.abs(x) > 98 || z < -98 || z > 141) continue;
+      if (Math.abs(x) > WORLD - 8 || Math.abs(z) > WORLD - 8) continue;
       const fx = -Math.sin(P.yaw), fz = -Math.cos(P.yaw);
       if (((x - P.pos.x) * fx + (z - P.pos.z) * fz) / d > 0.35) continue;
     }
     if (blocked(x, z, 0.8) || regionAt(x, z)) continue;
-    return makeZombie(x, z, { crawler: Math.random() < 0.05 });
+    const Z = makeZombie(x, z, { crawler: Math.random() < 0.05 }); if (!initial) Z.roam = true;
+    return Z;
   }
   return null;
 }
@@ -3096,6 +3808,8 @@ function spawnPlan() {
   makeZombie(-2.5, 95, { outfit: 'police' });
   makeZombie(-1.5, -18, { crawler: true }); makeZombie(55, 1.5, { crawler: true });
   for (let n = 0, k = 0; n < 9 && k < 80; k++) { const x = rand(-95, 95), z = rand(117, 141); if (blocked(x, z, 0.7)) continue; makeZombie(x, z, { state: Math.random() < 0.5 ? 'idle' : 'wander' }); n++; }
+  for (let n = 0, k = 0; n < 26 && k < 200; k++) { const x = rand(-WORLD + 30, WORLD - 30), z = rand(117, 141); if (Math.abs(x) < 120 || blocked(x, z, 0.7)) continue; makeZombie(x, z, { state: Math.random() < 0.6 ? 'idle' : 'wander' }); n++; }
+  spawnWorld();
 }
 function buildBodies() {
   const spots = [[-40, -2.4, 0.4, 'back'], [30, 62, 2.0, 'front'], [-38, 32, 1.1, 'back'], [46, -40, -0.6, 'left'], [-6.2, -60, 2.8, 'back'], [-60, 60, 0.2, 'front'], [2.6, -99, 1.4, 'back'], [44.6, 5.9, 0.9, 'right'], [12.6, -84.4, -1.2, 'back']];
@@ -3105,6 +3819,7 @@ function buildBodies() {
     bodies.push(c);
   }
   for (const [x, z, h, side] of [[-30, 134.1, 1.2, 'back'], [18, 137.1, 0.3, 'front'], [55, 131.0, 2.0, 'left'], [-62, 123.5, 0.7, 'back']]) { if (blocked(x, z, 0.5)) continue; bodies.push(makeZombie(x, z, { noAI: true, heading: h, lie: makeLie(side) })); addPool(x, z, rand(0.6, 0.9), true); }
+  worldBodies();
   const packs = [[-37.2, 32.9, null], [46.8, -39.1, null], [-5.4, -59.2, 'diary'], [-59.2, 60.8, null]];
   // a hunter's crossbow lying beside the body in the west field
   const bow = new THREE.Group(), bm2 = (geo, mat, x, y, z) => { const mm = new THREE.Mesh(geo, mat); mm.position.set(x, y, z); mm.castShadow = true; bow.add(mm); return mm; };
@@ -3487,7 +4202,7 @@ function updateWorld(dt) {
   _cA.copy(FOG_D.night).lerp(FOG_D.day, day).lerp(FOG_D.gold, gold * 0.55);
   _cB.copy(FOG_D.storm).lerp(FOG_D.dayStorm, day); _cA.lerp(_cB, rain * 0.85);
   const fogOut = toOut(_cA); scene.fog.color.copy(fogOut); scene.background.copy(fogOut);
-  scene.fog.near = lerp(0.028, 0.0095, day) + rain * lerp(0.012, 0.018, day) + W.mist * 0.018;
+  scene.fog.near = lerp(0.028, 0.0072, day) + rain * lerp(0.012, 0.018, day) + W.mist * 0.018;
   scene.fog.far = W.mist * 0.85 + night * 0.2 * (1 - rain) + gold * 0.14 + rain * 0.12 + 0.03;
   const u = skyMat.uniforms;
   u.uHorizon.value.copy(fogOut);
@@ -3499,7 +4214,7 @@ function updateWorld(dt) {
   skyObj.dome.position.copy(camera.position); skyObj.stars.position.copy(camera.position);
   skyObj.stars.material.opacity = 0.8 * night * night * (1 - rain * 0.95);
   const moonVis = smooth(-0.05, 0.05, MOONV.y) * (1 - rain * 0.9);
-  skyObj.moonDisc.position.copy(camera.position).addScaledVector(MOONV, 2900); skyObj.moonDisc.lookAt(camera.position);
+  skyObj.moonDisc.position.copy(camera.position).addScaledVector(MOONV, 4300); skyObj.moonDisc.lookAt(camera.position);
   skyObj.moonDisc.material.opacity = moonVis * (0.25 + night * 0.75); skyObj.moonDisc.visible = moonVis > 0.01;
   skyObj.moonGlow.position.copy(skyObj.moonDisc.position); skyObj.moonGlow.material.opacity = 0.7 * moonVis * night;
   // light: sun by day, moon by night, lightning in storms
@@ -3507,8 +4222,9 @@ function updateWorld(dt) {
   if (sunUp) { moon.intensity = 2.5 * smooth(-0.04, 0.12, sunU) * (1 - rain * 0.72); moon.color.copy(SUN_LO).lerp(SUN_HI, smooth(0.04, 0.45, sunU)); }
   else { moon.intensity = 0.45 * smooth(-0.05, 0.12, MOONV.y) * (1 - rain * 0.55); moon.color.copy(MOON_COL); }
   if (W.flash > 0) { moon.intensity += W.flash * 2.4; moon.color.lerp(BOLT_COL, Math.min(1, W.flash)); }
-  moon.position.set(camera.position.x + L.x * 100, Math.max(L.y, 0.05) * 100, camera.position.z + L.z * 100);
-  moon.target.position.set(camera.position.x, 0, camera.position.z);
+  const gy = heightAt(camera.position.x, camera.position.z);
+  moon.position.set(camera.position.x + L.x * 100, gy + Math.max(L.y, 0.05) * 100, camera.position.z + L.z * 100);
+  moon.target.position.set(camera.position.x, gy, camera.position.z);
   hemi.color.copy(HEMI_SKY.night).lerp(HEMI_SKY.day, day); hemi.groundColor.copy(HEMI_GND.night).lerp(HEMI_GND.day, day);
   hemi.intensity = lerp(0.42, 0.78, day) * (1 - rain * 0.25) * lerp(1, inK, 0.85) + W.flash * 0.7 * inK;
   // eyes adjust: stepping into a dark house by day takes a few seconds to see, stepping out is a glare that fades faster
@@ -3573,7 +4289,7 @@ const flashDir = new V3(0, 0, -1);
 const P = { pos: new V3(), vel: new V3() };
 // the clock counts minutes from midnight on day 41; a game minute is a real second by day, half that at night
 const START_MIN = 640, FEVER_MIN = 480;
-const G = { state: 'boot', clockMin: START_MIN, clock: 0, light: 1, gold: 0, rate: 1, spawnT: 10, hordeT: 150, hurtA: 0, splatA: 0, muzzleT: 0, zsteps: 0, docs: new Set(), amb: 4, said: {}, blinkT: 0, sleep: null, adapt: 1 };
+const G = { state: 'boot', clockMin: START_MIN, clock: 0, light: 1, gold: 0, rate: 1, spawnT: 10, hordeT: 150, hurtA: 0, splatA: 0, muzzleT: 0, zsteps: 0, docs: new Set(), found: new Set(), amb: 4, said: {}, blinkT: 0, sleep: null, adapt: 1 };
 const dayOf = m => 41 + Math.floor(m / 1440);
 const camFwd = v => v.set(0, 0, -1).applyQuaternion(camera.quaternion);
 const camRight = v => v.set(1, 0, 0).applyQuaternion(camera.quaternion);
@@ -4189,7 +4905,7 @@ function trySleep(t) {
 }
 function relocate(Z) {
   for (let k = 0; k < 30; k++) {
-    const x = rand(-96, 96), z = rand(-96, 96);
+    const x = clamp(P.pos.x + rand(-140, 140), -WORLD + 10, WORLD - 10), z = clamp(P.pos.z + rand(-140, 140), -WORLD + 10, WORLD - 10);
     if (Math.hypot(x - P.pos.x, z - P.pos.z) < 30 || blocked(x, z, 0.8) || regionAt(x, z)) continue;
     Z.pos.set(x, floorY(x, z), z); Z.state = 'wander'; Z.stateT = 0; Z.aware = 0; Z.lostT = 0; Z.wanderT = rand(1, 6);
     return;
@@ -4378,6 +5094,7 @@ addEventListener('keydown', e => {
   if (e.repeat) return;
   if (G.state === 'reading') { if (e.code === 'KeyE' || e.code === 'Space' || e.code === 'Enter') closeDoc(); return; }
   if (G.state === 'journal') { if (e.code === 'KeyJ' || e.code === 'Escape') closeJournal(); return; }
+  if (G.state === 'map') { if (e.code === 'KeyM' || e.code === 'Escape') closeMap(); return; }
   if (G.state === 'cine') { if (e.code === 'Space' || e.code === 'Enter' || e.code === 'Escape') { e.preventDefault(); endIntro(false); } return; }
   if (G.state !== 'play') return;
   if (P.grab) { if (e.code === 'KeyE' || e.code === 'Space') strugglePress(); return; }
@@ -4395,6 +5112,7 @@ addEventListener('keydown', e => {
     case 'KeyG': consume(); break;
     case 'KeyV': takePills(); break;
     case 'KeyJ': case 'Tab': openJournal(); break;
+    case 'KeyM': if (!PRO.on && !P.grab) openMap(); break;
     case 'KeyH': els.hud.classList.toggle('min'); break;
     case 'KeyP': if (locked) document.exitPointerLock(); else pause(); break;
   }
@@ -4693,11 +5411,12 @@ function updateHUD(dt) {
   const left = fuels.filter(f => !f.taken);
   let obj;
   if (P.fuel > 0) obj = `Carrying <b>${P.fuel} gas can${P.fuel > 1 ? 's' : ''}</b>. Get back to the truck. Tank ${P.tank}/3.`;
-  else obj = `Find gas for the truck. <b>Tank ${P.tank}/3.</b>` + (left.length ? ` Try ${left.map(f => f.hint).join('; ')}.` : '');
+  const known = left.filter(f => !f.poi || G.found.has(f.poi));
+  if (P.fuel <= 0) obj = `Find gas for the truck. <b>Tank ${P.tank}/3.</b>` + (known.length ? ` Try ${known.map(f => f.hint).join('; ')}.` : ' Search the farms out in the county (M for the map).');
   if (P.infected) obj += ' <b>You’re infected.</b> Get out before the fever takes you.';
   if (P.fatigue > 70) obj += ' <b>You need sleep</b> somewhere with a door.';
   if (!PRO.on) setH(els.obj, obj);
-  if (!PRO.on) setH(els.notes, `Notes ${G.docs.size}/${DOCS.length} · J to read`);
+  if (!PRO.on) setH(els.notes, `Notes ${G.docs.size}/${DOCS.length} · J to read · M map`);
   setW(els.bhp, P.hp); setW(els.bst, P.stam); setW(els.bfood, P.hunger); setW(els.bwater, P.thirst); setW(els.brest, 100 - P.fatigue); setW(els.blite, P.battery);
   let st = '';
   if (P.bleeding) st += '<span class="tag pulse">Bleeding</span>';
@@ -4759,12 +5478,12 @@ function show(id, on) { $(id).hidden = !on; }
 /* ---------------- the day and the night ---------------- */
 function horde() {
   const a = Math.random() * TAU, d = 62;
-  const hx = clamp(P.pos.x + Math.sin(a) * d, -95, 95), hz = clamp(P.pos.z + Math.cos(a) * d, -95, 95);
+  const hx = clamp(P.pos.x + Math.sin(a) * d, -WORLD + 12, WORLD - 12), hz = clamp(P.pos.z + Math.cos(a) * d, -WORLD + 12, WORLD - 12);
   let made = 0;
   for (let n = 0; n < 16 && made < 10; n++) {
     const x = hx + rand(-7, 7), z = hz + rand(-7, 7);
     if (blocked(x, z, 0.8) || regionAt(x, z)) continue;
-    const Z = makeZombie(x, z); Z.state = 'investigate'; Z.target.set(P.pos.x, 0, P.pos.z); made++;
+    const Z = makeZombie(x, z); Z.state = 'investigate'; Z.roam = true; Z.target.set(P.pos.x, 0, P.pos.z); made++;
     if (made < 5) setTimeout(() => sfx.groan(x, z, 1.4, false), made * 280);
   }
   const dirs = ['north', 'northeast', 'east', 'southeast', 'south', 'southwest', 'west', 'northwest'];
@@ -4781,7 +5500,7 @@ function updateDirector(dt) {
   if (t0 < 1065 && tod >= 1065) msg('The sun’s getting low. Wherever you sleep tonight, get there before dark.');
   if (t0 < 1140 && tod >= 1140) msg(P.battery > 0 || P.batteries > 0 ? 'Dark now. They don’t need light to find you. F for the flashlight, but they’ll see it too.' : 'Dark now, and the flashlight’s dead.');
   if (t0 < 460 && tod >= 460) msg(`First light. Day ${day}.`);
-  let alive = 0; for (const Z of zombies) if (Z.state !== 'dead') alive++;
+  let alive = 0; for (const Z of zombies) if (Z.state !== 'dead' && !Z.frozen) alive++;
   G.spawnT -= dt;
   if (G.spawnT <= 0) { G.spawnT = lerp(13, 9, night); const cap = Math.min(60, 30 + 2 * (day - 41) + Math.round(8 * night)); for (let n = 0; n < 2 && alive + n < cap; n++) spawnRandom(false); }
   G.hordeT -= dt * G.rate;
@@ -4822,6 +5541,7 @@ function resetGame() {
   for (const g of mags) scene.remove(g.m); mags.length = 0;
   while (boltObjs.length) removeBolt(boltObjs[0]);
   Object.assign(G, { adapt: 1, clockMin: START_MIN, rate: 1, spawnT: 10, hordeT: 150, hurtA: 0, splatA: 0, amb: 4, said: {}, blinkT: 0, sleep: null, saidRise: false, saidAnkle: false, saidGrab: false, saidReload: false });
+  G.found.clear();
   Object.assign(W, { rain: 0, wet: 0, mist: 0, bolt: 14, said: {}, seq: null, flash: 0 });
   Object.assign(RAD, { on: false, next: 3, idx: -1, heard: false }); els.radio.hidden = true; els.struggle.hidden = true;
   for (const l of inter) if (l.kind === 'loot') { l.searched = false; l.items = rollLoot(l); if (l.bow && l.mesh) l.mesh.visible = true; }
@@ -4887,6 +5607,7 @@ $('#skipDay1').addEventListener('click', () => { show('#pause', false); if (AU.c
 $('#pauseJournal').addEventListener('click', () => { G.state = 'play'; show('#pause', false); if (AU.ctx) AU.ctx.resume(); openJournal(); G.journalFrom = 'play'; });
 $('#endJournal').addEventListener('click', openJournal);
 $('#jclose').addEventListener('click', closeJournal);
+$('#mapClose').addEventListener('click', closeMap);
 
 
 /* ---------------- the opening: Millbrook before ---------------- */
@@ -5020,6 +5741,7 @@ function cineClear() {
 }
 // hide what the outbreak left behind: the bodies, the blood, the burning wreck
 function setBefore(on) {
+  G.before = on;
   for (const L of [bodies, corpses, zombies]) for (const Z of L) Z.g.visible = !on;
   for (const p of pools) p.m.visible = !on;
   const bow = inter.find(t => t.bow); if (bow && bow.mesh) bow.mesh.visible = !on && !bow.searched;
@@ -5349,7 +6071,7 @@ function loop(nowT) {
   else if (G.state === 'proEnd') { updateProEnd(dt); updateZombies(dt); updateFires(dt); updateFX(dt); cineAfterWorld(); }
   else if (G.state === 'title') { titleCam(dt); updateZombies(dt); updateFX(dt); }
   else if (G.state === 'end') { endCam(dt); updateZombies(dt); updateFX(dt); }
-  if (live) { updateWeather(dt); updateViewModel(dt); updateFlashlight(dt); updateWorld(dt); }
+  if (live) { updateWeather(dt); updateViewModel(dt); updateFlashlight(dt); updateWorld(dt); updateOpen(dt); }
   if (G.state === 'cine') cineAfterWorld();
   updatePost(dt);
   setListener();
@@ -5390,6 +6112,4 @@ const fontWait = document.fonts && document.fonts.load ? Promise.all([document.f
 Promise.race([fontWait, new Promise(r => setTimeout(r, 2500))]).then(() => setTimeout(boot, 30));
 })();
 </script>
-
-</body>
-</html>
+</body></html>
