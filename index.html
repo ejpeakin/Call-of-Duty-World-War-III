@@ -481,11 +481,11 @@ THREE.ShaderChunk.shadowmap_pars_fragment = THREE.ShaderChunk.shadowmap_pars_fra
   '\t\tvec3 sc = shadowCoord.xyz / shadowCoord.w; sc.z += shadowBias;',
   '\t\tif ( sc.x < 0.0 || sc.x > 1.0 || sc.y < 0.0 || sc.y > 1.0 || sc.z > 1.0 ) return 1.0;',
   '\t\tfloat texel = 1.0 / shadowMapSize.x, rot = rand( gl_FragCoord.xy ) * 6.2831853, blockers = 0.0, sum = 0.0;',
-  '\t\tfor ( int i = 0; i < 12; i ++ ) { float d = unpackRGBAToDepth( texture2D( shadowMap, sc.xy + sunVogel( i, 12.0, rot ) * texel * 9.0 ) ); if ( d < sc.z ) { sum += d; blockers += 1.0; } }',
+  '\t\tfor ( int i = 0; i < 7; i ++ ) { float d = unpackRGBAToDepth( texture2D( shadowMap, sc.xy + sunVogel( i, 7.0, rot ) * texel * 9.0 ) ); if ( d < sc.z ) { sum += d; blockers += 1.0; } }',
   '\t\tif ( blockers < 0.5 ) return 1.0;',
   '\t\tfloat pen = clamp( ( sc.z - sum / blockers ) * 0.022, texel * 0.9, texel * 9.0 ), lit = 0.0;',
-  '\t\tfor ( int i = 0; i < 16; i ++ ) lit += texture2DCompare( shadowMap, sc.xy + sunVogel( i, 16.0, rot ) * pen, sc.z );',
-  '\t\treturn lit / 16.0;',
+  '\t\tfor ( int i = 0; i < 10; i ++ ) lit += texture2DCompare( shadowMap, sc.xy + sunVogel( i, 10.0, rot ) * pen, sc.z );',
+  '\t\treturn lit / 10.0;',
   '\t}',
   '\tvec2 cubeToUV(',
 ].join('\n'));
@@ -564,9 +564,9 @@ const SharpenShader = {
     '}',
   ].join('\n'),
 };
-function basePR() { return Math.max(1, Math.min(devicePixelRatio || 1, SETTINGS.quality === 'low' ? 1.5 : 2)); }
+function basePR() { return Math.max(1, Math.min(devicePixelRatio || 1, SETTINGS.quality === 'low' ? 1.25 : 1.5)); }
 // the lowest the frame-rate governor may take the resolution, after it has already cut draw distance and ambient occlusion
-function floorPR() { const b = basePR(); return Math.min(b, Math.max(0.85, b * 0.6)); }
+function floorPR() { const b = basePR(); return Math.min(b, Math.max(0.75, b * 0.6)); }
 /* ---------------- cinematic pass: ambient occlusion, sun shafts and camera motion blur, all from the depth buffer ---------------- */
 const CinemaShader = {
   uniforms: {
@@ -595,19 +595,19 @@ const CinemaShader = {
     '    vec3 dx = abs(Pr.z - P.z) < abs(P.z - Pl.z) ? Pr - P : P - Pl, dy = abs(Pu.z - P.z) < abs(P.z - Pd.z) ? Pu - P : P - Pd;',
     '    vec3 N = normalize(cross(dx, dy));',
     '    float R = 0.85, rpx = min(R * uProjY * 0.5 * uRes.y / -P.z, 90.0), ao = 0.0;',
-    '    for (int i = 0; i < 14; i++) {',
-    '      float fi = (float(i) + n) / 14.0, a = fi * 37.7 + n * 6.2831853;',
+    '    for (int i = 0; i < 8; i++) {',
+    '      float fi = (float(i) + n) / 8.0, a = fi * 37.7 + n * 6.2831853;',
     '      vec3 v = vpos(vUv + vec2(cos(a), sin(a)) * max(fi * rpx, 1.5) * px) - P; float vv = dot(v, v);',
     '      ao += max(dot(v, N) * inversesqrt(vv + 1e-4) - 0.06, 0.0) * max(1.0 - vv / (R * R), 0.0);',
     '    }',
-    '    ao = clamp(1.0 - ao * 2.2 / 14.0, 0.0, 1.0);',
+    '    ao = clamp(1.0 - ao * 2.2 / 8.0, 0.0, 1.0);',
     '    col *= mix(1.0, ao, uAO * (1.0 - smoothstep(40.0, 70.0, -P.z)));',
     '  }',
     // light shafts: march toward the sun through the sky mask
     '  if (uSunVis > 0.001) {',
-    '    vec2 dl = vUv - uSun, st = dl / 40.0, su = vUv - st * n; float il = 0.0, dec = 1.0;',
-    '    for (int i = 0; i < 40; i++) { su -= st; vec2 cu = clamp(su, 0.0, 1.0); il += step(0.99999, texture2D(tDepth, cu).x) * dec * min(dot(texture2D(tDiffuse, cu).rgb, vec3(0.3333)), 3.0); dec *= 0.955; }',
-    '    col += uSunCol * il / 40.0 * uSunVis * (1.0 - smoothstep(0.0, 0.95, length(dl * vec2(uRes.x / uRes.y, 1.0))));',
+    '    vec2 dl = vUv - uSun, st = dl / 24.0, su = vUv - st * n; float il = 0.0, dec = 1.0;',
+    '    for (int i = 0; i < 24; i++) { su -= st; vec2 cu = clamp(su, 0.0, 1.0); il += step(0.99999, texture2D(tDepth, cu).x) * dec * min(dot(texture2D(tDiffuse, cu).rgb, vec3(0.3333)), 3.0); dec *= 0.928; }',
+    '    col += uSunCol * il / 24.0 * uSunVis * (1.0 - smoothstep(0.0, 0.95, length(dl * vec2(uRes.x / uRes.y, 1.0))));',
     '  }',
     '  gl_FragColor = vec4(col, 1.0);',
     '}',
@@ -1076,10 +1076,25 @@ function gridCircles() {
     for (let ix = x0; ix <= x1; ix++) for (let iz = z0; iz <= z1; iz++) { const k = ckey(ix, iz); let a = cgrid.get(k); if (!a) cgrid.set(k, (a = [])); a.push(c); }
   }
 }
+// a coarse grid over the solid boxes, so collision and sight lines only test the walls nearby
+const BCELL = 16, bgrid = new Map(), _bl = []; let bgridN = -1, bgridDirty = true, bstamp = 0;
+function boxesChanged() { bgridDirty = true; }
+function boxesIn(x0, z0, x1, z1) {
+  if (bgridDirty || bgridN !== boxes.length) {
+    bgrid.clear();
+    for (const b of boxes) { const a0 = Math.floor(b.minX / BCELL), a1 = Math.floor(b.maxX / BCELL), c0 = Math.floor(b.minZ / BCELL), c1 = Math.floor(b.maxZ / BCELL); for (let a = a0; a <= a1; a++) for (let c = c0; c <= c1; c++) { const k = ckey(a, c); let l = bgrid.get(k); if (!l) bgrid.set(k, (l = [])); l.push(b); } }
+    bgridN = boxes.length; bgridDirty = false;
+  }
+  _bl.length = 0; bstamp++;
+  const a0 = Math.floor(x0 / BCELL), a1 = Math.floor(x1 / BCELL), c0 = Math.floor(z0 / BCELL), c1 = Math.floor(z1 / BCELL);
+  for (let a = a0; a <= a1; a++) for (let c = c0; c <= c1; c++) { const l = bgrid.get(ckey(a, c)); if (l) for (let i = 0; i < l.length; i++) { const b = l[i]; if (b._s !== bstamp) { b._s = bstamp; _bl.push(b); } } }
+  return _bl;
+}
 function addBox(cx, cz, w, d) { const b = { minX: cx - w / 2, maxX: cx + w / 2, minZ: cz - d / 2, maxZ: cz + d / 2 }; boxes.push(b); return b; }
 function collide(p, r) {
-  for (let i = 0; i < boxes.length; i++) {
-    const b = boxes[i];
+  const bl = boxesIn(p.x - r, p.z - r, p.x + r, p.z + r);
+  for (let i = 0; i < bl.length; i++) {
+    const b = bl[i];
     if (p.x < b.minX - r || p.x > b.maxX + r || p.z < b.minZ - r || p.z > b.maxZ + r) continue;
     const nx = clamp(p.x, b.minX, b.maxX), nz = clamp(p.z, b.minZ, b.maxZ);
     const dx = p.x - nx, dz = p.z - nz, d2 = dx * dx + dz * dz;
@@ -1105,7 +1120,8 @@ function collide(p, r) {
   p.x = clamp(p.x, -lim, lim); p.z = clamp(p.z, -lim, lim);
 }
 function blocked(x, z, m) {
-  for (let i = 0; i < boxes.length; i++) { const b = boxes[i]; if (x > b.minX - m && x < b.maxX + m && z > b.minZ - m && z < b.maxZ + m) return true; }
+  const bl = boxesIn(x - m, z - m, x + m, z + m);
+  for (let i = 0; i < bl.length; i++) { const b = bl[i]; if (x > b.minX - m && x < b.maxX + m && z > b.minZ - m && z < b.maxZ + m) return true; }
   const ix = Math.floor(x / CELL), iz = Math.floor(z / CELL);
   for (let a = ix - 1; a <= ix + 1; a++) for (let bb = iz - 1; bb <= iz + 1; bb++) {
     const l = cgrid.get(ckey(a, bb)); if (!l) continue;
@@ -1122,7 +1138,7 @@ function segBox(ax, az, bx, bz, b) {
   }
   return true;
 }
-function los(a, b, skip) { for (let i = 0; i < boxes.length; i++) if (boxes[i] !== skip && segBox(a.x, a.z, b.x, b.z, boxes[i])) return false; return true; }
+function los(a, b, skip) { const bl = boxesIn(Math.min(a.x, b.x), Math.min(a.z, b.z), Math.max(a.x, b.x), Math.max(a.z, b.z)); for (let i = 0; i < bl.length; i++) if (bl[i] !== skip && segBox(a.x, a.z, b.x, b.z, bl[i])) return false; return true; }
 function regionAt(x, z) { for (const r of regions) if (x > r.minX && x < r.maxX && z > r.minZ && z < r.maxZ) return r; return null; }
 function floorY(x, z) { return regionAt(x, z) ? 0.03 : heightAt(x, z); }
 function onPorch(x, z) { for (const r of porches) if (x > r.minX && x < r.maxX && z > r.minZ && z < r.maxZ) return true; return false; }
@@ -1351,7 +1367,7 @@ function setDoor(d, open) {
     for (const Z of zombies) if (Z.state !== 'dead' && circleInBox(Z.pos, 0.3, d.box)) return false;
     boxes.push(d.box);
   } else { const i = boxes.indexOf(d.box); if (i >= 0) boxes.splice(i, 1); }
-  d.open = open;
+  boxesChanged(); d.open = open;
   return true;
 }
 function updateDoors(dt) {
@@ -2013,13 +2029,14 @@ function poles() {
     circles.push({ x: 6.6, z, r: 0.2 }); tops.push([tx, z, y0 + 7.75]);
   }
   const wireMat = new THREE.LineBasicMaterial({ color: 0x050607 });
+  const spans = new Map();
   for (let i = 0; i < tops.length - 1; i++) for (const off of [-0.8, 0.8]) {
     if (tops[i + 1][1] - tops[i][1] > 26) continue;
-    const pts = [];
-    for (let k = 0; k <= 10; k++) { const t = k / 10; pts.push(new V3(tops[i][0] + (tops[i + 1][0] - tops[i][0]) * t + off, lerp(tops[i][2], tops[i + 1][2], t) - Math.sin(t * PI) * 0.9, tops[i][1] + 25 * t)); }
-    const l = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), wireMat); scene.add(l);
-    if (!inTown(6.6, tops[i][1])) chunkAt(6.6, tops[i][1]).objs.push(l);
+    const key = inTown(6.6, tops[i][1]) ? -1 : chunkAt(6.6, tops[i][1]).i; if (!spans.has(key)) spans.set(key, []);
+    const seg = spans.get(key); let prev = null;
+    for (let k = 0; k <= 10; k++) { const t = k / 10, v = new V3(tops[i][0] + (tops[i + 1][0] - tops[i][0]) * t + off, lerp(tops[i][2], tops[i + 1][2], t) - Math.sin(t * PI) * 0.9, tops[i][1] + 25 * t); if (prev) seg.push(prev, v); prev = v; }
   }
+  for (const [key, seg] of spans) { const l = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(seg), wireMat); scene.add(l); (key < 0 ? TOWN : chunks[key]).objs.push(l); }
 }
 let jerseyG = null;
 function jersey(x, z, rot) {
@@ -2414,6 +2431,7 @@ function buildWorld() {
   bakeStatic();
   gridCircles();
   grass();
+  pruneEmpty(); freezeStatic(); collectDetail();
 }
 const X_STORE_GLASS = 16.84;
 
@@ -2422,33 +2440,47 @@ const CH = 160, CHN = 12, CH0 = -960;
 const chunks = [];
 for (let iz = 0; iz < CHN; iz++) for (let ix = 0; ix < CHN; ix++) {
   const cx = CH0 + (ix + 0.5) * CH, cz = CH0 + (iz + 0.5) * CH;
-  chunks.push({ i: chunks.length, cx, cz, objs: [], trunks: [], hi: [], lo: [], grass: [], inst: [], vis: true, d: 0, box: new THREE.Box3(new V3(cx - CH / 2, -16, cz - CH / 2), new V3(cx + CH / 2, 46, cz + CH / 2)) });
+  chunks.push({ i: chunks.length, cx, cz, half: CH / 2, objs: [], far: [], trunks: [], hi: [], lo: [], grass: [], inst: [], vis: true, d: 0, box: new THREE.Box3(new V3(cx - CH / 2, -16, cz - CH / 2), new V3(cx + CH / 2, 46, cz + CH / 2)) });
 }
 function chunkAt(x, z) { const ix = clamp(Math.floor((x - CH0) / CH), 0, CHN - 1), iz = clamp(Math.floor((z - CH0) / CH), 0, CHN - 1); return chunks[iz * CHN + ix]; }
 const inTown = (x, z) => Math.abs(x) < 170 && Math.abs(z) < 170;
 // Millbrook itself is one more chunk, a big one: from out in the county none of it needs drawing
-const TOWN = { cx: 0, cz: 0, half: 170, objs: [], trunks: [], hi: [], lo: [], grass: [], inst: [], vis: true, d: 0, box: new THREE.Box3(new V3(-170, -16, -170), new V3(170, 46, 170)) };
+const TOWN = { cx: 0, cz: 0, half: 170, objs: [], far: [], trunks: [], hi: [], lo: [], grass: [], inst: [], vis: true, d: 0, box: new THREE.Box3(new V3(-170, -16, -170), new V3(170, 46, 170)) };
 let chunkT = 0;
 const _fr = new THREE.Frustum(), _frM = new THREE.Matrix4(), tcells = [];
 const setVis = (o, v) => { if (o.visible !== v) o.visible = v; };
-// land within sight (the fog decides how far that is), trees a little closer and simpler far off, grass only up close
+// land within sight (the fog decides how far that is); far woods are one mesh per chunk, and the detailed trees
+// in 80 m cells only exist for the chunk you're standing in and anything within 40 m of it
+const NEAR = 40;
 function updateChunks(dt) {
   camera.updateMatrixWorld(); _frM.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse); _fr.setFromProjectionMatrix(_frM);
   chunkT -= dt; const redo = chunkT <= 0; if (redo) chunkT = 0.3;
   const px = camera.position.x, pz = camera.position.z, low = SETTINGS.quality === 'low';
+  if (redo) cullDetail(px, pz);
   const R = clamp(2.8 / Math.max(scene.fog.near, 0.001), 170, low ? 320 : 480) * G.detail, TR = Math.min(R, (low ? 240 : 340) * G.detail), GR = (low ? 60 : 100) * Math.sqrt(G.detail);
-  for (const c of chunks.concat(TOWN, tcells)) {
+  const dist = c => Math.hypot(Math.max(Math.abs(px - c.cx) - c.half, 0), Math.max(Math.abs(pz - c.cz) - c.half, 0));
+  for (const c of chunks.concat(TOWN)) {
     if (redo) {
-      const hf = c.half || CH / 2;
-      c.d = Math.hypot(Math.max(Math.abs(px - c.cx) - hf, 0), Math.max(Math.abs(pz - c.cz) - hf, 0));
+      c.d = dist(c);
       const vis = c.d < R; if (vis !== c.vis) { c.vis = vis; for (const o of c.objs) o.visible = vis; }
       const sh = c.d < 36; for (const t of c.trunks.concat(c.hi, c.inst)) if (t.castShadow !== sh) t.castShadow = sh;
     }
-    const seen = c.vis && (c.d < 40 || _fr.intersectsBox(c.box)), tv = seen && c.d < TR, near = c.d < 50;
+    const seen = c.vis && (c.d < 40 || _fr.intersectsBox(c.box)), tv = seen && c.d < TR;
+    for (const t of c.far) setVis(t, tv && c.d >= NEAR);
     for (const t of c.trunks) setVis(t, tv);
-    for (const t of c.hi) setVis(t, tv && near);
-    for (const t of c.lo) setVis(t, tv && !near);
+    for (const t of c.hi) setVis(t, tv && c.d < 50);
+    for (const t of c.lo) setVis(t, tv && c.d >= 50);
     for (const t of c.inst) setVis(t, seen);
+    for (const g of c.grass) setVis(g, seen && c.d < GR);
+  }
+  for (const c of tcells) {
+    const pd = c.parent.d;
+    if (pd >= Math.max(NEAR, GR)) { if (c.on) { c.on = false; for (const t of c.trunks.concat(c.hi, c.grass)) t.visible = false; } continue; }
+    c.on = true;
+    if (redo || c.d < 0) { c.d = dist(c); const sh = c.d < 36; for (const t of c.trunks.concat(c.hi)) if (t.castShadow !== sh) t.castShadow = sh; }
+    const seen = c.d < 40 || _fr.intersectsBox(c.box), near = pd < NEAR && seen;
+    for (const t of c.trunks) setVis(t, near);
+    for (const t of c.hi) setVis(t, near);
     for (const g of c.grass) setVis(g, seen && c.d < GR);
   }
 }
@@ -2572,60 +2604,68 @@ function groundCells() {
 }
 let lowCrownG = null;
 const lowCrowns = () => lowCrownG || (lowCrownG = [crownGeo([[0, 0.25, 0, 1.75]], 0.8), crownGeo([[0, 0.5, 0, 3.0]], 0.72)]);
+// a whole tree for far off: trunk and crown in one mesh, coloured by vertex, so a chunk's woods are a single draw
+function farTreeGeo(H, r0, r1, crowns) {
+  const t = new THREE.CylinderGeometry(r1, r0, H, 5).toNonIndexed(); t.translate(0, H / 2, 0);
+  const parts = [t].concat(crowns.map(([g, y]) => { const c = g.index ? g.toNonIndexed() : g.clone(); c.translate(0, y, 0); return c; }));
+  const g = mergeFlat(parts), n = g.attributes.position.count, tc = t.attributes.position.count, col = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) { const tr = i < tc; col[i * 3] = tr ? 0.42 : 1; col[i * 3 + 1] = tr ? 0.34 : 1; col[i * 3 + 2] = tr ? 0.26 : 1; }
+  g.setAttribute('color', new THREE.BufferAttribute(col, 3)); return g;
+}
 function wildTrees() {
   const LOBC = crownGeo(blobRing(6, 0.5, 1.5, -0.5, 1.1, 1.0, 1.6, 1.25), 0.8), OAKC = crownGeo(blobRing(9, 1.0, 3.1, -0.4, 1.7, 1.5, 2.5, 2.1), 0.78);
   const [LOBL, OAKL] = lowCrowns();
-  const lobTG = new THREE.CylinderGeometry(0.12, 0.21, 1, 6), oakTG = new THREE.CylinderGeometry(0.24, 0.42, 1, 7);
+  const FAR_LOB = farTreeGeo(13, 0.21, 0.12, [[LOBL, 13 * 0.88]]), FAR_OAK = farTreeGeo(4.2, 0.42, 0.24, [[OAKL, 5.25]]);
+  const farNeedle = M.needles.clone(), farLeaf = M.leaf.clone(); farNeedle.vertexColors = farLeaf.vertexColors = true;
+  const trunkG = new THREE.CylinderGeometry(0.12, 0.21, 1, 6);
   const GRASS_G = (() => { const planes = [0, PI / 3, 2 * PI / 3].map(a => { const pl = new THREE.PlaneGeometry(1, 0.6); pl.translate(0, 0.3, 0); pl.rotateY(a); return pl.toNonIndexed(); }); const g = mergeFlat(planes), n = g.attributes.normal; for (let i = 0; i < n.count; i++) n.setXYZ(i, 0, 1, 0); return g; })();
   const m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new V3(), p = new V3(), col = new THREE.Color();
-  const mk = (geo, mat, n, list) => { const im = new THREE.InstancedMesh(geo, mat, Math.max(1, n)); im.count = n; im.frustumCulled = false; im.receiveShadow = true; scene.add(im); list.push(im); return im; };
-  // the far crown shares the near one's per-tree transforms and tints
-  const twin = (geo, src, list) => { const im = new THREE.InstancedMesh(geo, src.material, 1); im.instanceMatrix = src.instanceMatrix; im.instanceColor = src.instanceColor; im.count = src.count; im.frustumCulled = false; im.receiveShadow = true; scene.add(im); list.push(im); return im; };
-  // trees go in 80 m cells, finer than the chunks, so the detailed crowns only draw close by
-  for (const c0 of chunks) for (const [ox, oz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+  const inst = (geo, mat, n, list, hidden) => { const im = new THREE.InstancedMesh(geo, mat, Math.max(1, n)); im.count = n; im.frustumCulled = false; im.receiveShadow = true; if (hidden) im.visible = false; scene.add(im); list.push(im); return im; };
+  const done = ims => { for (const im of ims) { im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true; } };
+  for (const c0 of chunks) {
     if (Math.abs(c0.cx) < 160 && Math.abs(c0.cz) < 160) continue;
-    const cx = c0.cx + ox * 40, cz = c0.cz + oz * 40;
-    const c = { cx, cz, half: 40, objs: [], trunks: [], hi: [], lo: [], grass: [], inst: [], vis: true, d: 0, box: new THREE.Box3(new V3(cx - 40, -16, cz - 40), new V3(cx + 40, 46, cz + 40)) };
-    tcells.push(c);
-    const lob = [], oak = [];
-    for (let i = 0; i < 140; i++) {
-      const x = cx + rand(-40, 40), z = cz + rand(-40, 40);
+    const trees = [];
+    for (let i = 0; i < 560; i++) {
+      const x = c0.cx + rand(-CH / 2, CH / 2), z = c0.cz + rand(-CH / 2, CH / 2);
       if (Math.random() > forestAt(x, z) * 0.85 + 0.012 || !wildOK(x, z)) continue;
-      (Math.random() < 0.78 ? lob : oak).push([x, z]);
+      const oak = Math.random() >= 0.78, k = oak ? rand(0.8, 1.3) : rand(0.85, 1.35);
+      trees.push({ x, z, oak, k, H: oak ? rand(3.4, 5) * k : rand(10, 16) * k, cs: oak ? rand(0.85, 1.25) * k : rand(0.9, 1.35) * k, sy: oak ? 1 : rand(0.9, 1.2), a: Math.random() * TAU, y0: heightAt(x, z) - 0.2,
+        tint: oak ? [rand(0.76, 1), rand(0.78, 1.05), rand(0.7, 0.92)] : [rand(0.8, 1), rand(0.82, 1.05), rand(0.72, 0.92)] });
+      circles.push({ x, z, r: (oak ? 0.4 : 0.25) * k });
     }
-    if (lob.length) {
-      const T1 = mk(lobTG, M.bark, lob.length, c.trunks), C1 = mk(LOBC, M.needles, lob.length, c.hi);
-      lob.forEach(([x, z], i) => {
-        const k = rand(0.85, 1.35), H = rand(10, 16) * k, y0 = heightAt(x, z) - 0.2; q.setFromAxisAngle(UP, Math.random() * TAU);
-        p.set(x, y0 + H / 2, z); s.set(k, H, k); m.compose(p, q, s); T1.setMatrixAt(i, m);
-        const cs = rand(0.9, 1.35) * k; p.set(x, y0 + H * 0.88, z); s.set(cs, cs * rand(0.9, 1.2), cs); m.compose(p, q, s); C1.setMatrixAt(i, m);
-        col.setRGB(rand(0.8, 1), rand(0.82, 1.05), rand(0.72, 0.92)); C1.setColorAt(i, col);
-        circles.push({ x, z, r: 0.25 * k });
-      });
-      twin(LOBL, C1, c.lo);
+    // far off: the whole chunk's pines in one draw, its oaks in another
+    for (const oak of [false, true]) {
+      const list = trees.filter(t => t.oak === oak); if (!list.length) continue;
+      const F = inst(oak ? FAR_OAK : FAR_LOB, oak ? farLeaf : farNeedle, list.length, c0.far);
+      list.forEach((t, i) => { q.setFromAxisAngle(UP, t.a); p.set(t.x, t.y0, t.z); s.set(t.cs, t.H / (oak ? 4.2 : 13), t.cs); m.compose(p, q, s); F.setMatrixAt(i, m); col.setRGB(...t.tint); F.setColorAt(i, col); });
+      done([F]);
     }
-    if (oak.length) {
-      const T2 = mk(oakTG, M.bark, oak.length, c.trunks), C2 = mk(OAKC, M.leaf, oak.length, c.hi);
-      oak.forEach(([x, z], i) => {
-        const k = rand(0.8, 1.3), H = rand(3.4, 5) * k, y0 = heightAt(x, z) - 0.2; q.setFromAxisAngle(UP, Math.random() * TAU);
-        p.set(x, y0 + H / 2, z); s.set(k, H, k); m.compose(p, q, s); T2.setMatrixAt(i, m);
-        const cs = rand(0.85, 1.25) * k; p.set(x, y0 + H + cs, z); s.set(cs, cs, cs); m.compose(p, q, s); C2.setMatrixAt(i, m);
-        col.setRGB(rand(0.76, 1), rand(0.78, 1.05), rand(0.7, 0.92)); C2.setColorAt(i, col);
-        circles.push({ x, z, r: 0.4 * k });
-      });
-      twin(OAKL, C2, c.lo);
-    }
-    for (const im of c.trunks.concat(c.hi)) { im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true; }
-    // tall grass in the open fields
-    const gr = [];
-    for (let i = 0; i < 175 && gr.length < 105; i++) { const x = cx + rand(-40, 40), z = cz + rand(-40, 40); if (forestAt(x, z) > 0.55 || Math.min(Math.abs(x), Math.abs(z)) < 6 || (z > 112 && z < 146) || onDirt(x, z, 1) || nearPOI(x, z, -8)) continue; gr.push([x, z]); }
-    if (gr.length) {
-      const G2 = new THREE.InstancedMesh(GRASS_G, M.grassClump, gr.length); G2.frustumCulled = false; G2.receiveShadow = true;
-      gr.forEach(([x, z], i) => { const k = rand(0.7, 1.4), tall = Math.random() < 0.25; q.setFromAxisAngle(UP, Math.random() * TAU); p.set(x, heightAt(x, z) - 0.04, z); s.set(k, k * (tall ? rand(1.5, 2.4) : rand(0.8, 1.3)), k); m.compose(p, q, s); G2.setMatrixAt(i, m); col.setRGB(rand(0.85, 1.12), rand(0.85, 1.05), rand(0.65, 0.88)); G2.setColorAt(i, col); });
-      G2.instanceMatrix.needsUpdate = true; if (G2.instanceColor) G2.instanceColor.needsUpdate = true; scene.add(G2); c.grass.push(G2);
+    // up close: four 80 m cells, each with its trunks, detailed crowns and field grass
+    for (const [ox, oz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+      const cx = c0.cx + ox * 40, cz = c0.cz + oz * 40;
+      const c = { cx, cz, half: 40, parent: c0, trunks: [], hi: [], grass: [], d: -1, on: false, box: new THREE.Box3(new V3(cx - 40, -16, cz - 40), new V3(cx + 40, 46, cz + 40)) };
+      tcells.push(c);
+      const qt = trees.filter(t => (t.x < c0.cx) === (ox < 0) && (t.z < c0.cz) === (oz < 0));
+      if (qt.length) {
+        const Tm = inst(trunkG, M.bark, qt.length, c.trunks, true);
+        qt.forEach((t, i) => { q.setFromAxisAngle(UP, t.a); p.set(t.x, t.y0 + t.H / 2, t.z); const w = t.oak ? 2 * t.k : t.k; s.set(w, t.H, w); m.compose(p, q, s); Tm.setMatrixAt(i, m); });
+        for (const oak of [false, true]) {
+          const l = qt.filter(t => t.oak === oak); if (!l.length) continue;
+          const C = inst(oak ? OAKC : LOBC, oak ? M.leaf : M.needles, l.length, c.hi, true);
+          l.forEach((t, i) => { q.setFromAxisAngle(UP, t.a); if (oak) { p.set(t.x, t.y0 + t.H + t.cs, t.z); s.set(t.cs, t.cs, t.cs); } else { p.set(t.x, t.y0 + t.H * 0.88, t.z); s.set(t.cs, t.cs * t.sy, t.cs); } m.compose(p, q, s); C.setMatrixAt(i, m); col.setRGB(...t.tint); C.setColorAt(i, col); });
+        }
+        done(c.trunks.concat(c.hi));
+      }
+      const gr = [];
+      for (let i = 0; i < 175 && gr.length < 105; i++) { const x = cx + rand(-40, 40), z = cz + rand(-40, 40); if (forestAt(x, z) > 0.55 || Math.min(Math.abs(x), Math.abs(z)) < 6 || (z > 112 && z < 146) || onDirt(x, z, 1) || nearPOI(x, z, -8)) continue; gr.push([x, z]); }
+      if (gr.length) {
+        const G2 = inst(GRASS_G, M.grassClump, gr.length, c.grass, true);
+        gr.forEach(([x, z], i) => { const k = rand(0.7, 1.4), tall = Math.random() < 0.25; q.setFromAxisAngle(UP, Math.random() * TAU); p.set(x, heightAt(x, z) - 0.04, z); s.set(k, k * (tall ? rand(1.5, 2.4) : rand(0.8, 1.3)), k); m.compose(p, q, s); G2.setMatrixAt(i, m); col.setRGB(rand(0.85, 1.12), rand(0.85, 1.05), rand(0.65, 0.88)); G2.setColorAt(i, col); });
+        done([G2]);
+      }
     }
   }
-  // past the fence: the rest of Georgia, pine woods going off into the haze
+  // past the fence: the rest of Georgia, pine woods going off into the haze, all one draw
   const out = [];
   for (let i = 0; i < 9000 && out.length < 2800; i++) {
     const x = rand(-1500, 1500), z = rand(-1500, 1500);
@@ -2633,15 +2673,35 @@ function wildTrees() {
     if (Math.random() > forestAt(x, z) * 0.9 + 0.05) continue;
     out.push([x, z]);
   }
-  const oT = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.12, 0.2, 1, 5), M.bark, out.length), oA = new THREE.InstancedMesh(new THREE.ConeGeometry(1, 1, 7), M.needles, out.length), oB = new THREE.InstancedMesh(new THREE.ConeGeometry(1, 1, 7), M.needles, out.length);
-  out.forEach(([x, z], i) => {
-    const k = rand(0.9, 1.6), y0 = heightAt(x, z) - 0.2, th = 5 * k; q.setFromAxisAngle(UP, Math.random() * TAU);
-    p.set(x, y0 + th / 2, z); s.set(k, th, k); m.compose(p, q, s); oT.setMatrixAt(i, m);
-    p.set(x, y0 + th + 2.2 * k, z); s.set(2.3 * k, 6 * k, 2.3 * k); m.compose(p, q, s); oA.setMatrixAt(i, m);
-    p.set(x, y0 + th + 5.6 * k, z); s.set(1.5 * k, 4.4 * k, 1.5 * k); m.compose(p, q, s); oB.setMatrixAt(i, m);
-    col.setRGB(rand(0.75, 0.95), rand(0.8, 1.0), rand(0.7, 0.9)); oA.setColorAt(i, col); oB.setColorAt(i, col);
-  });
-  for (const im of [oT, oA, oB]) { im.frustumCulled = false; im.receiveShadow = true; im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true; scene.add(im); }
+  const PINE = farTreeGeo(5, 0.2, 0.12, [[new THREE.ConeGeometry(2.3, 6, 7), 7.2], [new THREE.ConeGeometry(1.5, 4.4, 7), 10.6]]);
+  const O = new THREE.InstancedMesh(PINE, farNeedle, out.length);
+  out.forEach(([x, z], i) => { const k = rand(0.9, 1.6); q.setFromAxisAngle(UP, Math.random() * TAU); p.set(x, heightAt(x, z) - 0.2, z); s.set(k, k, k); m.compose(p, q, s); O.setMatrixAt(i, m); col.setRGB(rand(0.75, 0.95), rand(0.8, 1.0), rand(0.7, 0.9)); O.setColorAt(i, col); });
+  O.frustumCulled = false; O.receiveShadow = true; done([O]); scene.add(O); O.matrixAutoUpdate = false;
+}
+// after the bake, the groups that only held pieces for building are empty: drop them
+function pruneEmpty() {
+  const rec = o => { for (const ch of [...o.children]) if (ch.isGroup) rec(ch); if (o.isGroup && o.children.length === 0 && o.parent) o.parent.remove(o); };
+  for (const o of [...scene.children]) if (o.isGroup) rec(o);
+}
+// small things (cars, props, loose signs, sprites, blood) only matter up close: out of range they leave the scene
+const DETAIL = [];
+function collectDetail() {
+  const owned = new Set(); for (const c of chunks.concat(TOWN, tcells)) for (const k of ['objs', 'inst', 'far', 'trunks', 'hi', 'lo', 'grass']) for (const o of c[k] || []) owned.add(o);
+  for (const o of scene.children) {
+    if (owned.has(o) || o.isCamera || o.isLight || o.isInstancedMesh || o.isPoints || o.userData.far) continue;
+    if (!(o.isGroup || o.isMesh || o.isLine || o.isSprite) || o.children.some(ch => ch.isSkinnedMesh)) continue;
+    const x = o.position.x, z = o.position.z; if ((x === 0 && z === 0) || Math.abs(x) > WORLD + 50 || Math.abs(z) > WORLD + 50) continue;
+    DETAIL.push(o);
+  }
+}
+function cullDetail(px, pz) {
+  const DR = 150 * Math.max(0.7, G.detail), near = o => Math.abs(o.position.x - px) < DR && Math.abs(o.position.z - pz) < DR;
+  for (const o of DETAIL) { const w = near(o); if (w !== (o.parent === scene)) { if (w) scene.add(o); else scene.remove(o); } }
+  for (const p0 of pools) { const o = p0.m, w = near(o); if (w !== (o.parent === scene)) { if (w) scene.add(o); else scene.remove(o); } }
+}
+// and nothing that was built moves, so stop recomputing its matrices every frame
+function freezeStatic() {
+  for (const c of chunks.concat(TOWN, tcells)) for (const k of ['objs', 'inst', 'far', 'trunks', 'hi', 'lo', 'grass']) for (const o of c[k] || []) if (o.matrixAutoUpdate) { o.updateMatrix(); o.matrixAutoUpdate = false; }
 }
 
 /* places */
@@ -2856,7 +2916,7 @@ function cellTower(p) {
   for (let i = 0; i < 3; i++) { const a = i * TAU / 3; strut(new V3(x + Math.sin(a) * 2.6, y0, z + Math.cos(a) * 2.6), new V3(x + Math.sin(a) * 0.5, y0 + Hh, z + Math.cos(a) * 0.5), 0.1, M.metal); circles.push({ x: x + Math.sin(a) * 2.6, z: z + Math.cos(a) * 2.6, r: 0.3 }); }
   for (let y = 4; y < Hh; y += 4.5) { const r = lerp(2.6, 0.5, y / Hh); for (let i = 0; i < 3; i++) { const a = i * TAU / 3, b = a + TAU / 3; strut(new V3(x + Math.sin(a) * r, y0 + y, z + Math.cos(a) * r), new V3(x + Math.sin(b) * r, y0 + y, z + Math.cos(b) * r), 0.04, M.metal); } }
   for (let i = 0; i < 3; i++) { const a = i * TAU / 3 + 0.5; addMesh(B(0.5, 2.0, 0.15), MW.white, x + Math.sin(a) * 1.1, y0 + Hh - 3, z + Math.cos(a) * 1.1).rotation.y = a; }
-  towerLight = new THREE.Mesh(new THREE.SphereGeometry(0.35, 8, 6), MW.beacon); towerLight.position.set(x, y0 + Hh + 0.6, z); scene.add(towerLight);
+  towerLight = new THREE.Mesh(new THREE.SphereGeometry(0.35, 8, 6), MW.beacon); towerLight.userData.far = true; towerLight.position.set(x, y0 + Hh + 0.6, z); scene.add(towerLight);
   const g = gp(x, z, 0);
   addMesh(boxUV(3, 2.6, 3.6, 2), M.block, 5, 1.3, 4, g); addMesh(B(0.9, 2.0, 0.06), M.door, 5, 1.0, 5.83, g); solidBox(g, 5, 4, 3.2, 3.8);
   lootAt(g, 5, 6.6, 'Search the equipment shed', 1.8, { fixed: [['battery', 1]] });
@@ -3900,12 +3960,16 @@ function updateZombies(dt) {
     // out past what you can see, the dead stand where they are; the ones that wandered in drift off for good
     const fx = Math.abs(P.pos.x - Z.pos.x), fz = Math.abs(P.pos.z - Z.pos.z), far = fx > 160 || fz > 160;
     if (far && Z.state !== 'chase' && Z.state !== 'investigate') {
-      Z.frozen = true; if (Z.g.visible && !G.before) Z.g.visible = false;
+      if (!Z.frozen) { Z.frozen = true; scene.remove(Z.g); }
       if (Z.roam && (fx > 240 || fz > 240)) { zombies.splice(i, 1); disposeWalker(Z); }
       continue;
     }
-    if (Z.frozen) { Z.frozen = false; if (!G.before) Z.g.visible = true; }
-    updateZombie(Z, dt, t);
+    if (Z.frozen) { Z.frozen = false; scene.add(Z.g); }
+    // farther off, and not after you, the dead think and move on fewer frames
+    const dd = Math.max(fx, fz), every = dd < 40 || Z.state === 'chase' || Z.state === 'attack' || Z.state === 'grab' || Z.state === 'rise' || Z.state === 'stagger' || Z.state === 'down' ? 1 : dd < 85 ? 2 : 4;
+    Z.lodAcc = (Z.lodAcc || 0) + dt; Z.lodN = Z.lodN === undefined ? (Math.random() * 4) | 0 : Z.lodN + 1;
+    if (Z.lodN % every) continue;
+    updateZombie(Z, Math.min(Z.lodAcc, 0.15), t); Z.lodAcc = 0;
   }
   for (let i = 0; i < zombies.length; i++) {
     const a = zombies[i]; if (a.frozen || a.state === 'dead' || a.state === 'grab' || a.state === 'sleep' || a.state === 'feed') continue;
@@ -3919,7 +3983,7 @@ function updateZombies(dt) {
   if (shadowT <= 0) {
     shadowT = 0.5;
     const cx = camera.position.x, cz = camera.position.z, lim = SETTINGS.quality === 'low' ? 18 : 30;
-    for (const L of [zombies, corpses, bodies]) for (const Z of L) { const d = Math.hypot(Z.pos.x - cx, Z.pos.z - cz); Z.mesh.castShadow = d < lim; if (L !== zombies && !G.before) Z.g.visible = d < 200; }
+    for (const L of [zombies, corpses, bodies]) for (const Z of L) { const d = Math.hypot(Z.pos.x - cx, Z.pos.z - cz); Z.mesh.castShadow = d < lim; if (L !== zombies) { const want = d < 200; if (want !== (Z.g.parent === scene)) { if (want) scene.add(Z.g); else scene.remove(Z.g); } } }
   }
 }
 function clearZombies() {
@@ -4454,7 +4518,7 @@ const flashDir = new V3(0, 0, -1);
 const P = { pos: new V3(), vel: new V3() };
 // the clock counts minutes from midnight on day 41; a game minute is a real second by day, half that at night
 const START_MIN = 640, FEVER_MIN = 480;
-const G = { state: 'boot', detail: 1, clockMin: START_MIN, clock: 0, light: 1, gold: 0, rate: 1, spawnT: 10, hordeT: 150, hurtA: 0, splatA: 0, muzzleT: 0, zsteps: 0, docs: new Set(), found: new Set(), amb: 4, said: {}, blinkT: 0, sleep: null, adapt: 1 };
+const G = { state: 'boot', detail: 1, slowN: 0, clockMin: START_MIN, clock: 0, light: 1, gold: 0, rate: 1, spawnT: 10, hordeT: 150, hurtA: 0, splatA: 0, muzzleT: 0, zsteps: 0, docs: new Set(), found: new Set(), amb: 4, said: {}, blinkT: 0, sleep: null, adapt: 1 };
 const dayOf = m => 41 + Math.floor(m / 1440);
 const camFwd = v => v.set(0, 0, -1).applyQuaternion(camera.quaternion);
 const camRight = v => v.set(1, 0, 0).applyQuaternion(camera.quaternion);
@@ -4741,8 +4805,20 @@ const rMuzzlePt = new THREE.Object3D(); rMuzzlePt.position.set(0, 0, -0.69); rif
 const rEjectPt = new THREE.Object3D(); rEjectPt.position.set(0.028, 0.014, -0.05); rifle.add(rEjectPt);
 rifle.visible = false;
 
+// each weapon's fixed parts merged by material, so what's in your hands is a handful of draws instead of ninety
+function bakeDirect(g) {
+  const buckets = new Map();
+  for (const m of g.children.filter(o => o.isMesh && !o.userData.keep)) {
+    m.updateMatrix(); const k = m.material.uuid;
+    if (!buckets.has(k)) buckets.set(k, { mat: m.material, geos: [] });
+    buckets.get(k).geos.push(flatClone(m, m.matrix)); g.remove(m);
+  }
+  for (const b of buckets.values()) g.add(new THREE.Mesh(mergeFlat(b.geos), b.mat));
+}
+magTop.userData.keep = true; rTrig.userData.keep = true;
+for (const g of [pistol, slide, trig, mag, knife, lamp, xbow, strCock, strRest, rifle, rMagG, rBolt]) bakeDirect(g);
 const ray = new THREE.Raycaster();
-function zHitList() { const a = []; for (const Z of zombies) if (Z.state !== 'dead') for (const m of Z.hit) a.push(m); return a; }
+function zHitList() { const a = []; for (const Z of zombies) if (Z.state !== 'dead' && !Z.frozen) for (const m of Z.hit) a.push(m); return a; }
 function rayGround(o, d, maxD) { let t = 0.3; while (t < maxD) { const x = o.x + d.x * t, y = o.y + d.y * t, z = o.z + d.z * t; if (y <= floorY(x, z)) return t; t += t < 20 ? 0.2 : 0.5; } return Infinity; }
 function attack() { if (!P.alive || P.switchT > 0 || P.seated) return; if (P.weapon === 'pistol') fire(); else if (P.weapon === 'rifle') { P.trigger = locked; fireRifle(); } else if (P.weapon === 'bow') fireBow(); else stab(); }
 function fire() {
@@ -5671,7 +5747,7 @@ const setW = (e, v) => { const s = clamp(v, 0, 100).toFixed(1) + '%'; if (e._w !
 const rad = $('#radar'), rcx = rad.getContext('2d');
 let radT = 0;
 function drawRadar(dt) {
-  radT -= dt; if (radT > 0) return; radT = 1 / 30;
+  radT -= dt; if (radT > 0) return; radT = 1 / 12;
   const g = rcx, S = rad.width, C = S / 2, R = C - 10, range = 120, k = R / range, px = P.pos.x, pz = P.pos.z, cy = Math.cos(P.yaw), sy = Math.sin(P.yaw);
   const toR = (dx, dz) => [dx * cy - dz * sy, dx * sy + dz * cy];
   g.clearRect(0, 0, S, S);
@@ -5878,6 +5954,7 @@ function resetGame() {
   Object.assign(RAD, { on: false, next: 3, idx: -1, heard: false }); els.radio.hidden = true; els.struggle.hidden = true;
   for (const l of inter) if (l.kind === 'loot') { l.searched = false; l.items = rollLoot(l); if ((l.bow || l.rifle) && l.mesh) l.mesh.visible = true; }
   for (const f of fuels) { f.taken = false; f.mesh.visible = true; }
+  boxesChanged();
   for (const d of doors) { if (d.init === undefined) d.init = d.open; const i = boxes.indexOf(d.box); if (i >= 0) boxes.splice(i, 1); d.open = d.init; if (!d.open) boxes.push(d.box); d.t = d.open ? 1 : 0; }
   for (const C of cars) { C.alarmT = 0; C.alarmUsed = 0; }
   spawnPlan();
@@ -6410,10 +6487,17 @@ function loop(nowT) {
   setListener();
   if (G.state === 'play') {
     perfAcc += raw; perfN++; perfT += raw;
-    if (perfT > 2) {
+    if (perfT > 1) {
+      // when frames run long: draw distance and ambient occlusion first, then resolution, and if Cinematic still can't keep up, Fast
       const avg = perfAcc / perfN, base = basePR(), fl = floorPR();
-      if (avg > 1 / 38) { if (G.detail > 0.6) G.detail = Math.max(0.6, G.detail - 0.1); else if (PR > fl) { PR = Math.max(fl, PR - 0.1); applySize(); } }
-      else if (avg < 1 / 57) { if (PR < base) { PR = Math.min(base, PR + 0.05); applySize(); } else if (G.detail < 1) G.detail = Math.min(1, G.detail + 0.05); }
+      if (avg > 1 / 45) {
+        if (G.detail > 0.55) G.detail = Math.max(0.55, G.detail - 0.15);
+        else if (PR > fl) { PR = Math.max(fl, PR - 0.1); applySize(); }
+        else if (SETTINGS.quality === 'high' && avg > 1 / 32 && ++G.slowN >= 3) {
+          SETTINGS.quality = 'low'; saveSettings(); $('#qLow').checked = true; G.slowN = 0; G.detail = 0.8; applyQuality();
+          msg('Switched graphics to Fast to keep it smooth. Cinematic is still there in Settings on the title screen.');
+        }
+      } else { G.slowN = 0; if (avg < 1 / 58) { if (PR < base) { PR = Math.min(base, PR + 0.05); applySize(); } else if (G.detail < 1) G.detail = Math.min(1, G.detail + 0.05); } }
       perfAcc = 0; perfN = 0; perfT = 0;
     }
   }
