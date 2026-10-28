@@ -255,8 +255,8 @@ button:focus-visible{outline:2px solid var(--amber);outline-offset:3px}
       <div><kbd>C</kbd>Crouch (quieter)</div>
       <div><kbd>Click</kbd>Shoot / stab</div>
       <div><kbd>Right-click</kbd>Aim sights</div>
-      <div><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd>Knife / pistol / crossbow / rifle</div>
-      <div><kbd>Hold click</kbd>Rifle fires full auto</div>
+      <div><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd>Knife / pistol / crossbow</div>
+      <div><kbd>4</kbd>Rifle, if you get it out of the supermarket</div>
       <div><kbd>R</kbd>Reload or cock</div>
       <div><kbd>E</kbd>Search, open, read, sleep</div>
       <div><kbd>Q</kbd>Shove</div>
@@ -420,6 +420,7 @@ const POIS = [
   { id: 'trailers', name: 'Shady Pines', sub: 'MOBILE HOME PARK', x: -330, z: -70, r: 48 },
   { id: 'heli', name: 'The helicopter crash', sub: '', x: 140, z: 430, r: 30 },
   { id: 'tower', name: 'The cell tower', sub: 'PELL WIRELESS · SITE 114', x: -130, z: -430, r: 16 },
+  { id: 'market', name: 'Millbrook Supermarket', sub: 'GROCERY · MEAT · PHARMACY', x: 225, z: -44, r: 58, found: 'Millbrook Supermarket. The doors are chained, DEAD INSIDE is painted across the boards, and something keeps bumping the glass.' },
   { id: 'quarry', name: 'The quarry', sub: 'PELL COUNTY AGGREGATES', x: 700, z: -150, r: 60, pit: 9 },
 ];
 function heightAt(x, z) {
@@ -1046,6 +1047,11 @@ const DOCS = [
     'All roads are closed at checkpoints. Persons approaching a checkpoint will be fired upon.',
     'Destroy the brain of the deceased. Do not drink untreated water.',
     'Further instructions will be broadcast on weather radio, 162.550 MHz.'] },
+  { id: 'market', sort: 11.5, date: 'Oct 14', title: 'On the back of a stock order', src: 'Office desk, Millbrook Supermarket', style: 'hand', body: [
+    'Day eleven in the store. There were nine of us. Food for a year, the pharmacy, and Ray’s rifle.',
+    'The generator quit Tuesday night. In the dark nobody saw Carol was sick until she was already one of them.',
+    'They’re in the aisles now, all the ones who were us. I chained the front doors so they can’t get out. I can’t get out either.',
+    'Ray’s rifle is on the floor by me with a full magazine, and there’s another in the desk. If you’re reading this, they’re yours. Aim for the head.'] },
   { id: 'eas', sort: 12, date: 'Since Oct 9', title: 'Weather radio broadcast', src: 'Truck radio, 162.550 MHz', style: 'typed', body: EAS_LINES },
   { id: 'diary', sort: 13, date: 'Oct 24', title: 'Notebook in a pack', src: 'A survivor’s pack', style: 'hand', body: [
     'Water ran out at the Lyle house yesterday. Power’s been gone since the 12th.',
@@ -2938,6 +2944,108 @@ function containment() {
   }
 }
 
+// Millbrook Supermarket, out on the east road: chained shut with the dead still inside, and the rifle in the back office
+const MARKET = { X0: 203, X1: 247, Z0: -78, Z1: -50, H: 4.6, doors: [] };
+function market(p) {
+  const { X0, X1, Z0, Z1, H } = MARKET, cx = (X0 + X1) / 2, cz = (Z0 + Z1) / 2;
+  regions.push({ minX: X0, maxX: X1, minZ: Z0, maxZ: Z1, name: 'market' });
+  const fl = addMesh(planeUV(X1 - X0, Z1 - Z0, 1.2), M.tile, cx, 0.025, cz, scene, { cast: false, solid: false }); fl.rotation.x = -PI / 2;
+  const ce = addMesh(planeUV(X1 - X0, Z1 - Z0, 1.2), M.ceiling, cx, H, cz, scene, { cast: false, solid: false }); ce.rotation.x = PI / 2;
+  addMesh(boxUV(X1 - X0 + 0.6, 0.45, Z1 - Z0 + 0.6, 3), M.concrete, cx, H + 0.22, cz);
+  // the shell: block sides and back, a door into the stockroom on the east side
+  wallZ(X0, Z0 - 0.1, Z1 + 0.1, [], H, M.block, M.iwall2);
+  wallZ(X1, Z0 - 0.1, Z1 + 0.1, [[-75.6, -74.4]], H, M.iwall2, M.block);
+  wallX(Z0, X0 - 0.1, X1 + 0.1, [], H, M.block, M.iwall2);
+  // the storefront: brick knee wall and header, plate glass between, most of it boarded from inside
+  const front = (a, b) => {
+    wallBox(a, b, Z1 - 0.1, Z1 + 0.1, 0, 0.8, M.brick); wallBox(a, b, Z1 - 0.1, Z1 + 0.1, 3.1, H, M.brick);
+    boxes.push({ minX: a, maxX: b, minZ: Z1 - 0.1, maxZ: Z1 + 0.1 });
+    const n = Math.max(1, Math.round((b - a) / 3.2)), w = (b - a) / n;
+    for (let i = 0; i < n; i++) { const x = a + (i + 0.5) * w; windowPane(x, 1.95, Z1 + 0.04, 'x', w - 0.2, 2.25, Math.random() < 0.6); addMesh(B(0.12, 2.3, 0.14), M.metal, a + i * w, 1.95, Z1, scene, { cast: false }); }
+  };
+  front(X0 - 0.1, 222.6); front(225.4, X1 + 0.1);
+  wallBox(222.6, 225.4, Z1 - 0.1, Z1 + 0.1, 2.15, H, M.brick);
+  // a parapet and the sign over the doors
+  addMesh(boxUV(24, 1.7, 0.3, 2), M.white, cx, H + 0.85, Z1 + 0.16);
+  addMesh(new THREE.PlaneGeometry(20, 1.4), signMat(1024, 96, (c, w, h) => {
+    c.fillStyle = '#efe9da'; c.fillRect(0, 0, w, h); c.fillStyle = '#b5261c'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.font = 'bold 62px "Arial Black", Arial, sans-serif'; c.fillText('MILLBROOK SUPERMARKET', w / 2, h / 2 + 3);
+    speck(c, w, 3000, ['rgba(0,0,0,.22)', 'rgba(90,60,30,.25)'], 1, 3, 0.5, h);
+  }, 0.7), cx, H + 0.85, Z1 + 0.32, scene, { cast: false, solid: false });
+  // the doors, chained, and what somebody painted across the plywood either side
+  MARKET.doors = [makeDoor(222.6, Z1, 'x', 1.4, false, 1.3, 'front doors', M.door), makeDoor(224.0, Z1, 'x', 1.4, false, 1.3, 'front doors', M.door)];
+  for (let i = 0; i < 9; i++) addMesh(new THREE.TorusGeometry(0.045, 0.012, 5, 10), M.metal, 223.6 + i * 0.09, 1.05 + Math.sin(i * 0.7) * 0.04, Z1 + 0.12, scene, { cast: false, solid: false }).rotation.y = i % 2 ? PI / 2 : 0;
+  decal(afterMat(decalMat(sprayTex(['DEAD', 'INSIDE'], '#c21d12', 92))), 4.4, 2.2, 218.6, 1.95, Z1 + 0.13, 0, 0);
+  decal(afterMat(decalMat(sprayTex(['DON’T', 'OPEN'], '#e8e6df', 92))), 4.4, 2.2, 229.4, 1.95, Z1 + 0.13, 0, 0);
+  // inside: the aisles, one shelf pulled over, stock left on the rest
+  const goods = [];
+  for (let i = 0; i < 8; i++) {
+    const x = 207.5 + i * 3.6;
+    if (i === 5) { const s = boxProp(1.9, 1.05, 10.5, M.shelf, x + 0.9, 0, -61.5, true); s.rotation.z = 0.05; for (let k = 0; k < 40; k++) goods.push([x + rand(-1.6, 2.8), 0.06, -61.5 + rand(-5, 5), Math.random() * TAU]); continue; }
+    // a gondola: a solid spine with shelves out both sides, stock along each one
+    boxProp(0.36, 1.9, 10.5, M.shelf, x, 0, -61.5, false); addBox(x, -61.5, 1.2, 10.5);
+    for (const side of [-1, 1]) {
+      addMesh(B(0.38, 0.12, 10.5), M.shelf, x + side * 0.38, 0.06, -61.5, scene, { solid: false });
+      for (const y of [0.55, 1.0, 1.45]) addMesh(B(0.38, 0.025, 10.5), M.shelf, x + side * 0.38, y, -61.5, scene, { cast: false, solid: false });
+      for (const y of [0.12, 0.5625, 1.0125, 1.4625]) for (let k = 0; k < 34; k++) if (Math.random() < 0.5) goods.push([x + side * rand(0.3, 0.46), y, -66.4 + k * 0.29 + rand(-0.04, 0.04), rand(-0.2, 0.2)]);
+    }
+    addMesh(new THREE.PlaneGeometry(1.6, 0.5), signMat(256, 80, (c, w, h) => { c.fillStyle = '#1f4f7a'; c.fillRect(0, 0, w, h); c.fillStyle = '#f2ede0'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.font = 'bold 34px Arial, sans-serif'; c.fillText(`${i + 1} · ${['PHARMACY', 'BAKING', 'CANNED', 'CEREAL', 'SNACKS', 'SOUP', 'PAPER', 'PET'][i]}`, w / 2, h / 2 + 2, w - 12); }), x, 3.3, -56, scene, { cast: false, solid: false }).rotation.y = 0;
+    for (const s of [-0.6, 0.6]) addMesh(new THREE.CylinderGeometry(0.006, 0.006, 1.05, 4), M.metal, x + s, 4.07, -56, scene, { cast: false, solid: false });
+  }
+  for (let k = 0; k < 90; k++) goods.push([rand(X0 + 2, 234), 0.06, rand(-68, -53), Math.random() * TAU]);
+  const gm = new THREE.InstancedMesh(B(0.14, 0.2, 0.1), std({ roughness: 0.75 }), goods.length), m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new V3(1, 1, 1), pp = new V3(), col = new THREE.Color();
+  goods.forEach(([x, y, z, r], i) => { pp.set(x, y + 0.1, z); q.setFromAxisAngle(UP, r); m4.compose(pp, q, sc); gm.setMatrixAt(i, m4); col.set(pick(['#8a2a1c', '#c8b062', '#2c5a3a', '#b8b2a6', '#3a4a7a', '#a05a20', '#d8cfb8', '#5a2a4a'])); gm.setColorAt(i, col); });
+  gm.castShadow = true; gm.receiveShadow = true; gm.frustumCulled = false; gm.instanceMatrix.needsUpdate = true; if (gm.instanceColor) gm.instanceColor.needsUpdate = true; scene.add(gm); chunkAt(cx, cz).inst.push(gm);
+  // checkouts by the doors, carts shoved against them, the pharmacy and the deli along the back
+  for (const x of [237.5, 241, 244.5]) { boxProp(0.8, 0.95, 3.4, M.white, x, 0, -56.2, true); addMesh(B(0.5, 0.35, 0.4), M.rubber, x, 1.12, -55, scene, { cast: false }); }
+  for (let i = 0; i < 6; i++) { const x = 221 + rand(-1, 4), z = Z1 - 1.6 - rand(0, 2.5), r = rand(-0.6, 0.6); boxProp(0.56, 0.62, 0.92, M.metal, x, 0.32, z, false, r); addMesh(B(0.5, 0.04, 0.86), M.metal, x, 0.15, z).rotation.y = r; circles.push({ x, z, r: 0.5 }); }
+  boxProp(8, 1.05, 0.8, M.wood, 208, 0, -69.2, true); addMesh(boxUV(8, 0.4, 0.2, 1), M.white, 208, 2.4, -70.85, scene, { cast: false });
+  boxProp(12, 1.1, 1.0, M.white, 228, 0, -69.3, true);
+  for (let k = 0; k < 5; k++) addMesh(B(1.6, 0.04, 0.6), M.glass, 223.2 + k * 2.4, 1.32, -69.1, scene, { cast: false });
+  // the stockroom wall, with swing-door openings at either end
+  wallX(-71, X0 + 0.1, X1 - 0.1, [[213, 215.5], [235, 237.5]], H, M.iwall2, M.iwall2);
+  // stockroom: pallets of stock, the roll-up dock door on the back wall
+  const crate = std({ color: 0x9a7a52, roughness: 0.92 });
+  for (const [x, z] of [[216, -76.4], [219.5, -76.4], [223, -76.4], [230, -76.6], [233.5, -73.6], [240, -76.4], [243.5, -73.2]]) { boxProp(1.2, 0.14, 1.0, M.wood, x, 0, z, false); boxProp(1.1, rand(0.7, 1.5), 0.9, crate, x, 0.14, z, true); }
+  addMesh(boxUV(3.6, 3.2, 0.12, 1), M.steel, 226.5, 1.6, Z0 + 0.12, scene, { cast: false });
+  // the office in the north-west corner, where the last of them held out
+  wallZ(211.5, Z0 + 0.1, -71.1, [[-74.8, -73.8]], H, M.iwall2, M.iwall2);
+  makeDoor(211.5, -74.8, 'z', 1.0, false, 1.45, 'office door', M.door);
+  boxProp(1.6, 0.76, 0.8, M.wood, 205.6, 0, -76.6, true); boxProp(0.5, 1.3, 0.6, M.steel, 203.6, 0, -73, true); boxProp(0.55, 0.5, 0.55, M.fabric || M.wood, 207, 0, -75.8, false, 0.6);
+  addDocSpot('market', 205.3, 0.79, -76.5);
+  addLoot(206.6, -75.7, 'Search the office desk', null, 1.8, { fixed: [['rifle', 30], ['bandage', 1]] });
+  // the rifle, on the floor beside him
+  const rg = new THREE.Group(), stl = std({ color: 0x161718, roughness: 0.5, metalness: 0.6 }), wd = std({ color: 0x6a3418, roughness: 0.45 });
+  const part = (w, h, d, mat, x, y, z, rx) => { const m = new THREE.Mesh(B(w, h, d), mat); m.position.set(x, y, z); if (rx) m.rotation.x = rx; m.castShadow = true; rg.add(m); };
+  part(0.045, 0.06, 0.25, stl, 0, 0, 0); part(0.05, 0.045, 0.19, wd, 0, -0.005, -0.22); part(0.02, 0.02, 0.32, stl, 0, 0.005, -0.47); part(0.04, 0.055, 0.3, wd, 0, -0.02, 0.27, -0.12);
+  part(0.026, 0.12, 0.06, std({ color: 0x3e1a0e, roughness: 0.45 }), 0, -0.08, -0.07, 0.3); part(0.03, 0.09, 0.04, wd, 0, -0.07, 0.08, -0.3);
+  rg.position.set(208.6, 0.06, -73.3); rg.rotation.set(PI / 2, 0, 0.9); rg.rotation.order = 'YXZ'; rg.rotation.set(0, 0.9, PI / 2); scene.add(rg);
+  addLoot(208.6, -73.3, 'Take the rifle', rg, 1.4, { rifle: true });
+  MARKET.body = [208.2, -74.6];
+  // blood where it went wrong
+  decal(MD.smear, 4.2, 1.1, 226, 0.04, -66.5, -PI / 2, 0, 1.4); decal(MD.splat, 1.6, 1.6, 214.3, 0.04, -71.8, -PI / 2, 0, 0.4);
+  decal(MD.smear, 3.2, 0.9, 236.2, 0.04, -60, -PI / 2, 0, -0.2); decal(MD.hand, 0.32, 0.4, 211.38, 1.2, -73.4, 0, -PI / 2, 0.3); decal(MD.splat, 1.3, 1.3, 208.4, 0.04, -74.4, -PI / 2, 0, 2);
+  // the lot out front: asphalt to the road, faded stalls, a few cars that never left, the pylon sign
+  addMesh(planeUV(X1 - X0 + 6, 44, 8), M.asph, cx, 0.018, -27.5, scene, { cast: false, solid: false }).rotation.x = -PI / 2;
+  for (const z0 of [-45.5, -35.5]) for (let x = X0 + 1; x < X1; x += 3) addMesh(new THREE.PlaneGeometry(0.12, 4.6), M.white, x, 0.024, z0 + 2.3, scene, { cast: false, solid: false }).rotation.x = -PI / 2;
+  car(211.4, -43.2, 0.05, { color: '#4a5560', loot: true }); car(232.6, -37.8, PI + 0.1, { color: '#7a2a22', loot: true, smashed: true }); car(240.2, -26, 1.2, { color: '#8b8676', loot: true }); car(216, -21, 2.4, { burned: true });
+  for (let i = 0; i < 5; i++) { const x = rand(X0 + 2, X1 - 2), z = rand(-46, -12), r = Math.random() * TAU; boxProp(0.56, 0.62, 0.92, M.metal, x, 0.32, z, false, r); circles.push({ x, z, r: 0.5 }); }
+  addMesh(B(0.35, 7, 0.35), M.metal, X1 + 2, 3.5, -8); circles.push({ x: X1 + 2, z: -8, r: 0.3 });
+  addMesh(B(4.2, 1.6, 0.4), M.white, X1 + 2, 7.4, -8);
+  addMesh(new THREE.PlaneGeometry(3.9, 1.3), signMat(512, 168, (c, w, h) => { c.fillStyle = '#efe9da'; c.fillRect(0, 0, w, h); c.fillStyle = '#b5261c'; c.textAlign = 'center'; c.font = 'bold 50px "Arial Black", Arial'; c.fillText('MILLBROOK', w / 2, 62); c.font = 'bold 44px Arial'; c.fillText('SUPERMARKET', w / 2, 120); }), X1 + 2, 7.4, -7.78, scene, { cast: false, solid: false });
+}
+// the dead of the supermarket: packed against the front doors, and through every aisle
+function spawnMarket() {
+  const { X0, X1, Z0, Z1 } = MARKET, outfits = ['casual', 'casual', 'worker', 'dress', 'casual', 'scrubs', 'gown'];
+  for (const d of MARKET.doors) for (let k = 0; k < 2; k++) { const Z = makeZombie(d.x + rand(-0.4, 0.4), Z1 - 0.6 - k * 0.7, { outfit: pick(outfits), state: 'trapped', door: d, heading: 0 }); Z.home = 'market'; }
+  for (let n = 0, k = 0; n < 19 && k < 300; k++) {
+    const x = rand(X0 + 1, X1 - 1), z = rand(Z0 + 1, Z1 - 2);
+    if ((x < 212 && z < -71) || blocked(x, z, 0.7)) continue;
+    const Z = makeZombie(x, z, { outfit: pick(outfits), state: Math.random() < 0.65 ? 'idle' : 'wander', crawler: Math.random() < 0.08, kind: Math.random() < 0.3 ? 'rotter' : undefined }); Z.home = 'market'; n++;
+  }
+  for (const [x, z] of [[227, -64], [232.2, -59]]) { const Z = makeZombie(x + 0.5, z, { state: 'feed', heading: -PI / 2, outfit: pick(outfits) }); Z.home = 'market'; }
+}
+
 /* the whole county, in build order: land, places and the roads to them, the fence, the woods */
 function openWorld() {
   gridCircles();
@@ -2952,6 +3060,7 @@ function openWorld() {
     else if (p.id === 'heli') heliCrash(p);
     else if (p.id === 'tower') cellTower(p);
     else if (p.id === 'quarry') quarry(p);
+    else if (p.id === 'market') market(p);
   }
   const pf = POIS.find(p => p.id === 'farm3'); fuelCan(pf.x + 6, pf.z - 2, 'in the yard at the Pruitt place'); fuels[fuels.length - 1].poi = 'farm3';
   containment();
@@ -2960,6 +3069,7 @@ function openWorld() {
 // the ones who never left: walkers at each place, bodies where it went worst
 const POI_PEOPLE = { camp: [14, ['military', 'scrubs', 'gown', 'casual', 'casual']], church: [5, ['dress', 'casual']], trailers: [6, ['casual', 'worker']], heli: [3, ['military']], trench: [3, ['worker']], res: [3, ['casual']], tower: [1, ['worker']], quarry: [3, ['worker']], farm1: [3, ['casual', 'worker']], farm2: [3, ['casual', 'worker']], farm3: [3, ['casual', 'worker']], farm4: [3, ['casual', 'worker']], farm5: [3, ['casual', 'worker']] };
 function spawnWorld() {
+  spawnMarket();
   for (const p of POIS) {
     const def = POI_PEOPLE[p.id]; if (!def) continue;
     for (let n = 0, k = 0; n < def[0] && k < 60; k++) {
@@ -2970,6 +3080,8 @@ function spawnWorld() {
   }
 }
 function worldBodies() {
+  // in the supermarket: the man in the office, and the two in the aisles the others are still eating
+  for (const [x, z, side, outfit] of [[MARKET.body[0], MARKET.body[1], 'left', 'casual'], [227, -64, 'back', 'casual'], [232.2, -59, 'front', 'worker']]) { bodies.push(makeZombie(x, z, { noAI: true, heading: Math.random() * TAU, lie: makeLie(side), outfit })); addPool(x, z, rand(0.7, 1.0), true); }
   for (const [id, n, outfit] of [['camp', 10, 'casual'], ['heli', 2, 'military'], ['church', 2, 'dress'], ['trailers', 2, 'casual'], ['quarry', 1, 'worker']]) {
     const p = POIS.find(q => q.id === id);
     for (let i = 0, k = 0; i < n && k < 40; k++) {
@@ -2988,7 +3100,7 @@ function updateOpen(dt) {
   const hv = Math.abs(camera.position.x - HELI.x) < 600 && Math.abs(camera.position.z - HELI.z) < 600;
   for (const s of HELI.smoke) { s.visible = hv; if (!hv) continue; const d = s.userData; d.ph = (d.ph + dt * 0.05) % 1; const k = (d.j + d.ph) / 6; s.position.set(HELI.x + k * 14, heightAt(HELI.x, HELI.z) + 2 + k * 40, HELI.z + k * 4); s.scale.setScalar(4 + k * 26); s.material.opacity = 0.42 * Math.sin(Math.min(1, k * 1.3) * PI) * (1 - W.rain * 0.7); }
   openT -= dt; if (openT > 0 || G.state !== 'play' || PRO.on) return; openT = 0.5;
-  for (const p of POIS) if (p.r && !G.found.has(p.id) && Math.hypot(P.pos.x - p.x, P.pos.z - p.z) < p.r + 30) { G.found.add(p.id); msg(`${p.name}. It's on your map now (M).`); }
+  for (const p of POIS) if (p.r && !G.found.has(p.id) && Math.hypot(P.pos.x - p.x, P.pos.z - p.z) < p.r + 30) { G.found.add(p.id); msg(p.found ? p.found + ' On your map now (M).' : `${p.name}. It's on your map now (M).`); }
   if (!G.said.fence && (Math.abs(P.pos.x) > WORLD - 25 || Math.abs(P.pos.z) > WORLD - 25)) { G.said.fence = true; msg('The containment fence. Past it, the Guard shoots anything that moves.'); }
   if (!G.said.gate && Math.hypot(P.pos.x - GATE.x, P.pos.z - GATE.z) < 14) { G.said.gate = true; msg('The logging road runs right up to the fence, and here it is only a cattle gate on a chain. A truck could take that.'); }
 }
@@ -4973,7 +5085,7 @@ function takePills() {
 }
 const ITEM_TEXT = { ammo: n => `${n} rounds of 9mm`, rifle: n => `${n} rifle rounds`, food: () => 'a can of food', water: () => 'a bottle of water', bandage: () => 'a roll of gauze', battery: () => 'flashlight batteries', pills: () => 'a bottle of painkillers', bottle: () => 'an empty bottle' };
 function rollLoot(l) {
-  if (l.bow) return [];
+  if (l.bow || l.rifle) return [];
   const out = (l.fixed || []).map(x => x.slice()), n = Math.random() < 0.3 ? 2 : 1;
   for (let i = 0; i < n; i++) {
     const r = Math.random();
@@ -4989,7 +5101,11 @@ function rollLoot(l) {
   return out;
 }
 function completeInteract(t) {
-  if (t.kind === 'loot' && t.bow) {
+  if (t.kind === 'loot' && t.rifle) {
+    t.searched = true; if (t.mesh) t.mesh.visible = false; sfx.pickup();
+    Object.assign(P, { hasRifle: true, rmag: 29, rchamber: 1 }); equip('rifle');
+    msg('Ray’s rifle: an AKM with a full magazine and a light taped under the barrel. Press 4 for it. Hold the trigger and it keeps firing, and everything for a mile will hear it.');
+  } else if (t.kind === 'loot' && t.bow) {
     t.searched = true; if (t.mesh) t.mesh.visible = false; sfx.pickup();
     P.hasBow = true; P.bolts = 4; P.boltLoaded = true; equip('bow');
     msg('A hunter’s crossbow, cocked, with four more bolts in the quiver. Nearly silent, and the bolts can be pulled back out. Press 3 for it.');
@@ -5760,7 +5876,7 @@ function resetGame() {
   G.found.clear();
   Object.assign(W, { rain: 0, wet: 0, mist: 0, bolt: 14, said: {}, seq: null, flash: 0 });
   Object.assign(RAD, { on: false, next: 3, idx: -1, heard: false }); els.radio.hidden = true; els.struggle.hidden = true;
-  for (const l of inter) if (l.kind === 'loot') { l.searched = false; l.items = rollLoot(l); if (l.bow && l.mesh) l.mesh.visible = true; }
+  for (const l of inter) if (l.kind === 'loot') { l.searched = false; l.items = rollLoot(l); if ((l.bow || l.rifle) && l.mesh) l.mesh.visible = true; }
   for (const f of fuels) { f.taken = false; f.mesh.visible = true; }
   for (const d of doors) { if (d.init === undefined) d.init = d.open; const i = boxes.indexOf(d.box); if (i >= 0) boxes.splice(i, 1); d.open = d.init; if (!d.open) boxes.push(d.box); d.t = d.open ? 1 : 0; }
   for (const C of cars) { C.alarmT = 0; C.alarmUsed = 0; }
@@ -5774,9 +5890,9 @@ function start(noLock) {
   $('#msgs').textContent = '';
   // day 41 begins where day one ended: on the storeroom floor
   P.pos.set(20.7, 0, -94.1); P.yaw = -2.12; P.pitch = -0.1; P.eye = 0.35; P.eyeBase = floorY(20.7, -94.1); P.wakeT = 2.6;
-  Object.assign(P, { hasRifle: true, weapon: 'rifle', prevWeapon: 'rifle', rmag: 29, rchamber: 1, rreserve: 30 });
   msg('Day 41. The last of the food ran out yesterday. The truck is still at the crossroads, but somebody siphoned the tank.');
   setTimeout(() => { if (G.state === 'play' && !PRO.on) msg('Find three cans of gas. Something is moving around out in the shop.'); }, 5200);
+  setTimeout(() => { if (G.state === 'play' && !PRO.on && !P.hasRifle) msg('Scratched into the storeroom door: RIFLE IN THE SUPERMARKET OFFICE, EAST ROAD. TOO MANY OF THEM INSIDE.'); }, 11000);
   if (!lockFailed && !noLock) requestLock();
 }
 function pause() {
