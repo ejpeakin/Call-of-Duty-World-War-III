@@ -140,6 +140,8 @@ button:focus-visible{outline:2px solid var(--amber);outline-offset:3px}
 .tf input:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
 button.link{font:inherit;color:var(--ink);background:none;border:0;padding:0;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 button.link:hover{color:var(--amber)}
+.note.warn{color:var(--amber)}
+.note.warn:empty{display:none}
 .note{font-size:13.5px;color:var(--dim);max-width:62ch;line-height:1.5;margin:0}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:14px;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);padding-block:14px}
 .stats div{display:grid;gap:2px}
@@ -288,25 +290,32 @@ button.link:hover{color:var(--amber)}
       </div>
       <label class="field" for="sens">Mouse speed <input type="range" id="sens" min="0.3" max="2.5" step="0.05"></label>
     </div>
-    <form class="signin" id="signin" action="https://formsubmit.co/your@email.com" method="POST" target="signinSink">
-      <h3 class="sec">Sign in to play</h3>
-      <div class="signrow">
-        <label class="tf">Name<input name="name" id="signName" autocomplete="name" maxlength="40" required></label>
-        <label class="tf">Email<input type="email" name="email" id="signEmail" autocomplete="email" maxlength="80" required></label>
-        <input type="hidden" name="_subject" value="New Dead Hours player">
-        <input type="hidden" name="_captcha" value="false">
-        <input type="hidden" name="_template" value="table">
-        <button class="go" type="submit">Sign in</button>
+    <form class="signin" id="signin" action="https://formsubmit.co/egarcia29@setoncatholic.org" method="POST" novalidate hidden>
+      <h3 class="sec">Ask to play</h3>
+      <div class="signin" id="askStep">
+        <p class="note">Type your name and the game's owner gets an email asking to let you in. If they say yes, they'll give you a play code.</p>
+        <div class="signrow">
+          <label class="tf">Your name<input name="Name" id="signName" autocomplete="name" maxlength="40"></label>
+          <button class="go" type="submit" id="askBtn">Send request</button>
+        </div>
       </div>
+      <div class="signin" id="codeStep" hidden>
+        <p class="note" id="codeNote"></p>
+        <div class="signrow">
+          <label class="tf">Play code<input id="signCode" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12"></label>
+          <button class="go" type="button" id="codeBtn">Unlock</button>
+        </div>
+        <p class="note"><button class="link" id="askAgain" type="button">Send a new request</button></p>
+      </div>
+      <p class="note warn" id="signMsg" role="status"></p>
     </form>
-    <iframe name="signinSink" title="Sign-in receipt" hidden></iframe>
     <div class="actions" id="playActions" hidden>
       <button class="go" id="startBtn" disabled>Start</button>
       <button class="ghost" id="introBtn" type="button" disabled>Watch the opening</button>
       <button class="ghost" id="day1Btn" type="button" disabled>Play day one</button>
       <span id="loading">Building the town…</span>
     </div>
-    <p class="note" id="whoami" hidden>Signed in as <b id="whoName"></b>. <button class="link" id="signOut" type="button">Not you?</button></p>
+    <p class="note" id="whoami" hidden>Playing as <b id="whoName"></b>. <button class="link" id="signOut" type="button">Not you?</button></p>
     <p class="note">Needs a keyboard and mouse. Headphones help: walkers are placed in 3D sound, so you hear them shuffling before you see them. Cinematic mode adds ambient occlusion, sun shafts, soft contact-hardening shadows, motion blur and bloom; switch to Fast if the game stutters. The first time you start, you'll see the town before the outbreak (Space skips it), then play the morning it all came apart. After that, Start goes straight to day 41.</p>
   </div>
 </div>
@@ -390,25 +399,52 @@ try {
 } catch (e) { /* storage unavailable: defaults are fine */ }
 if (!HAS_POST) SETTINGS.quality = 'low';
 function saveSettings() { try { localStorage.setItem('deadhours.v2', JSON.stringify(SETTINGS)); } catch (e) { /* ignore */ } }
-/* ---------------- sign-in: a name and email before the first game, posted to FormSubmit ---------------- */
-const signForm = $('#signin');
+/* ---------------- asking to play: the website build emails each request to the owner through FormSubmit, and the owner answers with a play code ---------------- */
+// the claude.ai page can't send mail, so only the website build gives the form an address, and with no address there's no gate
+const signForm = $('#signin'), REQ_TO = signForm.getAttribute('action') || '';
+// the code is made from the name, so the one in the owner's email unlocks only that player
+const playCode = name => {
+  let h = 2166136261; for (const ch of 'millbrook-41:' + name.trim().toLowerCase().replace(/\s+/g, ' ')) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; }
+  const A = 'ACDEFGHJKMNPQRTUVWXY3479'; let s = ''; for (let i = 0; i < 6; i++) { s += A[h % A.length]; h = Math.floor(h / A.length); } return s;
+};
 let player = null;
 try { player = JSON.parse(localStorage.getItem('deadhours.player') || 'null'); } catch (e) { player = null; }
+const savePlayer = () => { try { if (player) localStorage.setItem('deadhours.player', JSON.stringify(player)); else localStorage.removeItem('deadhours.player'); } catch (e) { /* private window: this visit only */ } };
+const signMsg = t => { $('#signMsg').textContent = t || ''; };
 function showSignin() {
-  const ok = !!(player && player.name);
-  signForm.hidden = ok; $('#playActions').hidden = !ok; $('#whoami').hidden = !ok;
-  if (ok) $('#whoName').textContent = player.name;
+  const gate = !!REQ_TO, ok = !gate || !!(player && player.ok), pending = gate && !ok && !!(player && player.name);
+  signForm.hidden = ok; $('#playActions').hidden = !ok; $('#whoami').hidden = !(gate && ok);
+  if (gate && ok) $('#whoName').textContent = player.name;
+  $('#askStep').hidden = pending; $('#codeStep').hidden = !pending;
+  if (pending) $('#codeNote').textContent = `Request sent for ${player.name}. When the owner says yes, they'll give you a play code. Type it here.`;
 }
-signForm.addEventListener('submit', e => {
-  const name = $('#signName').value.trim(), email = $('#signEmail').value.trim();
-  if (!name) { e.preventDefault(); $('#signName').focus(); return; }
-  // the post lands in a hidden frame so the game stays put; with the placeholder address nothing is sent at all
-  if (signForm.action.includes('your@email.com')) e.preventDefault();
-  player = { name, email };
-  try { localStorage.setItem('deadhours.player', JSON.stringify(player)); } catch (err) { /* private window: signed in for this visit only */ }
-  setTimeout(showSignin, 0);
+function checkCode() {
+  const v = $('#signCode').value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (v && v === playCode(player.name)) { player.ok = true; savePlayer(); signMsg(''); showSignin(); }
+  else signMsg('That code doesn’t match. Codes only work for the name on the request, so check the spelling with the owner.');
+}
+signForm.addEventListener('submit', async e => {
+  e.preventDefault();
+  if (!$('#codeStep').hidden) { checkCode(); return; }
+  const name = $('#signName').value.trim().replace(/\s+/g, ' ');
+  if (!name) { signMsg('Type your name first.'); $('#signName').focus(); return; }
+  const btn = $('#askBtn'); btn.disabled = true; signMsg('Sending your request…');
+  try {
+    const r = await fetch(REQ_TO.replace('formsubmit.co/', 'formsubmit.co/ajax/'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ Name: name, 'Play code': playCode(name), 'To say yes': `Give ${name} the play code above. To say no, ignore this email.`, _subject: `Dead Hours: ${name} wants to play`, _template: 'table', _captcha: 'false' }),
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || String(j.success) !== 'true') throw new Error(j.message || '');
+    player = { name }; savePlayer(); signMsg(''); $('#signCode').value = ''; showSignin(); $('#signCode').focus();
+  } catch (err) {
+    signMsg(`Your request didn’t send. ${err.message && err.message !== 'Failed to fetch' ? err.message : 'Check your internet connection and try again.'}`);
+  }
+  btn.disabled = false;
 });
-$('#signOut').addEventListener('click', () => { player = null; try { localStorage.removeItem('deadhours.player'); } catch (e) { /* ignore */ } showSignin(); $('#signName').focus(); });
+$('#codeBtn').addEventListener('click', checkCode);
+$('#askAgain').addEventListener('click', () => { player = null; savePlayer(); signMsg(''); showSignin(); $('#signName').focus(); });
+$('#signOut').addEventListener('click', () => { player = null; savePlayer(); signMsg(''); showSignin(); $('#signName').focus(); });
 showSignin();
 $('#qHigh').checked = SETTINGS.quality === 'high';
 $('#qLow').checked = SETTINGS.quality === 'low';
