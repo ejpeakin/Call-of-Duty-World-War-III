@@ -113,8 +113,15 @@ h2{font-family:var(--f-display);font-weight:400;font-size:clamp(34px,6.5vw,60px)
 .timeline div{display:grid;grid-template-columns:66px minmax(0,1fr);gap:12px;align-items:baseline}
 .timeline dt{font-family:var(--f-display);color:var(--amber);font-size:15px}
 .timeline dd{margin:0;color:#cfc8b4;line-height:1.45;max-width:60ch}
-.keys{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:7px 20px;font-size:14.5px;color:var(--dim)}
-.keys div{display:flex;align-items:baseline;gap:8px}
+/* a screen taller than the window starts at the top and scrolls, instead of losing its top edge to centering */
+.screen{align-items:start}
+.screen>*{margin-block:auto}
+#keysMenu .sheet{max-width:980px}
+.kgroups{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:20px 30px}
+.kgroup{display:grid;gap:7px;align-content:start;font-size:14.5px;color:var(--dim)}
+.kgroup h4{margin:0 0 2px;font:600 13px var(--f-body);letter-spacing:.08em;text-transform:uppercase;color:var(--amber)}
+.kgroup div{display:flex;align-items:baseline;gap:5px}
+.kgroup span{margin-left:5px;min-width:0}
 kbd{font-family:var(--f-body);font-weight:600;font-size:13px;border:1px solid var(--rule);padding:1px 6px;min-width:1.5em;text-align:center;color:var(--ink);background:rgba(232,226,208,.06);white-space:nowrap}
 .settings{display:flex;gap:16px 30px;flex-wrap:wrap;align-items:center}
 .field{display:flex;gap:10px;align-items:center;color:var(--dim);font-weight:600}
@@ -257,29 +264,7 @@ button.link:hover{color:var(--amber)}
     <p class="note">Millbrook is only the middle of it. The whole county inside the containment fence is open: farms, a country church, the relief camp, the reservoir, the quarry, miles of jammed interstate, and whatever is still walking around out there. Press <kbd>M</kbd> for the map; places go on it once you've found them.</p>
     <p class="note">The rest is still out there: a warden's log, the clinic's records, a lab report nobody wanted to read. Pick up papers with <kbd>E</kbd> and reread them in your journal with <kbd>J</kbd>.</p>
     <h3 class="sec">Controls</h3>
-    <div class="keys">
-      <div><kbd>W A S D</kbd>Move</div>
-      <div><kbd>Mouse</kbd>Look</div>
-      <div><kbd>Shift</kbd>Sprint</div>
-      <div><kbd>C</kbd>Crouch (quieter)</div>
-      <div><kbd>Click</kbd>Shoot / stab</div>
-      <div><kbd>Right-click</kbd>Aim sights</div>
-      <div><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd>Knife / pistol / crossbow</div>
-      <div><kbd>4</kbd>Rifle, if you get it out of the supermarket</div>
-      <div><kbd>R</kbd>Reload or cock</div>
-      <div><kbd>E</kbd>Search, open, read, sleep</div>
-      <div><kbd>E</kbd>Drive, if a car still has its keys</div>
-      <div><kbd>Q</kbd>Shove</div>
-      <div><kbd>T</kbd>Throw a bottle</div>
-      <div><kbd>F</kbd>Flashlight</div>
-      <div><kbd>B</kbd>Bandage</div>
-      <div><kbd>G</kbd>Eat or drink</div>
-      <div><kbd>V</kbd>Painkillers</div>
-      <div><kbd>J</kbd>Journal</div>
-      <div><kbd>M</kbd>Map of the county</div>
-      <div><kbd>H</kbd>Hide HUD</div>
-      <div><kbd>Esc</kbd>Pause</div>
-    </div>
+    <div class="kgroups" id="titleKeys"></div>
     <h3 class="sec">Settings</h3>
     <div class="settings">
       <div class="field">Graphics
@@ -324,7 +309,7 @@ button.link:hover{color:var(--amber)}
   <div class="sheet">
     <h2>Holding still</h2>
     <p class="journal" id="pauseNote">The dead keep walking. Get back to it when you're ready.</p>
-    <div class="actions"><button class="go" id="resumeBtn">Resume</button><button class="ghost" id="pauseJournal">Open journal</button><button class="ghost" id="skipDay1" type="button" hidden>Skip to day 41</button></div>
+    <div class="actions"><button class="go" id="resumeBtn">Resume</button><button class="ghost" id="pauseJournal">Open journal</button><button class="ghost" id="pauseKeys" type="button">Controls</button><button class="ghost" id="skipDay1" type="button" hidden>Skip to day 41</button></div>
   </div>
 </div>
 
@@ -332,6 +317,17 @@ button.link:hover{color:var(--amber)}
   <div class="reader-wrap">
     <div id="readerPaper"></div>
     <p class="hint" id="readerHint">Saved to your journal. Press E, Space or click to put it down.</p>
+  </div>
+</div>
+
+<div class="screen" id="keysMenu" hidden>
+  <div class="sheet">
+    <div>
+      <div class="eyebrow">Inside the back cover</div>
+      <h2>Controls</h2>
+    </div>
+    <div class="kgroups" id="keyGroups"></div>
+    <div class="actions"><button class="go" id="keysBack" type="button">Back to the game</button><span class="note"><kbd>K</kbd> or <kbd>Esc</kbd> closes this list.</span></div>
   </div>
 </div>
 
@@ -5825,6 +5821,44 @@ function openDoc(id) {
   G.state = 'reading'; show('#reader', true); sfx.paper(); P.ads = false; P.searchT = 0;
 }
 function closeDoc() { show('#reader', false); G.state = 'play'; P.needERelease = true; }
+/* ---------------- the controls list: one source for the title screen and the in-game menu ---------------- */
+const CONTROLS = [
+  ['Moving', [[['W', 'A', 'S', 'D'], 'Move'], [['Mouse'], 'Look'], [['Shift'], 'Sprint'], [['C'], 'Crouch (quieter)'], [['←', '→', '↑', '↓'], 'Turn and look, if the mouse won’t capture']]],
+  ['Fighting', [[['Click'], 'Shoot / stab'], [['Right-click'], 'Aim down the sights'], [['1', '2', '3'], 'Knife / pistol / crossbow'], [['4'], 'Rifle, if you get it out of the supermarket'],
+    [['Wheel'], 'Switch weapon'], [['R'], 'Reload or cock'], [['Q'], 'Shove'], [['T'], 'Throw a bottle']]],
+  ['Staying alive', [[['E'], 'Search, open, read, sleep'], [['E'], 'Mash it to push off one that grabs you'], [['F'], 'Flashlight'], [['B'], 'Bandage'], [['G'], 'Eat or drink'], [['V'], 'Painkillers']]],
+  ['Driving', [[['E'], 'Get in a car that still has its keys, or get out'], [['W', 'S'], 'Gas and reverse'], [['A', 'D'], 'Steer'], [['Space'], 'Brake'], [['F'], 'Headlights']]],
+  ['Screens', [[['J'], 'Journal (Tab works too)'], [['M'], 'Map of the county'], [['K'], 'This list'], [['H'], 'Hide the HUD'], [['Esc'], 'Pause (P works too)']]],
+];
+function renderControls(el) {
+  el.textContent = '';
+  for (const [title, rows] of CONTROLS) {
+    const g = document.createElement('section'), h = document.createElement('h4'); g.className = 'kgroup'; h.textContent = title; g.append(h);
+    for (const [ks, what] of rows) {
+      const r = document.createElement('div'), t = document.createElement('span');
+      for (const k of ks) { const b = document.createElement('kbd'); b.textContent = k; r.append(b); }
+      t.textContent = what; r.append(t); g.append(r);
+    }
+    el.append(g);
+  }
+}
+renderControls($('#titleKeys')); renderControls($('#keyGroups'));
+// like the map, the world holds still while it's open; from the pause screen it goes back there
+function openKeys() {
+  G.keysFrom = G.state; G.state = 'keys';
+  show('#keysMenu', true); show('#pause', false);
+  if (locked) document.exitPointerLock();
+  $('#keysBack').textContent = G.keysFrom === 'paused' ? 'Back' : 'Back to the game';
+  setTimeout(() => $('#keysBack').focus(), 0);
+}
+function closeKeys() {
+  show('#keysMenu', false);
+  if (G.keysFrom === 'paused') { G.state = 'paused'; show('#pause', true); return; }
+  G.state = 'play';
+  if (!lockFailed) requestLock();
+}
+$('#keysBack').addEventListener('click', closeKeys);
+$('#pauseKeys').addEventListener('click', openKeys);
 function openJournal() {
   G.journalFrom = G.state; G.state = 'journal';
   show('#journal', true); show('#pause', false); show('#end', false);
@@ -5939,10 +5973,11 @@ addEventListener('keydown', e => {
   if (G.state === 'reading') { if (e.code === 'KeyE' || e.code === 'Space' || e.code === 'Enter') closeDoc(); return; }
   if (G.state === 'journal') { if (e.code === 'KeyJ' || e.code === 'Escape') closeJournal(); return; }
   if (G.state === 'map') { if (e.code === 'KeyM' || e.code === 'Escape') closeMap(); return; }
+  if (G.state === 'keys') { if (e.code === 'KeyK' || e.code === 'Escape') closeKeys(); return; }
   if (G.state === 'cine') { if (e.code === 'Space' || e.code === 'Enter' || e.code === 'Escape') { e.preventDefault(); endIntro(false); } return; }
   if (G.state !== 'play') return;
   if (P.grab) { if (e.code === 'KeyE' || e.code === 'Space') strugglePress(); return; }
-  if (P.drive && !['KeyE', 'KeyF', 'KeyJ', 'Tab', 'KeyH', 'KeyP', 'KeyM'].includes(e.code)) return;
+  if (P.drive && !['KeyE', 'KeyF', 'KeyJ', 'Tab', 'KeyH', 'KeyP', 'KeyM', 'KeyK'].includes(e.code)) return;
   switch (e.code) {
     case 'Digit1': equip('knife'); break;
     case 'Digit2': equip('pistol'); break;
@@ -5960,6 +5995,7 @@ addEventListener('keydown', e => {
     case 'KeyJ': case 'Tab': openJournal(); break;
     case 'KeyM': if (!PRO.on && !P.grab) openMap(); break;
     case 'KeyH': els.hud.classList.toggle('min'); break;
+    case 'KeyK': openKeys(); break;
     case 'KeyP': if (locked) document.exitPointerLock(); else pause(); break;
   }
 });
@@ -6313,7 +6349,7 @@ function updateHUD(dt) {
   }
   hudT -= dt; if (hudT > 0) return; hudT = 0.08;
   setH(els.clock, `${fmtClock(G.clockMin)}<small>${PRO.on ? 'SEPT 20' : 'DAY ' + dayOf(G.clockMin)}${P.crouch ? ' · CROUCHED' : ''}</small>`);
-  if (PRO.on) { setH(els.obj, PRO.obj); setH(els.notes, 'September 20 · the first morning'); }
+  if (PRO.on) { setH(els.obj, PRO.obj); setH(els.notes, 'September 20 · the first morning · K controls'); }
   const left = fuels.filter(f => !f.taken);
   let obj;
   if (P.fuel > 0) obj = `Carrying <b>${P.fuel} gas can${P.fuel > 1 ? 's' : ''}</b>. Get back to the truck. Tank ${P.tank}/3.`;
@@ -6322,7 +6358,7 @@ function updateHUD(dt) {
   if (P.infected) obj += ' <b>You’re infected.</b> Get out before the fever takes you.';
   if (P.fatigue > 70) obj += ' <b>You need sleep</b> somewhere with a door.';
   if (!PRO.on) setH(els.obj, obj);
-  if (!PRO.on) setH(els.notes, `Notes ${G.docs.size}/${DOCS.length} · J to read · M map`);
+  if (!PRO.on) setH(els.notes, `Notes ${G.docs.size}/${DOCS.length} · J to read · M map · K controls`);
   setW(els.bhp, P.hp); setW(els.bst, P.stam); setW(els.bfood, P.hunger); setW(els.bwater, P.thirst); setW(els.brest, 100 - P.fatigue); setW(els.blite, P.battery);
   let st = '';
   if (P.bleeding) st += '<span class="tag pulse">Bleeding</span>';
