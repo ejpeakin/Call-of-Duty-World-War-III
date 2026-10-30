@@ -4487,43 +4487,36 @@ function mkPan(x, z, y, ref) {
 }
 const now = () => AU.ctx.currentTime;
 /* ---------------- gunfire, built sample by sample once at start-up ----------------
-   A real report is a pressure spike well under a millisecond long, a blast of broadband noise that's mostly gone in
-   ten, a low thump from the expanding gas, the barrel and frame ringing, and the action cycling a few hundredths of a
-   second later. A microphone that close clips, so the whole thing is driven into saturation. The room or the open air
-   around you does the rest, live. */
+   A gunshot has no pitch: it's a pressure spike well under a millisecond long, then a blast of noise that starts bright
+   and darkens as it dies inside a few tens of milliseconds, with a low rumble of gas under it, and the action clacking a
+   few hundredths of a second later. All of it is noise here, never a tone. A microphone that close clips, so the peaks
+   are clipped. The room or the open air around you does the rest, live. */
 function shotBuffer(ctx, kind) {
   const R = kind === 'rifle', sr = ctx.sampleRate, len = Math.floor(sr * (R ? 0.6 : 0.45)), b = ctx.createBuffer(2, len, sr), J = (a, c) => a + Math.random() * (c - a);
-  // spike length and height; the blast's filter sweeping down from the crack to the boom; its three decays; the gas thump
+  // spike; the blast's filter sweep and decays; the low rumble; the action's clicks [time, brightness, level]
   const S = R
     ? { T: J(0.00035, 0.00045), A: 1.2, lpEnd: J(650, 800), lpSweep: 7000, lpT: 0.008, e: [J(0.0055, 0.0065), J(0.035, 0.045), 0.2], k: [0.25, 0.05], gain: 2.8,
-        f0: J(42, 48), f1: 100, ft: 0.015, boom: 0.7, bt: J(0.05, 0.06),
-        ring: [[J(860, 940), 0.006, 0.2], [J(1950, 2150), 0.004, 0.18], [J(3300, 3500), 0.0025, 0.12]],
-        // the bolt carrier slamming back, then home again on the next round
-        act: [[J(0.031, 0.036), [1350, 2550, 4150, 6100], 0.014, 0.16], [J(0.074, 0.082), [1150, 2300, 3900], 0.018, 0.12]] }
+        rumble: 1.5, rf: 160, rt: J(0.05, 0.06), clicks: [[J(0.031, 0.036), 2200, 0.22], [J(0.074, 0.082), 1600, 0.16]] }
     : { T: J(0.0005, 0.0007), A: 1, lpEnd: J(800, 1000), lpSweep: 6000, lpT: 0.006, e: [J(0.0035, 0.0045), J(0.022, 0.028), 0.12], k: [0.18, 0.03], gain: 2.6,
-        f0: J(58, 64), f1: 120, ft: 0.012, boom: 0.55, bt: J(0.033, 0.04),
-        ring: [[J(1450, 1600), 0.004, 0.22], [J(2700, 2900), 0.003, 0.16], [J(4200, 4450), 0.002, 0.1]],
-        // the slide going back and slamming forward on a fresh round
-        act: [[J(0.012, 0.016), [2300, 3650, 5200, 7400], 0.008, 0.14], [J(0.043, 0.05), [2000, 3300, 4800], 0.011, 0.11]] };
-  const aHP = Math.exp(-TAU * 90 / sr), knee = 0.6;
+        rumble: 1.1, rf: 210, rt: J(0.033, 0.04), clicks: [[J(0.012, 0.016), 3000, 0.2], [J(0.043, 0.05), 2400, 0.15]] };
+  const op = f => 1 - Math.exp(-TAU * f / sr), aHP = Math.exp(-TAU * 90 / sr), aR = op(S.rf), knee = 0.6;
   for (let c = 0; c < 2; c++) {
     const d = b.getChannelData(c);
-    let l1 = 0, l2 = 0, hi = 0, hpOut = 0, ph = 0, pk = 0;
+    let l1 = 0, l2 = 0, hi = 0, hpOut = 0, r1 = 0, r2 = 0, pk = 0;
+    const ch = S.clicks.map(([t0, f, a]) => ({ t0, a, k: op(f), lp: 0 }));
     for (let i = 0; i < len; i++) {
-      const t = i / sr, n = Math.random() * 2 - 1, aLP = 1 - Math.exp(-TAU * (S.lpEnd + S.lpSweep * Math.exp(-t / S.lpT)) / sr);
+      const t = i / sr, n = Math.random() * 2 - 1, m = Math.random() * 2 - 1;
+      // the blast: bright at first, darker as it goes
+      const aLP = op(S.lpEnd + S.lpSweep * Math.exp(-t / S.lpT));
       l1 += aLP * (n - l1); l2 += aLP * (l1 - l2); hpOut = aHP * (hpOut + l2 - hi); hi = l2;
       let x = hpOut * S.gain * (Math.exp(-t / S.e[0]) + S.k[0] * Math.exp(-t / S.e[1]) + S.k[1] * Math.exp(-t / S.e[2]));
       if (t < S.T) x += S.A * (1 - 2 * t / S.T);
-      ph += TAU * (S.f0 + S.f1 * Math.exp(-t / S.ft)) / sr;
-      x += S.boom * Math.sin(ph) * Math.exp(-t / S.bt) * (1 - Math.exp(-t / 0.0004));
-      if (t < 0.04) for (const [f, tau, a] of S.ring) x += a * Math.sin(TAU * f * t + c) * Math.exp(-t / tau);
-      for (const [t0, fs, tau, a] of S.act) {
-        const u = t - t0; if (u < 0 || u > tau * 7) continue;
-        let s = 0; for (const f of fs) s += Math.sin(TAU * f * u * (1 + 0.003 * c));
-        x += a * Math.exp(-u / tau) * (s / fs.length + 0.6 * n * Math.exp(-u / 0.002));
-      }
-      // only the peaks clip: a soft knee above 0.6, untouched below, so the tail isn't pulled up with them
-      const m = Math.abs(x); d[i] = m < knee ? x : Math.sign(x) * (knee + (1 - knee) * Math.tanh((m - knee) / (1 - knee)));
+      // the gas: low rumble, noise with the top cut away, so it has weight but no note
+      r1 += aR * (m - r1); r2 += aR * (r1 - r2);
+      x += r2 * S.rumble * 9 * Math.exp(-t / S.rt) * (1 - Math.exp(-t / 0.0008));
+      // the action: short clicks of noise, the low part taken off so they snap
+      for (const k of ch) { const u = t - k.t0; k.lp += k.k * (n - k.lp); if (u >= 0 && u < 0.02) x += k.a * (n - k.lp) * Math.exp(-u / 0.0025); }
+      const v = Math.abs(x); d[i] = v < knee ? x : Math.sign(x) * (knee + (1 - knee) * Math.tanh((v - knee) / (1 - knee)));
       pk = Math.max(pk, Math.abs(d[i]));
     }
     for (let i = 0; i < len; i++) d[i] *= 0.98 / pk;
@@ -4552,8 +4545,8 @@ function playShot(kind) {
 const sfx = {
   gun() { playShot('pistol'); },
   rifle() { playShot('rifle'); },
-  // a spent case landing: on a hard floor it rings at a few inharmonic modes and bounces, quicker and quieter each
-  // time, then rolls; on grass it barely makes a sound
+  // a spent case landing: on a hard floor a short metallic tick that bounces, quicker and quieter each time, then
+  // rolls; on grass it barely makes a sound
   casing(x, y, z, surface, big) {
     if (!aOK()) return; const t = now(), p = mkPan(x, z, y, 1);
     if (surface === 'grass') { noiseHit({ t, dur: 0.035, type: 'bandpass', freq: rand(800, 1300), Q: 1.2, peak: 0.07, out: p }); return; }
@@ -4561,11 +4554,11 @@ const sfx = {
     let at = 0, gap = rand(0.09, 0.13), amp = surface === 'gravel' ? 0.11 : 0.19;
     const n = surface === 'gravel' ? 2 : surface === 'wood' ? 3 : 2 + (Math.random() * 3 | 0), ring = surface === 'tile' ? 1.3 : surface === 'wood' ? 0.6 : 1;
     for (let i = 0; i < n; i++) {
-      for (const [m, a, d] of [[1, 1, 0.42], [1.59, 0.6, 0.32], [2.31, 0.45, 0.24], [3.12, 0.3, 0.17]]) tone({ t: t + at, f0: base * m * rand(0.99, 1.01), dur: d * ring, peak: amp * a * 0.45, out: p });
-      noiseHit({ t: t + at, dur: 0.008, type: 'highpass', freq: 5000, peak: amp * 0.4, out: p });
+      for (const [m, a, d] of [[1, 1, 0.09], [2.31, 0.5, 0.05]]) tone({ t: t + at, f0: base * m * rand(0.98, 1.02), dur: d * ring, peak: amp * a * 0.22, out: p });
+      noiseHit({ t: t + at, dur: 0.012, type: 'bandpass', freq: base * 1.6, Q: 0.8, peak: amp * 0.55, out: p });
       at += gap; gap *= rand(0.55, 0.7); amp *= rand(0.45, 0.6);
     }
-    if (hard) noiseHit({ t: t + at, dur: rand(0.15, 0.3), type: 'bandpass', freq: base * 1.2, Q: 3, a: 0.02, peak: amp * 0.3, out: p });
+    if (hard) noiseHit({ t: t + at, dur: rand(0.1, 0.2), type: 'bandpass', freq: base * 1.2, Q: 1.2, a: 0.02, peak: amp * 0.25, out: p });
   },
   rreload(empty) {
     if (!aOK()) return; const t = now(), steps = [[0.2, 2600, 0.3], [0.55, 1400, 0.36], [1.5, 900, 0.5], [1.62, 2200, 0.3]];
