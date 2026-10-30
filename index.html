@@ -1265,9 +1265,150 @@ function flatClone(m, matrix) {
   if (!g.attributes.normal) g.computeVertexNormals();
   return g;
 }
+/* ---------------- greedy meshing ----------------
+   Most of what's built is axis-aligned boxes. Before the bake merges them, every box face loses whatever another opaque
+   box (or the ground) covers, and what's left on each plane is cut into as few rectangles as possible, two triangles each,
+   the way block games mesh their chunks. */
+const GMS = { boxes: 0, trisIn: 0, trisOut: 0 };
+const GM_MAPS = ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap', 'bumpMap', 'alphaMap', 'emissiveMap', 'lightMap'];
+const gmEligible = mat => mat.isMeshStandardMaterial && !mat.transparent && mat.opacity >= 1 && !mat.alphaTest && mat.side === THREE.FrontSide && !mat.vertexColors && !mat.polygonOffset;
+// a one-segment box whose world matrix only swaps, flips and scales axes
+function gmAligned(m) {
+  const g = m.geometry, p = g.parameters;
+  if (g.type !== 'BoxGeometry' || !p || p.widthSegments !== 1 || p.heightSegments !== 1 || p.depthSegments !== 1) return false;
+  const e = m.matrixWorld.elements;
+  for (let c = 0; c < 3; c++) { let n = 0; for (let r = 0; r < 3; r++) if (Math.abs(e[c * 4 + r]) > 1e-6) n++; if (n !== 1) return false; }
+  return true;
+}
+// the six faces of a baked box: plane, rectangle on it, and the affine map its texture follows across it
+function gmFaces(r) {
+  const P = r.geo.attributes.position.array, N = r.geo.attributes.normal.array, T = r.geo.attributes.uv.array, out = [];
+  for (let f = 0; f < 6; f++) {
+    const k0 = f * 6, n = [N[k0 * 3], N[k0 * 3 + 1], N[k0 * 3 + 2]], a = Math.abs(n[0]) > Math.abs(n[1]) ? (Math.abs(n[0]) > Math.abs(n[2]) ? 0 : 2) : (Math.abs(n[1]) > Math.abs(n[2]) ? 1 : 2);
+    const s = Math.sign(n[a]), ua = (a + 1) % 3, va = (a + 2) % 3;
+    let u0 = Infinity, u1 = -Infinity, v0 = Infinity, v1 = -Infinity;
+    for (let k = k0; k < k0 + 6; k++) { const u = P[k * 3 + ua], v = P[k * 3 + va]; if (u < u0) u0 = u; if (u > u1) u1 = u; if (v < v0) v0 = v; if (v > v1) v1 = v; }
+    if (u1 - u0 < 1e-4 || v1 - v0 < 1e-4) continue;
+    const at = (u, v) => { for (let k = k0; k < k0 + 6; k++) if (Math.abs(P[k * 3 + ua] - u) < 1e-4 && Math.abs(P[k * 3 + va] - v) < 1e-4) return [T[k * 2], T[k * 2 + 1]]; return null; };
+    const c00 = at(u0, v0), c10 = at(u1, v0), c01 = at(u0, v1);
+    if (!c00 || !c10 || !c01) return null;
+    const A = [(c10[0] - c00[0]) / (u1 - u0), (c01[0] - c00[0]) / (v1 - v0), 0, (c10[1] - c00[1]) / (u1 - u0), (c01[1] - c00[1]) / (v1 - v0), 0];
+    A[2] = c00[0] - A[0] * u0 - A[1] * v0; A[5] = c00[1] - A[3] * u0 - A[4] * v0;
+    out.push({ a, s, p: P[k0 * 3 + a], u0, u1, v0, v1, A, r });
+  }
+  return out;
+}
+// which faces may become one rectangle: untextured ones always; a tiling texture laid on at one scale gets pinned to the
+// world so it runs straight across the join; anything else only joins a face whose texture map is identical
+function gmClass(f, maps) {
+  if (!maps.length) return 'n';
+  const [aU, aV, , bU, bV] = f.A, q = x => Math.round(x * 1e4);
+  const repeat = maps.every(t => t.wrapS === THREE.RepeatWrapping && t.wrapT === THREE.RepeatWrapping);
+  const metric = repeat && ((Math.abs(aV) < 1e-6 && Math.abs(bU) < 1e-6 && Math.abs(Math.abs(aU) - Math.abs(bV)) < 1e-3 * Math.abs(aU)) ||
+    (Math.abs(aU) < 1e-6 && Math.abs(bV) < 1e-6 && Math.abs(Math.abs(aV) - Math.abs(bU)) < 1e-3 * Math.abs(aV)));
+  if (metric) { f.A[2] = 0; f.A[5] = 0; return 'm' + [aU, aV, bU, bV].map(q).join(','); }
+  return 'a' + f.A.map(q).join(',');
+}
+const gmUnder = f => {
+  // a bottom face resting on the terrain: U runs along z and V along x for a y-facing plane
+  if (f.a !== 1 || f.s > 0) return false;
+  const nu = Math.ceil((f.u1 - f.u0) / 2) + 1, nv = Math.ceil((f.v1 - f.v0) / 2) + 1;
+  for (let i = 0; i < nu; i++) for (let j = 0; j < nv; j++) if (heightAt(lerp(f.v0, f.v1, j / (nv - 1 || 1)), lerp(f.u0, f.u1, i / (nu - 1 || 1))) < f.p - 0.02) return false;
+  return true;
+};
+function gmEmit(o, g, U0, U1, V0, V1) {
+  const { a, s, p, cls, A } = g, ua = (a + 1) % 3, va = (a + 2) % 3, c = [[U0, V0], [U1, V0], [U1, V1], [U0, V1]], q = [0, 0, 0], n = [0, 0, 0];
+  n[a] = s; q[a] = p;
+  // whole-tile shifts keep texture coordinates small without moving the pattern
+  const ou = cls[0] === 'm' ? Math.floor(A[0] * U0 + A[1] * V0) : 0, ov = cls[0] === 'm' ? Math.floor(A[3] * U0 + A[4] * V0) : 0;
+  for (const i of s > 0 ? [0, 1, 2, 0, 2, 3] : [0, 2, 1, 0, 3, 2]) {
+    const [U, V] = c[i]; q[ua] = U; q[va] = V;
+    o.pos.push(q[0], q[1], q[2]); o.nor.push(n[0], n[1], n[2]);
+    if (cls[0] === 'n') o.uv.push(0, 0); else o.uv.push(A[0] * U + A[1] * V + A[2] - ou, A[3] * U + A[4] * V + A[5] - ov);
+  }
+  GMS.trisOut += 2;
+}
+// one plane's faces on a grid cut at every edge. Cells another box covers are hidden either way, so a rectangle may run
+// across them but never has to: a face that's only partly covered stays whole, and one that's fully covered goes
+function gmGroup(g, occ, o) {
+  const uniq = arr => { arr.sort((x, y) => x - y); const out = [arr[0]]; for (const x of arr) if (x - out[out.length - 1] > 1e-5) out.push(x); return out; };
+  let gu0 = Infinity, gu1 = -Infinity, gv0 = Infinity, gv1 = -Infinity;
+  for (const f of g.faces) { gu0 = Math.min(gu0, f.u0); gu1 = Math.max(gu1, f.u1); gv0 = Math.min(gv0, f.v0); gv1 = Math.max(gv1, f.v1); }
+  const Uc = [], Vc = [];
+  for (const f of g.faces) Uc.push(f.u0, f.u1), Vc.push(f.v0, f.v1);
+  occ = occ.map(r => [clamp(r[0], gu0, gu1), clamp(r[1], gu0, gu1), clamp(r[2], gv0, gv1), clamp(r[3], gv0, gv1)]).filter(r => r[1] - r[0] > 1e-5 && r[3] - r[2] > 1e-5);
+  for (const r of occ) Uc.push(r[0], r[1]), Vc.push(r[2], r[3]);
+  const Us = uniq(Uc), Vs = uniq(Vc), nu = Us.length - 1, nv = Vs.length - 1, grid = new Uint8Array(nu * nv);
+  const idx = (arr, x) => { let lo = 0, hi = arr.length - 1; while (lo < hi) { const m = (lo + hi) >> 1; if (arr[m] < x - 1e-5) lo = m + 1; else hi = m; } return lo; };
+  const span = (u0, u1, v0, v1) => [idx(Us, u0), idx(Us, u1), idx(Vs, v0), idx(Vs, v1)];
+  // 1 must be drawn, 3 is hidden (draw or not), 2 is done
+  for (const f of g.faces) { const [i0, i1, j0, j1] = span(f.u0, f.u1, f.v0, f.v1); for (let j = j0; j < j1; j++) grid.fill(1, j * nu + i0, j * nu + i1); }
+  for (const r of occ) { const [i0, i1, j0, j1] = span(r[0], r[1], r[2], r[3]); for (let j = j0; j < j1; j++) for (let i = i0; i < i1; i++) if (grid[j * nu + i] === 1) grid[j * nu + i] = 3; }
+  const ok = v => v === 1 || v === 3, rects = [];
+  for (let j = 0; j < nv; j++) for (let i = 0; i < nu; i++) {
+    if (grid[j * nu + i] !== 1) continue;
+    let w = 1; while (i + w < nu && ok(grid[j * nu + i + w])) w++;
+    let h = 1;
+    grow: while (j + h < nv) { for (let k = 0; k < w; k++) if (!ok(grid[(j + h) * nu + i + k])) break grow; h++; }
+    for (let jj = j; jj < j + h; jj++) for (let k = 0; k < w; k++) if (grid[jj * nu + i + k] === 1) grid[jj * nu + i + k] = 2;
+    rects.push([Us[i], Us[i + w], Vs[j], Vs[j + h]]);
+  }
+  // never worse than the faces it started from: the ones with anything left to show, whole
+  const shown = g.faces.filter(f => { const [i0, i1, j0, j1] = span(f.u0, f.u1, f.v0, f.v1); for (let j = j0; j < j1; j++) for (let i = i0; i < i1; i++) if (grid[j * nu + i] === 2) return true; return false; });
+  for (const r of rects.length <= shown.length ? rects : shown.map(f => [f.u0, f.u1, f.v0, f.v1])) gmEmit(o, g, r[0], r[1], r[2], r[3]);
+}
+// recs: { geo (world space, non-indexed), key (bake bucket), grp (what shows and hides with it), cast, mat }
+function gmMesh(recs) {
+  const out = new Map(), bucket = key => { if (!out.has(key)) out.set(key, { pos: [], nor: [], uv: [], raw: [] }); return out.get(key); };
+  const cell = 8, grid = new Map(), ck = (i, j) => i * 65536 + j, groups = new Map();
+  for (const r of recs) {
+    const P = r.geo.attributes.position.array; r.mn = [Infinity, Infinity, Infinity]; r.mx = [-Infinity, -Infinity, -Infinity];
+    for (let k = 0; k < P.length; k += 3) for (let a = 0; a < 3; a++) { r.mn[a] = Math.min(r.mn[a], P[k + a]); r.mx[a] = Math.max(r.mx[a], P[k + a]); }
+    for (let i = Math.floor(r.mn[0] / cell); i <= Math.floor(r.mx[0] / cell); i++) for (let j = Math.floor(r.mn[2] / cell); j <= Math.floor(r.mx[2] / cell); j++) { const k = ck(i, j); if (!grid.has(k)) grid.set(k, []); grid.get(k).push(r); }
+    const faces = gmFaces(r);
+    GMS.boxes++; GMS.trisIn += 12;
+    if (!faces) { bucket(r.key).raw.push(r.geo); GMS.trisOut += 12; continue; }
+    const maps = GM_MAPS.map(k => r.mat[k]).filter(Boolean);
+    for (const f of faces) {
+      if (gmUnder(f)) continue;
+      f.cls = gmClass(f, maps);
+      // faces only join within a 24 m tile of their plane, which keeps each plane's grid small
+      const gk = r.key + '|' + f.a + f.s + '|' + Math.round(f.p * 1e4) + '|' + f.cls + '|' + Math.floor((f.u0 + f.u1) / 48) + ',' + Math.floor((f.v0 + f.v1) / 48);
+      if (!groups.has(gk)) groups.set(gk, { a: f.a, s: f.s, p: f.p, cls: f.cls, A: f.A, key: r.key, grp: r.grp, cast: r.cast, faces: [] });
+      groups.get(gk).faces.push(f);
+    }
+  }
+  for (const g of groups.values()) {
+    // what covers this plane: any opaque box reaching through it from the open side, shown whenever this face is,
+    // and casting a shadow if this face does
+    const ua = (g.a + 1) % 3, va = (g.a + 2) % 3, seen = new Set(), occ = [], e = 1e-3;
+    for (const f of g.faces) {
+      const x0 = g.a === 0 ? g.p : ua === 0 ? f.u0 : f.v0, x1 = g.a === 0 ? g.p : ua === 0 ? f.u1 : f.v1;
+      const z0 = g.a === 2 ? g.p : ua === 2 ? f.u0 : f.v0, z1 = g.a === 2 ? g.p : ua === 2 ? f.u1 : f.v1;
+      for (let i = Math.floor(x0 / cell); i <= Math.floor(x1 / cell); i++) for (let j = Math.floor(z0 / cell); j <= Math.floor(z1 / cell); j++) for (const b of grid.get(ck(i, j)) || []) {
+        if (seen.has(b)) continue; seen.add(b);
+        if (b.grp !== g.grp && b.grp !== 'G') continue;
+        if (g.cast && !b.cast) continue;
+        const through = g.s > 0 ? b.mn[g.a] <= g.p + e && b.mx[g.a] > g.p + e : b.mx[g.a] >= g.p - e && b.mn[g.a] < g.p - e;
+        if (through) occ.push([b.mn[ua], b.mx[ua], b.mn[va], b.mx[va]]);
+      }
+    }
+    gmGroup(g, occ, bucket(g.key));
+  }
+  const res = [];
+  for (const [key, o] of out) {
+    if (o.pos.length) {
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(o.pos, 3)); geo.setAttribute('normal', new THREE.Float32BufferAttribute(o.nor, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(o.uv, 2));
+      res.push([key, geo]);
+    }
+    for (const g of o.raw) res.push([key, g]);
+  }
+  return res;
+}
 function bakeStatic() {
   scene.updateMatrixWorld(true);
-  const buckets = new Map(), wp = new V3();
+  const buckets = new Map(), wp = new V3(), boxes = [];
   for (const { m, solid, global } of bakeList) {
     if (!m.parent) continue;
     if (Array.isArray(m.material)) { if (solid) solids.push(m); continue; }
@@ -1276,9 +1417,12 @@ function bakeStatic() {
     const ch = global || inTown(wp.x, wp.z) ? null : chunkAt(wp.x, wp.z);
     const key = m.material.uuid + (m.castShadow ? 'c' : 'n') + (solid ? 's' : 'x') + (ch ? ch.i : global ? 'G' : 'T');
     if (!buckets.has(key)) buckets.set(key, { mat: m.material, cast: m.castShadow, solid, geos: [], ch: ch || (global ? null : TOWN) });
-    buckets.get(key).geos.push(flatClone(m, m.matrixWorld));
+    const geo = flatClone(m, m.matrixWorld);
+    if (gmEligible(m.material) && gmAligned(m)) boxes.push({ geo, key, grp: ch ? ch.i : global ? 'G' : 'T', cast: m.castShadow, mat: m.material });
+    else buckets.get(key).geos.push(geo);
     m.parent.remove(m);
   }
+  for (const [key, geo] of gmMesh(boxes)) buckets.get(key).geos.push(geo);
   for (const b of buckets.values()) {
     const mesh = new THREE.Mesh(mergeFlat(b.geos), b.mat);
     mesh.castShadow = b.cast; mesh.receiveShadow = true; mesh.matrixAutoUpdate = false; mesh.updateMatrix();
