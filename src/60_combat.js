@@ -199,7 +199,7 @@ function damageActor(t, dmg, src, o = {}) {
     HUD.hitmark(o.head); Sfx.hit(o.head);
     HUD.dmgNum(o.x !== undefined ? o.x : t.pos.x, o.y !== undefined ? o.y + 0.4 : t.pos.y + 2.2, o.z !== undefined ? o.z : t.pos.z, dmg, o.head ? 'head' : shieldHit ? 'shield' : 'hp');
   }
-  if (t === player) HUD.hurt(src, dmg, o);
+  if (t === player) { HUD.hurt(src, dmg, o); Input.rumble(170, clamp(dmg / 50, 0.35, 1), 0.5); }
   if (t.ai && src && src !== t) botAlert(t, src);
   if (t.hp <= 0) { t.hp = 0; eliminate(t, src, o); }
   return dmg;

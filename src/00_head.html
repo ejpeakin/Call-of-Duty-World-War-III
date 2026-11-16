@@ -366,5 +366,10 @@ button:focus-visible{outline:2px solid var(--sun-2);outline-offset:2px}
   #teamList{display:none}
   #buildbar{bottom:calc(360px + var(--sb))}
 }
+.padfocus{outline:3px solid #ffd23a!important;outline-offset:2px;box-shadow:0 0 0 6px rgba(255,210,58,.25)!important}
+.padkeys{display:none}
+body.pad .padkeys{display:grid}
+body.pad .keys:not(.padkeys){display:none}
+body.pad{cursor:none}
 @media (prefers-reduced-motion: reduce){ *{animation:none!important;transition:none!important} }
 </style>

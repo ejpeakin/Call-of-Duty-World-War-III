@@ -4,9 +4,50 @@
 const Input = {
   keys: {}, pressed: new Set(), mdx: 0, mdy: 0, lmb: false, rmb: false, wheel: 0, locked: false,
   touch: { on: false, mx: 0, mz: 0, fire: false, ads: false, jump: false, stickId: null, lookId: null, sx: 0, sy: 0, lx: 0, ly: 0 },
+  // game controller (standard layout): sticks move and look, triggers aim and fire, face buttons act
+  pad: { gp: null, on: false, mx: 0, mz: 0, lx: 0, ly: 0, fire: false, ads: false, jump: false, sprint: false, prev: [], hit: [], navT: 0, focus: null, lastSlot: 1 },
+  pollPad() {
+    const pd = this.pad; let gp = null; pd.hit.length = 0;
+    try { const list = navigator.getGamepads ? navigator.getGamepads() : []; for (const g of list) if (g && g.connected && g.buttons.length >= 10 && g.axes.length >= 4) { gp = g; break; } } catch (e) { /* not allowed here */ }
+    pd.gp = gp;
+    if (!gp) { if (pd.on) this.padOff(); return; }
+    const dz = v => { const a = Math.abs(v); return a < 0.16 ? 0 : Math.sign(v) * (a - 0.16) / 0.84; };
+    const b = i => !!(gp.buttons[i] && (gp.buttons[i].pressed || gp.buttons[i].value > 0.35));
+    for (let i = 0; i < 17; i++) { const d = b(i); if (d && !pd.prev[i]) pd.hit.push(i); pd.prev[i] = d; }
+    pd.mx = dz(gp.axes[0] || 0); pd.mz = -dz(gp.axes[1] || 0); pd.lx = dz(gp.axes[2] || 0); pd.ly = dz(gp.axes[3] || 0);
+    pd.fire = b(7); pd.ads = b(6); pd.jump = b(0);
+    if (Math.hypot(pd.mx, pd.mz) < 0.25) pd.sprint = false;
+    if (!pd.on && (pd.hit.length || Math.abs(pd.mx) + Math.abs(pd.mz) + Math.abs(pd.lx) + Math.abs(pd.ly) > 0.4)) { pd.on = true; $('clickHint').hidden = true; document.body.classList.add('pad'); Sfx.init(); HUD.last = {}; HUD.dirty = true; }
+  },
+  padOff() { const pd = this.pad; if (!pd.on) return; pd.on = false; pd.mx = pd.mz = pd.lx = pd.ly = 0; pd.fire = pd.ads = pd.jump = pd.sprint = false; document.body.classList.remove('pad'); if (pd.focus) pd.focus.classList.remove('padfocus'); pd.focus = null; HUD.last = {}; HUD.dirty = true; },
+  rumble(ms, strong, weak) { const gp = this.pad.gp; if (!this.pad.on || !gp || !gp.vibrationActuator || !gp.vibrationActuator.playEffect) return; try { gp.vibrationActuator.playEffect('dual-rumble', { duration: ms, strongMagnitude: strong, weakMagnitude: weak }); } catch (e) { /* no rumble */ } },
+  // menus: the D-pad or left stick moves a highlight between buttons, A presses it, B goes back, LB / RB change tab
+  padMenu(dt) {
+    const pd = this.pad; if (!pd.gp) return;
+    const root = ['ticket', 'results', 'death', 'pause', 'mpPanel', 'lobby'].map(id => $(id)).find(el => el && !el.hidden); if (!root) return;
+    const els = [...root.querySelectorAll('button, [data-id], [data-mode], [data-isl], [data-f], [data-cat], [data-build], [data-body], input')].filter(el => el.offsetParent !== null && !el.disabled && el.getBoundingClientRect().width > 4);
+    if (!els.length) return;
+    if (!pd.focus || !els.includes(pd.focus)) { if (pd.focus) pd.focus.classList.remove('padfocus'); pd.focus = els.find(el => /readyBtn|resumeBtn|rLobbyBtn|specBtn|tkBtn/.test(el.id)) || els[0]; if (pd.on) pd.focus.classList.add('padfocus'); }
+    let dx = 0, dy = 0; pd.navT -= dt;
+    for (const i of pd.hit) { if (i === 12) dy = -1; if (i === 13) dy = 1; if (i === 14) dx = -1; if (i === 15) dx = 1; }
+    if (!dx && !dy && pd.navT <= 0 && Math.hypot(pd.mx, pd.mz) > 0.6) { if (Math.abs(pd.mx) > Math.abs(pd.mz)) dx = Math.sign(pd.mx); else dy = -Math.sign(pd.mz); }
+    if (dx || dy) {
+      pd.navT = 0.2; const r = pd.focus.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2; let best = null, bs = 1e9;
+      for (const el of els) { if (el === pd.focus) continue; const q = el.getBoundingClientRect(), ex = q.left + q.width / 2 - cx, ey = q.top + q.height / 2 - cy, along = ex * dx + ey * dy, across = Math.abs(ex * dy) + Math.abs(ey * dx); if (along < 6) continue; const sc = along + across * 2.4; if (sc < bs) { bs = sc; best = el; } }
+      if (best) { pd.focus.classList.remove('padfocus'); pd.focus = best; best.classList.add('padfocus'); if (best.scrollIntoView) best.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }
+    }
+    for (const i of pd.hit) {
+      if (i === 0) { Sfx.init(); pd.focus.click(); }
+      else if (i === 9 && root.id === 'pause') togglePause();
+      else if (i === 1) { if (root.id === 'pause') togglePause(); else if (root.id === 'death') $('specBtn').click(); else if (root.id === 'lobby') { const t = root.querySelector('#tabs [data-tab="play"], #tabs button'); if (t) t.click(); } }
+      else if ((i === 4 || i === 5) && root.id === 'lobby') { const tabs = [...$('tabs').querySelectorAll('button')], cur = tabs.findIndex(t => t.classList.contains('on')), n = tabs[(Math.max(0, cur) + (i === 5 ? 1 : tabs.length - 1)) % tabs.length]; if (n) n.click(); }
+    }
+    pd.hit.length = 0;   // a press that closed a menu must not also act in the game this frame
+  },
   init() {
     const cv = $('game');
     addEventListener('keydown', e => {
+      this.padOff();
       if (Match.state !== 'play') return;
       if (!this.keys[e.code]) this.pressed.add(e.code);
       this.keys[e.code] = true;
@@ -17,6 +58,7 @@ const Input = {
     addEventListener('blur', () => { this.keys = {}; this.lmb = this.rmb = false; });
     addEventListener('mousemove', e => { if (Match.state === 'play' && !Match.paused && (this.locked || this.lmb || this.rmb || this.free)) { this.mdx += e.movementX || 0; this.mdy += e.movementY || 0; } });
     cv.addEventListener('mousedown', e => {
+      this.padOff();
       if (Match.state !== 'play' || Match.paused) return;
       Sfx.init();
       if (!this.locked && !IS_TOUCH) this.requestLock();
@@ -35,7 +77,7 @@ const Input = {
     this.initTouch();
   },
   requestLock() {
-    if (IS_TOUCH || this.touch.on) return;
+    if (IS_TOUCH || this.touch.on || this.pad.on) return;
     const cv = $('game');
     try { const p = cv.requestPointerLock(); if (p && p.catch) p.catch(() => { this.free = true; }); } catch (e) { this.free = true; }
     setTimeout(() => { if (!this.locked && Match.state === 'play' && !Match.paused && !this.free) $('clickHint').hidden = false; }, 400);
@@ -162,7 +204,7 @@ function togglePause(force) {
   if (Match.state !== 'play') return;
   Match.paused = force === true ? true : !Match.paused;
   $('pause').hidden = !Match.paused;
-  if (Match.paused) { if (document.pointerLockElement) document.exitPointerLock(); $('clickHint').hidden = true; Input.keys = {}; Input.lmb = Input.rmb = false; }
+  if (Match.paused) { if (document.pointerLockElement) document.exitPointerLock(); $('clickHint').hidden = true; Input.keys = {}; Input.lmb = Input.rmb = false; Input.pad.prev[9] = true; }
   else Input.requestLock();
 }
 function updatePlayer(dt) {
@@ -173,18 +215,38 @@ function updatePlayer(dt) {
   let mdx = Input.mdx, mdy = Input.mdy; Input.mdx = Input.mdy = 0;
   if (K.ArrowLeft) mdx -= 600 * dt; if (K.ArrowRight) mdx += 600 * dt; if (K.ArrowUp) mdy -= 400 * dt; if (K.ArrowDown) mdy += 400 * dt;
   a.yaw -= mdx * sens; a.pitch = clamp(a.pitch - mdy * sens, -1.45, 1.45);
+  const pd = Input.pad;
+  if (pd.on) {
+    const ls = (inp.ads ? (Cam.scoped ? 0.3 : 0.6) : 1) * Profile.d.sens, cv = v => Math.sign(v) * Math.pow(Math.abs(v), 1.7);
+    a.yaw -= cv(pd.lx) * 3.5 * ls * dt; a.pitch = clamp(a.pitch - cv(pd.ly) * 2.3 * ls * dt, -1.45, 1.45);
+    if (a.slot) pd.lastSlot = a.slot;
+    for (const i of pd.hit) {
+      if (i === 0) P.add('Space');
+      else if (i === 1) P.add('KeyQ');
+      else if (i === 2) P.add(Interact.cur ? 'KeyE' : 'KeyR');
+      else if (i === 3) P.add('Digit' + (a.slot === 0 ? (a.inv[pd.lastSlot] ? pd.lastSlot : 1) + 1 : 1));
+      else if (i === 4) { if (Build.active) P.add('KeyG'); else Input.wheel -= 1; }
+      else if (i === 5) { if (Build.active) P.add('TouchBuild'); else Input.wheel += 1; }
+      else if (i === 8 || i === 12) P.add('KeyM');
+      else if (i === 9) { togglePause(); P.clear(); return; }
+      else if (i === 10) pd.sprint = !pd.sprint;
+      else if (i === 13) P.add('KeyB');
+      else if (i === 14) P.add('KeyG');
+      else if (i === 15) P.add('TouchBuild');
+    }
+  }
   if (P.has('KeyM')) $('bigmap').hidden = !$('bigmap').hidden;
   if (!a.alive) {
     inp.f = inp.r = 0; inp.fire = inp.jump = inp.ads = false;
     if (P.has('Space') || P.has('Click')) cycleSpectate();
     P.clear(); Input.wheel = 0; return;
   }
-  let f = (K.KeyW ? 1 : 0) - (K.KeyS ? 1 : 0) + tc.mz, r = (K.KeyD ? 1 : 0) - (K.KeyA ? 1 : 0) + tc.mx;
+  let f = (K.KeyW ? 1 : 0) - (K.KeyS ? 1 : 0) + tc.mz + pd.mz, r = (K.KeyD ? 1 : 0) - (K.KeyA ? 1 : 0) + tc.mx + pd.mx;
   inp.f = clamp(f, -1, 1); inp.r = clamp(r, -1, 1);
-  inp.sprint = !!(K.ShiftLeft || K.ShiftRight) || (tc.on && Math.hypot(tc.mx, tc.mz) > 0.92);
-  inp.jump = !!K.Space || tc.jump;
-  inp.fire = Input.lmb || tc.fire;
-  inp.ads = Input.rmb || tc.ads;
+  inp.sprint = !!(K.ShiftLeft || K.ShiftRight) || (tc.on && Math.hypot(tc.mx, tc.mz) > 0.92) || pd.sprint;
+  inp.jump = !!K.Space || tc.jump || pd.jump;
+  inp.fire = Input.lmb || tc.fire || pd.fire;
+  inp.ads = Input.rmb || tc.ads || pd.ads;
   if (a.state === 'bus') { inp.f = inp.r = 0; inp.fire = false; if (P.has('Space')) busJump(a); }
   else if (a.state === 'sky') { if (P.has('Space')) a.state = 'glide'; }
   for (let i = 1; i <= 6; i++) if (P.has('Digit' + i)) { switchSlot(a, i - 1); Build.active = false; }

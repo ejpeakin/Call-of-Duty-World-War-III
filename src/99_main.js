@@ -26,6 +26,8 @@ function boot() {
 function frame(now) {
   requestAnimationFrame(frame);
   let dt = Math.min(0.05, Math.max(0.0005, (now - lastFrame) / 1000)); lastFrame = now;
+  Input.pollPad();
+  if (Match.state !== 'play' || Match.paused || !$('death').hidden || !$('results').hidden || !$('ticket').hidden) Input.padMenu(dt);
   if (Match.state === 'lobby' || Match.state === 'loading') { Lobby.render(dt); return; }
   if (Match.paused) { renderer.render(scene, camera); return; }
   gameTime += dt;

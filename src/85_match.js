@@ -247,7 +247,7 @@ const Match = {
     this.state = 'play';
     $('loading').hidden = true; HUD.startMatch();
     Input.requestLock();
-    if (this.mode !== 'rumble') HUD.banner('Welcome aboard the Sky Coach', IS_TOUCH ? 'Tap JUMP to leave the bus' : 'Press SPACE to jump out', 4);
+    if (this.mode !== 'rumble') HUD.banner('Welcome aboard the Sky Coach', Input.pad.on ? 'Press A to jump out' : IS_TOUCH ? 'Tap JUMP to leave the bus' : 'Press SPACE to jump out', 4);
     else HUD.banner('Storm Rumble', 'First team to 40 eliminations wins. You respawn.', 4);
   },
   spawnVault(v) {
