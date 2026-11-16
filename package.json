@@ -1,8 +1,8 @@
 {
-  "name": "dead-hours",
-  "version": "2.0.0",
-  "description": "Dead Hours - a first-person zombie survival game that runs in the browser",
+  "name": "fortday",
+  "version": "1.0.0",
+  "description": "FortDay - an original 3D battle royale that runs in the browser",
   "main": "server.js",
-  "scripts": { "start": "node server.js" },
+  "scripts": { "start": "node server.js", "build": "bash build.sh" },
   "engines": { "node": ">=18" }
 }

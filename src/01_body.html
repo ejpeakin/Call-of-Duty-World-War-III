@@ -1,0 +1,228 @@
+<canvas id="game" tabindex="0"></canvas>
+
+<div id="loading" hidden>
+  <div class="ld-title">FORT<span>DAY</span></div>
+  <div id="ldMsg">Raising the island…</div>
+  <div class="ld-bar"><i id="ldFill"></i></div>
+</div>
+
+<!-- ================= LOBBY ================= -->
+<div id="lobby">
+  <header class="lb-top">
+    <div class="logo">FORT<span>DAY</span></div>
+    <nav class="tabs" id="tabs">
+      <button data-tab="play" class="on">Play</button>
+      <button data-tab="locker">Locker</button>
+      <button data-tab="pass">Pass</button>
+      <button data-tab="career">Career</button>
+      <button data-tab="shop" class="shop-tab">Shop</button>
+    </nav>
+    <div class="lb-tier"><span id="tierLbl" class="num">Tier 1</span><div class="mini-bar"><i id="tierFill"></i></div></div>
+    <div class="lb-coins" title="FortBux"><i class="coin"></i><span id="coinLbl" class="num">1,500</span></div>
+  </header>
+
+  <div class="side">
+    <section class="panel" id="tab-play">
+      <h3>Mode</h3>
+      <div class="opt-grid" id="modeGrid">
+        <button class="opt" data-mode="solo"><b>Battle Royale · Solo</b><span>100 players, one survivor. Bus drop, loot, storm.</span></button>
+        <button class="opt" data-mode="squads"><b>Battle Royale · Squads</b><span>25 squads of 4. You lead three bot teammates.</span></button>
+        <button class="opt" data-mode="rumble"><b>Storm Rumble</b><span>16 vs 16 with respawns. First team to 40 eliminations.</span></button>
+      </div>
+      <h3>Combat style</h3>
+      <div class="seg" id="buildSeg">
+        <button data-build="1">Build</button>
+        <button data-build="0">No-Build</button>
+      </div>
+      <div class="hint" id="buildHint"></div>
+      <h3>Island</h3>
+      <div class="isl-grid" id="islGrid"></div>
+      <label class="check"><input type="checkbox" id="rankedChk"> Ranked queue <span class="hint">(tougher bots, earns rank points)</span></label>
+      <div class="hint">
+        <kbd>WASD</kbd> move · <kbd>Mouse</kbd> aim · <kbd>LMB</kbd> fire · <kbd>RMB</kbd> aim down sights · <kbd>Space</kbd> jump / leave bus / glider ·
+        <kbd>Shift</kbd> sprint · <kbd>1</kbd>–<kbd>6</kbd> slots · <kbd>E</kbd> pick up / open · <kbd>R</kbd> reload ·
+        <kbd>Z</kbd> wall <kbd>X</kbd> ramp <kbd>C</kbd> floor <kbd>G</kbd> material · <kbd>B</kbd> emote · <kbd>M</kbd> map
+      </div>
+      <div class="hint">Car model: <a href="https://sketchfab.com/3d-models/goodbye-and-good-riddance-nissan-car-fbx-ba71611bcba3445db89287411ca85c87" target="_blank" rel="noopener" style="color:inherit">“Goodbye And Good Riddance Nissan Car FBX”</a> by PixelGTT, licensed <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener" style="color:inherit">CC BY 4.0</a>. Badges removed and paint recolored.</div>
+    </section>
+
+    <section class="panel shop" id="tab-locker" hidden>
+      <div class="shop-head">
+        <h2 id="lockerTitle">Locker</h2>
+        <span class="lk-count" id="lkCount"></span>
+      </div>
+      <div class="shop-filters" id="catRow" role="tablist" aria-label="Locker categories"></div>
+      <article class="shop-detail" id="lkDetail">
+        <div class="sd-main">
+          <span class="sd-tag" id="lkTag"></span>
+          <h3 class="sd-name" id="lkName"></h3>
+          <p class="sd-sub" id="lkSub"></p>
+          <p class="sd-desc" id="lkDesc"></p>
+          <div class="body-seg" id="lkBody" role="radiogroup" aria-label="Body"><span>Body</span><button data-body="woman" role="radio">Woman</button><button data-body="man" role="radio">Man</button></div>
+        </div>
+        <div class="sd-buy">
+          <span class="sd-price owned" id="lkState"></span>
+          <button id="lkBtn" class="buy equip">Equip</button>
+        </div>
+      </article>
+      <div class="shop-cards" id="itemGrid"></div>
+      <p class="hint">Click an item you own to equip it. Locked items show how to get them; every cosmetic is visual only.</p>
+    </section>
+
+    <section class="panel" id="tab-pass" hidden>
+      <div class="season-head">
+        <span class="season-tag">Season 1</span>
+        <h2 id="seasonName">Music Festival 2026</h2>
+        <span class="season-left" id="seasonLeft"></span>
+      </div>
+      <div class="ticket-own" id="ticketOwn" hidden><b>Music Concert Ticket</b><span>Everything in the Item Shop is yours until the season ends.</span></div>
+      <div class="lvl-row"><b id="passLvl">Level 1</b><span id="passXp"></span></div>
+      <div class="bar"><i id="passFill"></i></div>
+      <div class="hint" id="passInfo"></div>
+      <div class="thank"><div><b>Thank the maker</b><span id="thankTxt">Say thanks to the person who made FortDay. +1,000 XP, once per season.</span></div><button id="thankBtn" class="buy equip">Thank you!</button></div>
+      <div class="pass-track" id="passTrack"></div>
+    </section>
+
+    <section class="panel shop" id="tab-shop" hidden>
+      <div class="shop-head">
+        <h2>Item Shop</h2>
+        <span class="shop-bal"><i class="coin"></i><b id="shopBal" class="num">1,500</b><span>FortBux</span></span>
+      </div>
+      <div class="shop-filters" id="shopFilters" role="tablist" aria-label="Item categories"></div>
+      <article class="shop-detail" id="shopDetail">
+        <div class="sd-main">
+          <span class="sd-tag" id="shopTag">Premium</span>
+          <h3 class="sd-name" id="shopName">Good Riddance Car</h3>
+          <p class="sd-sub" id="shopSub">Car</p>
+          <p class="sd-desc" id="shopDesc"></p>
+          <ul class="sd-feats" id="shopFeats"></ul>
+        </div>
+        <div class="sd-buy">
+          <span class="sd-price"><i class="coin"></i><b id="shopPrice" class="num">1,500</b></span>
+          <button id="buyBtn" class="buy">Buy</button>
+        </div>
+        <p class="sd-msg" id="shopMsg" role="status"></p>
+      </article>
+      <div class="shop-cards" id="shopGrid"></div>
+      <p class="hint">Every match pays FortBux: 40 for playing, 15 per elimination, plus 200 for a win, 60 for a top-10 finish or 25 for top 25. Each new Pass tier adds 100 more. Everything in the shop is cosmetic only.</p>
+    </section>
+
+    <section class="panel" id="tab-career" hidden>
+      <h2>Career</h2>
+      <div class="stat-grid" id="statGrid"></div>
+      <h3>Ranked ladder</h3>
+      <div class="ranks" id="rankList"></div>
+    </section>
+  </div>
+
+  <div class="lb-foot"><button id="readyBtn">READY UP</button></div>
+</div>
+
+<!-- ================= HUD ================= -->
+<div id="hud" hidden>
+  <div id="stormVig"></div>
+  <div id="hurtVig"></div>
+  <div id="scope" hidden></div>
+  <div id="dmgNums"></div>
+  <div id="killfeed"></div>
+  <div id="teamList"></div>
+  <div id="scoreBox" hidden><div class="blue" id="scoreBlue">0</div><div class="red" id="scoreRed">0</div></div>
+  <div id="bossbar" hidden><div class="bn" id="bossName"></div><div class="bb"><i id="bossFill"></i></div></div>
+  <div id="eventTag" hidden>Live event</div>
+  <div id="mapbox">
+    <canvas id="minimap" width="190" height="190"></canvas>
+    <div class="mrow"><span id="stormTxt">Storm forming</span></div>
+    <div class="mrow"><span><b id="aliveN">100</b> <span id="aliveLbl">left</span></span><span><b id="elimN">0</b> elims</span></div>
+  </div>
+  <div id="banner"><div class="bt" id="bannerT"></div><div class="bs" id="bannerS"></div></div>
+  <div id="stormTint"></div>
+  <div id="crosshair"><i></i><i></i><i></i><i></i></div>
+  <div id="reloadArc" hidden><svg viewBox="0 0 100 100" aria-hidden="true"><path class="tr" d="M 68 81.2 A 36 36 0 0 0 68 18.8" pathLength="100"/><path class="fg" d="M 68 81.2 A 36 36 0 0 0 68 18.8" pathLength="100"/></svg></div>
+  <div id="hitmarker"></div>
+  <div id="dmgDir"></div>
+  <div id="prompt"></div>
+  <div id="channel" hidden><div id="chLbl"></div><div class="cb"><i id="chFill"></i></div></div>
+  <div id="specBar" hidden></div>
+  <div id="buildbar"></div>
+  <div id="mats"></div>
+  <div id="ammoBox"><div id="wName"></div><b id="magTxt"></b><span id="resTxt"></span></div>
+  <div id="vitals">
+    <div class="vbar sh"><i id="shFill"></i><b id="shTxt">0</b></div>
+    <div class="vbar hp"><i id="hpFill"></i><b id="hpTxt">100</b></div>
+    <div class="vbar st" id="stBar"><i id="stFill"></i></div>
+  </div>
+  <div id="hotbar"></div>
+  <div id="touchUI" hidden>
+    <div id="stick"><i></i></div>
+    <div class="tb" id="tFire">FIRE</div>
+    <div class="tb" id="tAim">AIM</div>
+    <div class="tb" id="tJump">JUMP</div>
+    <div class="tb" id="tReload">RELOAD</div>
+    <div class="tb" id="tUse">USE</div>
+    <div class="tb" id="tBuild">BUILD</div>
+    <div class="tb" id="tMap">MAP</div>
+    <div class="tb" id="tPause">II</div>
+  </div>
+</div>
+
+<div id="clickHint" hidden>Click to take control</div>
+<div id="bigmap" hidden><canvas id="bigmapC" width="760" height="760"></canvas></div>
+
+<div class="overlay" id="pause" hidden>
+  <div class="card">
+    <h2>Paused</h2>
+    <div class="sens"><label for="sensIn">Look sensitivity</label><input type="range" id="sensIn" min="0.3" max="2.5" step="0.05"></div>
+    <label class="check"><input type="checkbox" id="shadowChk"> Shadows</label>
+    <div class="keys">
+      <kbd>WASD / Shift</kbd><span>Move / sprint</span>
+      <kbd>Space</kbd><span>Jump, leave the bus, open glider</span>
+      <kbd>LMB / RMB</kbd><span>Fire or harvest / aim down sights</span>
+      <kbd>1 – 6, wheel</kbd><span>Harvesting tool and five item slots</span>
+      <kbd>E</kbd><span>Pick up, swap, open chests</span>
+      <kbd>R</kbd><span>Reload</span>
+      <kbd>Z X C</kbd><span>Build wall, ramp, floor (Build mode)</span>
+      <kbd>G</kbd><span>Switch build material</span>
+      <kbd>B</kbd><span>Emote</span>
+      <kbd>M</kbd><span>Full map</span>
+    </div>
+    <div class="btn-row"><button class="btn pri" id="resumeBtn">Resume</button><button class="btn" id="quitBtn">Leave match</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="death" hidden>
+  <div class="card">
+    <div class="place num" id="dPlace">#12</div>
+    <h2 id="dTitle">Eliminated</h2>
+    <div class="sub" id="dSub"></div>
+    <div class="btn-row"><button class="btn" id="specBtn">Spectate</button><button class="btn pri" id="dLobbyBtn">Back to lobby</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="results" hidden>
+  <div class="card">
+    <div class="place num" id="rPlace">#1</div>
+    <h2 id="rTitle">Last one standing</h2>
+    <div class="sub" id="rSub"></div>
+    <div class="res-grid" id="rStats"></div>
+    <div>
+      <div class="hint" id="rXp"></div>
+      <div class="bar" style="margin-top:6px"><i id="rXpFill"></i></div>
+    </div>
+    <div class="unl" id="rUnlocks"></div>
+    <div class="btn-row"><button class="btn pri" id="rLobbyBtn">Continue</button></div>
+  </div>
+</div>
+<div id="ticket" hidden>
+  <div class="tk-rays"></div>
+  <div class="tk-confetti" id="tkConf"></div>
+  <div class="tk-wrap">
+    <p class="tk-kicker">You found the only one this season</p>
+    <div class="tk-card">
+      <div class="tk-stub"><b>ADMIT</b><b>ONE</b></div>
+      <div class="tk-main"><span class="tk-season" id="tkSeason">Music Festival 2026</span><h2>Music Concert Ticket</h2><span class="tk-no">No. 0001 · Front row · All access</span></div>
+      <i class="tk-shine"></i>
+    </div>
+    <p class="tk-desc" id="tkDesc">Everything in the Item Shop is yours until the season ends.</p>
+    <button id="tkBtn">Let's go!</button>
+  </div>
+</div>
