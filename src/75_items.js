@@ -461,7 +461,7 @@ const Ticket = {
   show() {
     const dl = Season.daysLeft();
     $('tkSeason').textContent = Season.name();
-    $('tkDesc').textContent = this.demo ? 'Preview: this is what finding the ticket looks like. Every chest has one for this match only, and it is not kept. The real ticket is still a 1 in 2,000 find.'
+    $('tkDesc').textContent = this.demo ? 'Preview: this is what finding the ticket looks like. Every chest has one for this match only, and it is not kept. The real ticket is still a 1 in 10,000 find.'
       : 'Everything in the Item Shop is yours until ' + Season.name() + ' ends — ' + (dl === 1 ? '1 day' : dl + ' days') + ' left. Equip any skin, glider, wrap or car from your Locker.';
     const conf = $('tkConf'); conf.innerHTML = '';
     const cols = ['#ffd84a', '#ff7ae0', '#7fd8ff', '#ffffff', '#ff8a3c', '#9b6bff'];

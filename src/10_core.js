@@ -229,7 +229,7 @@ for (const [cat] of COS_CATS) for (const c of COS[cat]) c.cat = cat;
 const RARITY_PRICE = [0, 400, 800, 1200, 1500, 2500, 2000];
 function itemPrice(c) { return c.price || RARITY_PRICE[c.r] || 0; }
 const COIN = 'FortBux';
-const PASS_TIERS = 30, XP_PER_TIER = 5000, XP_PER_LEVEL = 5000, LEVEL_COINS = 100, TICKET_CHANCE = 1 / 2000, TICKET_DEMO = 1;
+const PASS_TIERS = 30, XP_PER_TIER = 5000, XP_PER_LEVEL = 5000, LEVEL_COINS = 100, TICKET_CHANCE = 1 / 10000, TICKET_DEMO = 1;
 // ---------------------------------------------------------------- seasons: 30 days each, the first is Music Festival 2026
 const SEASON_EPOCH = Date.UTC(2026, 10, 16), SEASON_DAYS = 30, SEASON_NAMES = ['Music Festival 2026'];
 const Season = {
