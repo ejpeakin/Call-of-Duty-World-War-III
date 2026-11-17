@@ -26,10 +26,33 @@ function boot() {
   checkGL(); setInterval(checkGL, 3000);
 }
 let frameErrs = 0, firstFrame = false;
+// Diagnostics: open the game with ?diag on the end of the address to see what the browser is doing
+const Diag = {
+  on: /[?&]diag\b/.test(location.search), frames: 0, slowT: 0, ms: 0, fps: 0, n: 0, t0: performance.now(), errs: [], el: null, gpu: '', drops: 0,
+  log(m) { this.errs.push(String(m).slice(0, 140)); if (this.errs.length > 4) this.errs.shift(); },
+  tick(ms) {
+    this.frames++; this.n++; this.ms = this.ms * 0.9 + ms * 0.1;
+    const now = performance.now();
+    // frames taking far too long: draw fewer pixels and turn shadows off, a step at a time
+    if (this.ms > 90 && !document.hidden) { this.slowT += ms / 1000; if (this.slowT > 2.5 && renderer.getPixelRatio() > 0.5) { this.slowT = 0; this.ms = 40; this.drops++; renderer.setPixelRatio(Math.max(0.5, renderer.getPixelRatio() * 0.7)); renderer.setSize(innerWidth, innerHeight); if (sun) sun.castShadow = false; Profile.d.shadows = false; } }
+    else this.slowT = 0;
+    if (now - this.t0 < 500) return;
+    this.fps = Math.round(this.n * 1000 / (now - this.t0)); this.n = 0; this.t0 = now;
+    if (!this.on) return;
+    if (!this.el) { this.el = document.createElement('pre'); this.el.style.cssText = 'position:fixed;left:8px;top:64px;z-index:98;margin:0;max-width:calc(100vw - 16px);background:rgba(0,0,0,.82);color:#9ff0a8;font:12px/1.4 ui-monospace,monospace;padding:10px 12px;border-radius:8px;pointer-events:none;white-space:pre-wrap'; document.body.appendChild(this.el); }
+    if (!this.gpu) try { const gl = renderer.getContext(), d = gl.getExtension('WEBGL_debug_renderer_info'); this.gpu = d ? gl.getParameter(d.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER); } catch (e) { this.gpu = '?'; }
+    let lost = '?', buf = '?'; try { const gl = renderer.getContext(); lost = gl.isContextLost(); buf = gl.drawingBufferWidth + 'x' + gl.drawingBufferHeight; } catch (e) { /* */ }
+    let pads = 0; try { pads = [...(navigator.getGamepads ? navigator.getGamepads() : [])].filter(Boolean).length; } catch (e) { /* */ }
+    this.el.textContent = ['FortDay build ' + BUILD_ID, 'state ' + Match.state + (Match.paused ? ' (paused)' : '') + ' · frames ' + this.frames + ' · ' + this.fps + ' fps · ' + this.ms.toFixed(0) + ' ms/frame', 'graphics ' + this.gpu, 'context lost ' + lost + ' · buffer ' + buf + ' · pixel ratio ' + renderer.getPixelRatio().toFixed(2) + ' · lowered ' + this.drops + 'x', 'window ' + innerWidth + 'x' + innerHeight + ' · dpr ' + (devicePixelRatio || 1) + ' · hidden ' + document.hidden + ' · pads ' + pads + (Input.pad.on ? ' (in use)' : ''), 'character ' + (CharModel.ready ? 'ready' : 'not loaded') + ' · online lib ' + (typeof Peer === 'function' ? 'ok' : 'missing') + ' · net ' + Net.state + (Net.p2p ? ' p2p' : ' relay')].concat(this.errs.length ? ['errors:'].concat(this.errs) : []).join('\n');
+  },
+};
+addEventListener('error', e => Diag.log(e.message || e)); addEventListener('unhandledrejection', e => Diag.log('promise: ' + (e.reason && e.reason.message || e.reason)));
 function frame(now) {
   requestAnimationFrame(frame);
+  const t0 = performance.now();
   try {
     step(now);
+    Diag.tick(performance.now() - t0);
     if (!firstFrame && checkGL()) {
       // make sure the picture really reached the screen: an opaque pixel in the middle of the frame
       let ok = true; try { const gl = renderer.getContext(), px = new Uint8Array(4); gl.readPixels(gl.drawingBufferWidth >> 1, gl.drawingBufferHeight >> 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); ok = px[3] > 0 || gl.drawingBufferWidth === 0; } catch (e) { /* cannot tell */ }
@@ -37,7 +60,7 @@ function frame(now) {
       else if (++frameErrs > 30) { firstFrame = true; showProblem(GL_BLOCKED); }
     }
   } catch (e) {
-    console.error(e); lastFrame = performance.now();
+    console.error(e); lastFrame = performance.now(); Diag.log(e && e.message ? e.message : e);
     if (++frameErrs <= 3 || frameErrs % 300 === 0) showProblem('Something went wrong drawing the game (' + (e && e.message ? e.message : e) + '). Try reloading the page. If it keeps happening, send a screenshot of this message.');
   }
 }

@@ -161,7 +161,7 @@ const Lobby = {
   },
   refresh() {
     const d = Profile.d;
-    Net.render();
+    Net.render(); $('buildTag').textContent = 'build ' + BUILD_ID;
     $('coinLbl').textContent = d.coins.toLocaleString();
     [...$('tabs').children].forEach(b => b.classList.toggle('on', b.dataset.tab === this.tab));
     for (const t of ['play', 'locker', 'pass', 'career', 'shop']) $('tab-' + t).hidden = t !== this.tab;
