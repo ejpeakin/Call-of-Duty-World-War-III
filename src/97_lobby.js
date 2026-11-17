@@ -63,7 +63,7 @@ const Lobby = {
     $('tabs').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; this.tab = b.dataset.tab; this.refresh(); });
     $('modeGrid').addEventListener('click', e => { const b = e.target.closest('[data-mode]'); if (!b) return; Profile.d.mode = b.dataset.mode; Profile.save(); this.refresh(); });
     $('buildSeg').addEventListener('click', e => { const b = e.target.closest('[data-build]'); if (!b) return; Profile.d.build = b.dataset.build === '1'; Profile.save(); this.refresh(); });
-    $('islGrid').addEventListener('click', e => { const b = e.target.closest('[data-isl]'); if (!b) return; Profile.d.theme = b.dataset.isl; Profile.save(); this.refresh(); });
+    $('islGrid').addEventListener('click', e => { const b = e.target.closest('[data-isl]'); if (!b) return; if (b.dataset.isl !== MapRotation.current()) { Sfx.init(); $('islNote').textContent = THEMES[b.dataset.isl].name + ' is locked. Only ' + THEMES[MapRotation.current()].name + ' is open right now.'; return; } Profile.d.theme = b.dataset.isl; Profile.save(); this.refresh(); });
     $('rankedChk').addEventListener('change', e => { Profile.d.ranked = e.target.checked; Profile.save(); });
     $('catRow').addEventListener('click', e => { const b = e.target.closest('[data-cat]'); if (!b) return; this.cat = b.dataset.cat; this.refresh(); });
     $('itemGrid').addEventListener('click', e => {
@@ -100,6 +100,7 @@ const Lobby = {
       if (Net.state === 'room' && !Net.isHost) return;
       Sfx.init(); Sfx.horn();
       Net.inMatch = Net.state === 'room';
+      MapRotation.began(); Profile.d.theme = MapRotation.current();
       Match.start({ mode: Profile.d.mode, build: Profile.d.mode === 'rumble' ? Profile.d.build : Profile.d.build, ranked: Profile.d.ranked && Profile.d.mode !== 'rumble' && !Net.inMatch, theme: Profile.d.theme });
     });
     Net.initUI();
@@ -200,7 +201,9 @@ const Lobby = {
     [...$('modeGrid').children].forEach(b => b.classList.toggle('on', b.dataset.mode === d.mode));
     [...$('buildSeg').children].forEach(b => b.classList.toggle('on', (b.dataset.build === '1') === d.build));
     $('buildHint').textContent = d.build ? 'Harvest wood, brick and metal with your tool, then throw up walls, ramps and floors mid-fight.' : 'No construction. Use natural cover, mantle up ledges, and lean on a 50-point overshield that regenerates when you are out of combat.';
-    $('islGrid').innerHTML = THEME_ORDER.map(k => { const t = THEMES[k]; return `<button class="isl ${k === d.theme ? 'on' : ''}" data-isl="${k}" style="--sw:${t.swatch}"><b>${t.name}</b><span>${t.tag}</span></button>`; }).join('');
+    const cur = MapRotation.current(), nxt = MapRotation.next(); if (d.theme !== cur) { d.theme = cur; Profile.save(); }
+    $('islGrid').innerHTML = THEME_ORDER.map(k => { const t = THEMES[k], open = k === cur; return `<button class="isl ${open ? 'on' : 'locked'}" data-isl="${k}" style="--sw:${t.swatch}" aria-disabled="${!open}">${open ? '' : '<i class="isl-lock" aria-hidden="true"></i>'}<b>${t.name}</b><span>${open ? 'Open now · closes in ' + MapRotation.left() : k === nxt ? 'Opens in ' + MapRotation.left() : 'Locked'}</span></button>`; }).join('');
+    $('islNote').textContent = MapRotation.start() ? THEMES[cur].name + ' is open for ' + MapRotation.left() + ', then ' + THEMES[nxt].name + ' opens and ' + THEMES[cur].name + ' closes.' : 'Every player starts on Greenvale. After 30 days the next island opens and this one closes.';
     $('rankedChk').checked = !!d.ranked; $('rankedChk').disabled = d.mode === 'rumble';
     if (this.tab === 'locker') this.lockerView();
     if (this.tab === 'pass') {

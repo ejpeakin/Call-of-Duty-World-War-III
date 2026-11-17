@@ -8,7 +8,7 @@ An original 3D battle royale that runs in the browser: drop from the bus, loot, 
 
 ## Play
 
-**https://ejpeakin.github.io/Call-of-Duty-World-War-III/** (GitHub Pages, from the `main` branch)
+**https://ejpeakin.github.io/FortDay/** (GitHub Pages, from the `main` branch)
 
 ## Multiplayer
 

@@ -148,6 +148,18 @@ const THEMES = {
   },
 };
 const THEME_ORDER = ['greenvale', 'floodtide', 'neon', 'olympia', 'dune'];
+// Map rotation: everyone starts on Greenvale. 30 days after a player's first match the next island opens and
+// the previous one closes, in THEME_ORDER, starting over after the last.
+const MAP_DAYS = 30, DAY_MS = 86400000;
+const MapRotation = {
+  start() { const f = Profile.d.firstPlay; return Number.isFinite(f) && f > 0 ? f : 0; },
+  index(now = Date.now()) { const f = this.start(); return f ? Math.floor(Math.max(0, now - f) / (MAP_DAYS * DAY_MS)) % THEME_ORDER.length : 0; },
+  current() { return THEME_ORDER[this.index()]; },
+  next() { return THEME_ORDER[(this.index() + 1) % THEME_ORDER.length]; },
+  msLeft(now = Date.now()) { const f = this.start(); if (!f) return MAP_DAYS * DAY_MS; const p = MAP_DAYS * DAY_MS; return p - (Math.max(0, now - f) % p); },
+  left() { const ms = this.msLeft(), d = Math.floor(ms / DAY_MS); if (d >= 1) return d + (d === 1 ? ' day' : ' days'); const h = Math.max(1, Math.ceil(ms / 3600000)); return h + (h === 1 ? ' hour' : ' hours'); },
+  began() { if (!this.start()) { Profile.d.firstPlay = Date.now(); Profile.save(); } },
+};
 
 const STYLES = {
   town: { walls: [0xe8e0cf, 0xcfd9e3, 0xf2d9a6, 0xd9c1ad, 0xc4dcbc], roofs: [0xb5483a, 0x3e6fb0, 0x56565e, 0x7a4b2a], found: 0x9a948a, mat: 'wood' },
@@ -170,15 +182,15 @@ const COS = {
     { id: 'tycoon', build: 'heavy', hair: 0x1a1a1a, name: 'Gilt Tycoon', r: 4, shirt: 0xd4a72c, pants: 0xd4a72c, skin: 0xe8c06a, sleeve: 0x1a1a1a, hat: 'tophat', hatC: 0x1a1a1a, unlock: 'tier:25' },
     { id: 'stormborn', build: 'average', hair: 0x0e0e10, name: 'Pluma Peso', r: 4, shirt: 0x141416, pants: 0x17181d, skin: 0xf1cdb0, sleeve: 0x141416, hat: 'none', hoodie: true, jeans: true, shiesty: 0x0e0e10, sneakers: 0xf6f6f4, unlock: 'tier:30' },
     { id: 'nova', build: 'average', name: 'Juice Earth', r: 4, shirt: 0xf3f2ee, pants: 0xe8731e, skin: 0x70482f, sleeve: 0xf3f2ee,
-      hat: 'dreads', hatC: 0x1c120c, tip: 0xcfa552, cargo: true, chain: true, beard: true, shoes: 0x6b4423, boots: true, back: '999', personal: true },
+      hat: 'dreads', hatC: 0x1c120c, tip: 0xcfa552, cargo: true, chain: true, beard: true, shoes: 0x6b4423, boots: true, back: '999', personal: true, unlock: 'shop', price: 1500 },
     { id: 'tripy', build: 'slim', name: 'Tripy Red', r: 4, shirt: 0x161618, pants: 0x18181c, skin: 0x8a5a3c, sleeve: 0x161618, hair: 0x6a0c10,
-      hat: 'dreads', hatC: 0x6a0c10, tip: 0xff2a2a, hairSeed: 777, hoodie: true, cargo: true, shades: 0x0c0c0e, faceTats: true, personal: true },
+      hat: 'dreads', hatC: 0x6a0c10, tip: 0xff2a2a, hairSeed: 777, hoodie: true, cargo: true, shades: 0x0c0c0e, faceTats: true, personal: true, unlock: 'shop', price: 1500 },
     { id: 'uzi', build: 'slim', name: 'Lil Uzi', r: 4, shirt: 0xff4fa8, jacket: 0x141418, pants: 0x121216, skin: 0x7a4a30, sleeve: 0x141418, hair: 0x141010, shoes: 0xf2f2f2,
-      hat: 'spikes', hatC: 0x141010, tip: 0x1c1616, spikeScale: 0.55, hairSeed: 1212, leather: true, studBelt: true, earring: true, faceTats: 'uzi', personal: true },
+      hat: 'spikes', hatC: 0x141010, tip: 0x1c1616, spikeScale: 0.55, hairSeed: 1212, leather: true, studBelt: true, earring: true, faceTats: 'uzi', personal: true, unlock: 'shop', price: 1500 },
     { id: 'headliner', build: 'muscular', name: 'Headliner', r: 4, shirt: 0x1a1426, pants: 0x101018, skin: 0xc68a5e, sleeve: 0xffd84a, hair: 0x2a1a10, hat: 'headphones', hatC: 0xff3fa6,
       jacket: 0xffd84a, leather: true, studBelt: true, unlock: 'shop', price: 1500, music: true },
     { id: 'week', build: 'slim', name: 'The Week', r: 4, shirt: 0x17171c, pants: 0x17171c, skin: 0x6e4630, sleeve: 0x17171c, hair: 0x0e0b0a, shoes: 0x0c0c0e,
-      hat: 'afro', afroSize: 0.8, lineup: true, hatC: 0x0e0b0a, suit: true, tieC: 0xb3121e, mustache: true, shades: 0x0a0a0c, personal: true },
+      hat: 'afro', afroSize: 0.8, lineup: true, hatC: 0x0e0b0a, suit: true, tieC: 0xb3121e, mustache: true, shades: 0x0a0a0c, personal: true, unlock: 'shop', price: 1500 },
   ],
   backpack: [
     { id: 'none', name: 'No Backpack', r: 0 },
@@ -228,7 +240,7 @@ const COS_CATS = [['outfit', 'Skins'], ['backpack', 'Back Bling'], ['pickaxe', '
 for (const [cat] of COS_CATS) for (const c of COS[cat]) c.cat = cat;
 const RARITY_PRICE = [0, 400, 800, 1200, 1500, 2500, 2000];
 // Skin codes: each unlocks one skin. Only a hash of each code is stored here, so the codes cannot be read from the page.
-const SKIN_CODES = {"b988f760c06661598b2306f9190cf3e2b49eede966a437b893f9cec8b7da4e94": "outfit:moss", "c9f8ccf00415edf51af71a754d7ff028524b44e8460a6b3ae71782999a660226": "outfit:comet", "6c20490c4a51a9daf0e4a506051bbef481b69064ad73f1dc55c730b4ab67669c": "outfit:siren", "0482d235e2b487cb4bd726f72f61f4bccaf818d6490108418b5bb454e75286a0": "outfit:toast", "d29e86b0e73b5f53bad9eef6e3cac179a1b954cceca8fab647db777288b95123": "outfit:nightwarden", "d415b6c930bf893cab24401df88e72dc4ef49125a8d35fdbb3d22dc5145ba25e": "outfit:tycoon", "b24e8cb0fb398c0acc64c00a5f55ae9b9277e60bb507b1d55388c2a1b5be067b": "outfit:stormborn", "a45886e085b42acdb18940bc409c2d3ba927f3cebcd7f6ad8120cca9a917c400": "outfit:headliner"};
+const SKIN_CODES = {"b988f760c06661598b2306f9190cf3e2b49eede966a437b893f9cec8b7da4e94": "outfit:moss", "c9f8ccf00415edf51af71a754d7ff028524b44e8460a6b3ae71782999a660226": "outfit:comet", "6c20490c4a51a9daf0e4a506051bbef481b69064ad73f1dc55c730b4ab67669c": "outfit:siren", "0482d235e2b487cb4bd726f72f61f4bccaf818d6490108418b5bb454e75286a0": "outfit:toast", "d29e86b0e73b5f53bad9eef6e3cac179a1b954cceca8fab647db777288b95123": "outfit:nightwarden", "d415b6c930bf893cab24401df88e72dc4ef49125a8d35fdbb3d22dc5145ba25e": "outfit:tycoon", "b24e8cb0fb398c0acc64c00a5f55ae9b9277e60bb507b1d55388c2a1b5be067b": "outfit:stormborn", "a45886e085b42acdb18940bc409c2d3ba927f3cebcd7f6ad8120cca9a917c400": "outfit:headliner", "7fb23ee2720fbf9744db86140a291c9da1d319b81592f0d64691b2490c78bd26": "outfit:nova", "768389476f280ee7e04103893784363c1d8311b1a1ef76ec7c9c8b6d9125123c": "outfit:tripy", "b6f82df325a16d8401efe178553f6f17bdd69e8c5a82e7dcfb9f41f699165f30": "outfit:uzi", "e9baf6540e4d5eda6e4c4c2b68fd2fe8b2d5c7a6578b203ce98be105e8b03812": "outfit:week"};
 async function redeemCode(raw) {
   const code = String(raw || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
   if (code.length < 8) return { err: 'Type the whole code, like ABCD-EFGH-JKLM.' };
@@ -265,12 +277,14 @@ const Profile = {
     xp: 0, wins: 0, matches: 0, kills: 0, top10: 0, rp: 0, umbrella: false, coins: 0, owned: {},
     eq: { outfit: 'rae', body: 'woman', backpack: 'ruck', pickaxe: 'pick', glider: 'sail', wrap: 'none', emote: 'groove', car: 'street' },
     sens: 1, shadows: !IS_TOUCH, mode: 'solo', build: true, theme: 'greenvale', ranked: false, novaGiven: true,
-    season: -1, seasonXp: 0, firstBonus: false, thankSeason: -1, ticketSeason: -1,
+    season: -1, seasonXp: 0, firstBonus: false, thankSeason: -1, ticketSeason: -1, skinsPaid: true,
   },
   load() {
     try {
       const s = localStorage.getItem('stormbreak.v1');
-      if (s) { const o = JSON.parse(s); const eq = Object.assign({}, this.d.eq, o.eq || {}); Object.assign(this.d, o); this.d.eq = eq; if (!this.d.owned || typeof this.d.owned !== 'object') this.d.owned = {}; if (!this.d.novaGiven) { this.d.eq.outfit = 'nova'; this.d.novaGiven = true; } if (typeof this.d.coins !== 'number') this.d.coins = 1500; }
+      if (s) { const o = JSON.parse(s); const eq = Object.assign({}, this.d.eq, o.eq || {}); Object.assign(this.d, o); this.d.eq = eq; if (!this.d.owned || typeof this.d.owned !== 'object') this.d.owned = {}; if (!this.d.novaGiven) { this.d.eq.outfit = 'nova'; this.d.novaGiven = true; } if (typeof this.d.coins !== 'number') this.d.coins = 1500;
+        // these four skins used to be free: players who already had a save keep them
+        if (!o.skinsPaid) { for (const id of ['nova', 'tripy', 'uzi', 'week']) this.d.owned['outfit:' + id] = true; this.d.skinsPaid = true; this.save(); } }
     } catch (e) { /* storage unavailable */ }
   },
   save() { try { localStorage.setItem('stormbreak.v1', JSON.stringify(this.d)); } catch (e) { /* ignore */ } },

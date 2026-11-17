@@ -76,6 +76,10 @@ button:focus-visible{outline:2px solid var(--sun-2);outline-offset:2px}
 .isl b{font-size:14px;text-shadow:0 1px 2px rgba(0,0,0,.6)}
 .isl span{font-size:11px;color:rgba(255,255,255,.85);text-shadow:0 1px 2px rgba(0,0,0,.6)}
 .isl.on{outline:2px solid var(--sun);outline-offset:1px}
+.isl.locked{filter:grayscale(.85) brightness(.55);cursor:not-allowed}
+.isl.locked:hover{filter:grayscale(.6) brightness(.7)}
+.isl-lock{position:absolute;top:8px;right:9px;width:12px;height:9px;border-radius:2px;background:#fff;opacity:.9}
+.isl-lock::before{content:'';position:absolute;left:2px;top:-7px;width:8px;height:8px;border:2px solid #fff;border-bottom:0;border-radius:6px 6px 0 0;box-sizing:border-box;width:8px}
 .check{display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer}
 .check input{width:18px;height:18px;accent-color:var(--sun)}
 .lb-foot{grid-column:2;grid-row:3;display:flex;gap:10px}
