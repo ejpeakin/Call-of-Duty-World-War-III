@@ -229,7 +229,7 @@ for (const [cat] of COS_CATS) for (const c of COS[cat]) c.cat = cat;
 const RARITY_PRICE = [0, 400, 800, 1200, 1500, 2500, 2000];
 function itemPrice(c) { return c.price || RARITY_PRICE[c.r] || 0; }
 const COIN = 'FortBux';
-const PASS_TIERS = 30, XP_PER_TIER = 5000, XP_PER_LEVEL = 5000, LEVEL_COINS = 100, TICKET_CHANCE = 1 / 2000;
+const PASS_TIERS = 30, XP_PER_TIER = 5000, XP_PER_LEVEL = 5000, LEVEL_COINS = 100, TICKET_CHANCE = 1 / 2000, TICKET_DEMO = 1;
 // ---------------------------------------------------------------- seasons: 30 days each, the first is Music Festival 2026
 const SEASON_EPOCH = Date.UTC(2026, 10, 16), SEASON_DAYS = 30, SEASON_NAMES = ['Music Festival 2026'];
 const Season = {
@@ -252,7 +252,7 @@ const Profile = {
     xp: 0, wins: 0, matches: 0, kills: 0, top10: 0, rp: 0, umbrella: false, coins: 1500, owned: {},
     eq: { outfit: 'rae', body: 'woman', backpack: 'ruck', pickaxe: 'pick', glider: 'sail', wrap: 'none', emote: 'groove', car: 'street' },
     sens: 1, shadows: !IS_TOUCH, mode: 'solo', build: true, theme: 'greenvale', ranked: false, novaGiven: true,
-    season: -1, seasonXp: 0, firstBonus: false, thankSeason: -1, ticketSeason: -1,
+    season: -1, seasonXp: 0, firstBonus: false, thankSeason: -1, ticketSeason: -1, ticketDemo: 0,
   },
   load() {
     try {

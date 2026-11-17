@@ -251,6 +251,9 @@ const Match = {
     if (PlayerRig) scene.remove(PlayerRig.root);
     PlayerRig = makeRig(Profile.d.eq); scene.add(PlayerRig.root);
     sun.castShadow = !!Profile.d.shadows;
+    // one-off preview: the first match after this update, every chest shows the Music Concert Ticket reveal
+    this.ticketDemo = Profile.d.ticketDemo !== TICKET_DEMO;
+    if (this.ticketDemo) { Profile.d.ticketDemo = TICKET_DEMO; Profile.save(); setTimeout(() => { if (Match.state === 'play' && Match.ticketDemo) HUD.banner('Ticket preview match', 'Every chest holds a Music Concert Ticket, this match only', 5); }, 4500); }
     this.recount();
     this.state = 'play'; Net.building = false;
     if (Net.hosting) Net.hostStart(); else if (Net.guest) Net.flush();
@@ -377,6 +380,7 @@ const Match = {
     $('death').hidden = true; $('results').hidden = false;
   },
   toLobby() {
+    this.ticketDemo = false;
     if (Net.inMatch) { if (Net.isHost) { if (!this.hasWinner) Net.emit({ k: 'end' }); } else if (this.state === 'play') Net.send('h', { k: 'bye' }); Net.inMatch = false; Net.queue.length = 0; }
     this.state = 'lobby'; $('results').hidden = true; $('death').hidden = true; $('pause').hidden = true; $('hud').hidden = true; $('bigmap').hidden = true; $('clickHint').hidden = true;
     if (document.pointerLockElement) document.exitPointerLock();

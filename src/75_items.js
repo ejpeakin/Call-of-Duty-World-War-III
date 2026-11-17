@@ -129,7 +129,7 @@ function openChest(c, a) {
   if (c.opened) return;
   if (Net.guest && !Net.applying) {   // the host opens it, so everyone sees the same loot
     if (c.asked > Match.time) return; c.asked = Match.time + 1.5; a.chests++; Net.emit({ k: 'chest', x: c.x, z: c.z });
-    if (a === player && !Profile.ticket() && (Math.random() < TICKET_CHANCE || window.__forceTicket)) Ticket.found(c);
+    if (a === player && (Match.ticketDemo || (!Profile.ticket() && (Math.random() < TICKET_CHANCE || window.__forceTicket)))) Ticket.found(c, Match.ticketDemo);
     return;
   }
   c.opened = true; c.claim = null; if (!Net.applying) a.chests++;
@@ -145,7 +145,7 @@ function openChest(c, a) {
   if (near) { FX.burst(c.x, c.y + 0.8, c.z, c.kind === 'exotic' ? 0x2fe0d0 : 0xffd84a, 16, 3, 0.8, 0.12, -1); if (Sfx.vol(c.x, c.y, c.z) > 0.3) Sfx.chest(); }
   if (a === player) HUD.dirty = true;
   // Music Concert Ticket: one per season, a tiny chance in any chest you open
-  if (a === player && !Profile.ticket() && (Math.random() < TICKET_CHANCE || window.__forceTicket)) Ticket.found(c);
+  if (a === player && (Match.ticketDemo || (!Profile.ticket() && (Math.random() < TICKET_CHANCE || window.__forceTicket)))) Ticket.found(c, Match.ticketDemo);
 }
 function playerTakePickup(p) {
   const it = p.item, a = player;
@@ -450,9 +450,10 @@ const Vehicles = {
 
 // ---------------------------------------------------------------- the Music Concert Ticket reveal
 const Ticket = {
-  found(c) {
-    window.__forceTicket = false;
-    Profile.d.ticketSeason = Season.id(); Profile.save();
+  // demo: the one-off preview match where every chest plays the reveal without handing out the real ticket
+  found(c, demo) {
+    window.__forceTicket = false; this.demo = !!demo;
+    if (!demo) { Profile.d.ticketSeason = Season.id(); Profile.save(); }
     for (let i = 0; i < 4; i++) setTimeout(() => FX.burst(c.x, c.y + 1 + i * 0.4, c.z, i % 2 ? 0xff7ae0 : 0xffd84a, 26, 6, 1.1, 0.16, -2), i * 120);
     HUD.banner('Something golden is inside...', '', 1.2);
     setTimeout(() => this.show(), 700);
@@ -460,7 +461,8 @@ const Ticket = {
   show() {
     const dl = Season.daysLeft();
     $('tkSeason').textContent = Season.name();
-    $('tkDesc').textContent = 'Everything in the Item Shop is yours until ' + Season.name() + ' ends — ' + (dl === 1 ? '1 day' : dl + ' days') + ' left. Equip any skin, glider, wrap or car from your Locker.';
+    $('tkDesc').textContent = this.demo ? 'Preview: this is what finding the ticket looks like. Every chest has one for this match only, and it is not kept. The real ticket is still a 1 in 2,000 find.'
+      : 'Everything in the Item Shop is yours until ' + Season.name() + ' ends — ' + (dl === 1 ? '1 day' : dl + ' days') + ' left. Equip any skin, glider, wrap or car from your Locker.';
     const conf = $('tkConf'); conf.innerHTML = '';
     const cols = ['#ffd84a', '#ff7ae0', '#7fd8ff', '#ffffff', '#ff8a3c', '#9b6bff'];
     for (let i = 0; i < 70; i++) { const e = document.createElement('i'); e.style.left = (Math.random() * 100) + 'vw'; e.style.background = cols[i % cols.length]; e.style.animationDuration = (2.6 + Math.random() * 3) + 's'; e.style.animationDelay = (-Math.random() * 5) + 's'; e.style.transform = 'rotate(' + Math.random() * 360 + 'deg)'; conf.appendChild(e); }
