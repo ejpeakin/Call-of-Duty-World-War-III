@@ -250,7 +250,7 @@ const Match = {
     LiveEvent.init(this.mode); if (Net.inMatch) LiveEvent.state = 'off'; else Creatures.spawn();
     if (PlayerRig) scene.remove(PlayerRig.root);
     PlayerRig = makeRig(Profile.d.eq); scene.add(PlayerRig.root);
-    sun.castShadow = !!Profile.d.shadows && !SOFT_GL;
+    sun.castShadow = GFX.shadows(); GFX.pr = GFX.base; renderer.setPixelRatio(GFX.pr); renderer.setSize(innerWidth, innerHeight);
     this.recount();
     this.state = 'play'; Net.building = false;
     if (Net.hosting) Net.hostStart(); else if (Net.guest) Net.flush();

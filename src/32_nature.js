@@ -359,7 +359,7 @@ const GroundCover = {
   },
   build() {
     const th = W.theme, s = th.style, nat = NAT[s], G = CoverGeo; GB.rnd = mulberry32(th.seed);
-    const desert = s === 'desert', dense = IS_TOUCH ? 0.6 : 1;
+    const desert = s === 'desert', dense = IS_TOUCH || GFX.fast ? 0.55 : 1;
     this.add(G.tuft(desert ? 7 : 10, desert ? 0.4 : 0.34, 0.035, desert ? 0.25 : 0.42), { cell: desert ? 2.0 : 0.92, M: Math.round((desert ? 44 : 76) * dense), prob: desert ? 0.5 : 0.95, hab: desert ? 'land' : 'grass', s: [0.7, 1.45], cols: nat.tuft, sway: 0.2 });
     nat.flowers.forEach((hex, i) => this.add(G.flower(hex, nat.glow), { cell: 3.1, M: Math.round(26 * dense), prob: desert ? 0.12 : 0.62, hab: 'open', s: [0.8, 1.45], sway: 0.14, glow: nat.glow, patch: 0.021 + i * 0.004 }));
     this.add(G.bush(nat.bush, nat.berry), { cell: 9, M: 20, prob: desert ? 0.16 : 0.34, hab: 'grass', s: [0.8, 1.9], cols: [0xffffff, 0xe8e8e8, 0xd4d4d4], sway: 0.02 });

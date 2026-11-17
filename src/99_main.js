@@ -20,7 +20,8 @@ function boot() {
   $('dLobbyBtn').addEventListener('click', () => { Match.showResults(); });
   $('rLobbyBtn').addEventListener('click', () => Match.toLobby());
   $('sensIn').value = Profile.d.sens; $('sensIn').addEventListener('input', e => { Profile.d.sens = +e.target.value; Profile.save(); });
-  $('shadowChk').checked = !!Profile.d.shadows; $('shadowChk').addEventListener('change', e => { Profile.d.shadows = e.target.checked; sun.castShadow = e.target.checked; Profile.save(); });
+  $('shadowChk').checked = !!Profile.d.shadows; $('shadowChk').addEventListener('change', e => { Profile.d.shadows = e.target.checked; sun.castShadow = GFX.shadows(); Profile.save(); });
+  $('gfxSel').value = Profile.d.gfx || 'auto'; $('gfxSel').addEventListener('change', e => { Profile.d.gfx = e.target.value; Profile.save(); GFX.apply(); $('gfxNote').textContent = 'Saved. Grass and edge smoothing change after you reload the page.'; });
   $('fdView').addEventListener('click', () => { if (Match.state === 'play' && !Match.paused && !Input.locked) Input.requestLock(); });
   requestAnimationFrame(frame);
   checkGL(); setInterval(checkGL, 3000);
@@ -58,9 +59,6 @@ const Diag = {
   tick(ms) {
     this.frames++; this.n++; this.ms = this.ms * 0.9 + ms * 0.1;
     const now = performance.now();
-    // frames taking far too long: draw fewer pixels and turn shadows off, a step at a time
-    if (this.ms > 90 && !document.hidden) { this.slowT += ms / 1000; if (this.slowT > 2.5 && renderer.getPixelRatio() > 0.5) { this.slowT = 0; this.ms = 40; this.drops++; renderer.setPixelRatio(Math.max(0.5, renderer.getPixelRatio() * 0.7)); renderer.setSize(innerWidth, innerHeight); if (sun) sun.castShadow = false; Profile.d.shadows = false; } }
-    else this.slowT = 0;
     if (now - this.t0 < 500) return;
     this.fps = Math.round(this.n * 1000 / (now - this.t0)); this.n = 0; this.t0 = now;
     if (!this.on) return;
@@ -68,7 +66,7 @@ const Diag = {
     if (!this.gpu) try { const gl = renderer.getContext(), d = gl.getExtension('WEBGL_debug_renderer_info'); this.gpu = d ? gl.getParameter(d.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER); } catch (e) { this.gpu = '?'; }
     let lost = '?', buf = '?'; try { const gl = renderer.getContext(); lost = gl.isContextLost(); buf = gl.drawingBufferWidth + 'x' + gl.drawingBufferHeight; } catch (e) { /* */ }
     let pads = 0; try { pads = [...(navigator.getGamepads ? navigator.getGamepads() : [])].filter(Boolean).length; } catch (e) { /* */ }
-    this.el.textContent = ['FortDay build ' + BUILD_ID, 'state ' + Match.state + (Match.paused ? ' (paused)' : '') + ' · frames ' + this.frames + ' · ' + this.fps + ' fps · ' + this.ms.toFixed(0) + ' ms/frame', 'graphics ' + this.gpu, 'context lost ' + lost + ' · buffer ' + buf + ' · pixel ratio ' + renderer.getPixelRatio().toFixed(2) + ' · lowered ' + this.drops + 'x', 'window ' + innerWidth + 'x' + innerHeight + ' · dpr ' + (devicePixelRatio || 1) + ' · hidden ' + document.hidden + ' · pads ' + pads + (Input.pad.on ? ' (in use)' : ''), this.screen(), 'character ' + (CharModel.ready ? 'ready' : 'not loaded') + ' · online lib ' + (typeof Peer === 'function' ? 'ok' : 'missing') + ' · net ' + Net.state + (Net.p2p ? ' p2p' : ' relay')].concat(this.errs.length ? ['errors:'].concat(this.errs) : []).join('\n');
+    this.el.textContent = ['FortDay build ' + BUILD_ID, 'state ' + Match.state + (Match.paused ? ' (paused)' : '') + ' · frames ' + this.frames + ' · ' + this.fps + ' fps · ' + this.ms.toFixed(0) + ' ms/frame', 'graphics ' + this.gpu, 'context lost ' + lost + ' · buffer ' + buf + ' · pixel ratio ' + renderer.getPixelRatio().toFixed(2) + ' · graphics ' + (Profile.d.gfx || 'auto') + (GFX.fast ? ' (fast)' : '') + ' · lowered ' + GFX.steps + 'x', 'window ' + innerWidth + 'x' + innerHeight + ' · dpr ' + (devicePixelRatio || 1) + ' · hidden ' + document.hidden + ' · pads ' + pads + (Input.pad.on ? ' (in use)' : ''), this.screen(), 'character ' + (CharModel.ready ? 'ready' : 'not loaded') + ' · online lib ' + (typeof Peer === 'function' ? 'ok' : 'missing') + ' · net ' + Net.state + (Net.p2p ? ' p2p' : ' relay')].concat(this.errs.length ? ['errors:'].concat(this.errs) : []).join('\n');
   },
 };
 const GAME_IDS = new Set([...document.querySelectorAll('body > [id]')].map(e => e.id).concat(['problemBar', 'stageWait', 'diagPanel']));
@@ -77,7 +75,7 @@ setTimeout(() => { const cv = document.getElementById('fdView'); if (cv && getCo
 addEventListener('error', e => Diag.log(e.message || e)); addEventListener('unhandledrejection', e => Diag.log('promise: ' + (e.reason && e.reason.message || e.reason)));
 function frame(now) {
   requestAnimationFrame(frame);
-  const t0 = performance.now();
+  const t0 = performance.now(); GFX.watch(Math.max(0, (now - lastFrame) / 1000));
   try {
     step(now);
     Diag.tick(performance.now() - t0);

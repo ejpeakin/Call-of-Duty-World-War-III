@@ -50,14 +50,37 @@ function makeTex(kind) {
   const t = new THREE.CanvasTexture(c); t.anisotropy = 4; return t;
 }
 
+// Graphics quality. 'auto' uses Fast on low-power graphics chips (Chromebooks, phones, Intel UHD), and while
+// playing the game also steps the resolution down whenever the frame rate stays low.
+const GFX = {
+  fast: false, base: 1, pr: 1, tWin: 0, nWin: 0, steps: 0,
+  lowPower: /CrOS/.test(navigator.userAgent) || IS_TOUCH,
+  pick() { const g = Profile.d.gfx || 'auto'; return g === 'fast' || (g === 'auto' && (this.lowPower || SOFT_GL)); },
+  shadows() { return !!Profile.d.shadows && !this.fast && !SOFT_GL; },
+  apply() {
+    this.fast = this.pick(); const dpr = window.devicePixelRatio || 1;
+    this.base = SOFT_GL ? 0.6 : this.fast ? Math.min(dpr, 1) * 0.8 : Math.min(dpr, IS_TOUCH ? 1.25 : 1.5);
+    this.pr = this.base; this.steps = 0; renderer.setPixelRatio(this.pr); renderer.setSize(innerWidth, innerHeight);
+    if (sun) sun.castShadow = Match.state === 'play' ? this.shadows() : false;
+  },
+  // called every frame with the time since the last one: if a match runs under ~38 fps for a few seconds, draw fewer pixels
+  watch(dt) {
+    if (Match.state !== 'play' || Match.paused || document.hidden || dt > 1.5) { this.tWin = this.nWin = 0; return; }   // a long gap is a tab switch or a load, not a slow frame
+    this.tWin += dt; this.nWin++; if (this.tWin < 2.5) return;
+    const fps = this.nWin / this.tWin; this.tWin = this.nWin = 0;
+    if (fps >= 38 || (Profile.d.gfx || 'auto') === 'pretty') return;
+    if (sun && sun.castShadow) { sun.castShadow = false; this.steps++; return; }
+    if (this.pr > 0.5) { this.pr = Math.max(0.5, this.pr * 0.85); this.steps++; renderer.setPixelRatio(this.pr); renderer.setSize(innerWidth, innerHeight); }
+  },
+};
 function initEngine() {
-  const canvas = $('fdView');
-  renderer = new THREE.WebGLRenderer({ canvas, antialias: !IS_TOUCH, powerPreference: 'high-performance' });
+  const canvas = $('fdView'), g0 = Profile.d.gfx || 'auto';
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: g0 === 'pretty' || (g0 === 'auto' && !GFX.lowPower), powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, IS_TOUCH ? 1.25 : 1.5));
   renderer.setSize(innerWidth, innerHeight);
   // no graphics acceleration (software drawing): fewer pixels and no shadows, or every frame takes seconds
-  try { const gl = renderer.getContext(), dbg = gl.getExtension('WEBGL_debug_renderer_info'), name = dbg ? String(gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL)) : ''; SOFT_GL = /swiftshader|llvmpipe|software|basic render/i.test(name) && !window.__testGL; } catch (e) { /* unknown: assume a real GPU */ }
-  if (SOFT_GL) renderer.setPixelRatio(0.6);
+  try { const gl = renderer.getContext(), dbg = gl.getExtension('WEBGL_debug_renderer_info'), name = dbg ? String(gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL)) : ''; SOFT_GL = /swiftshader|llvmpipe|software|basic render/i.test(name) && !window.__testGL; if (/UHD Graphics|HD Graphics [0-9]|ADL-N|JSL|Mali-G[0-5]|PowerVR/i.test(name)) GFX.lowPower = true; } catch (e) { /* unknown: assume a real GPU */ }
+  GFX.apply();
   canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); checkGL(); });
   canvas.addEventListener('webglcontextrestored', () => { const el = document.getElementById('problemBar'); if (el && el.dataset.gl) el.remove(); });
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
@@ -65,7 +88,7 @@ function initEngine() {
   camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.1, 1700);
   hemi = new THREE.HemisphereLight(0xffffff, 0x445533, 0.6); scene.add(hemi);
   sun = new THREE.DirectionalLight(0xffffff, 0.9); sun.castShadow = true;
-  sun.shadow.mapSize.set(IS_TOUCH ? 1024 : 2048, IS_TOUCH ? 1024 : 2048);
+  sun.shadow.mapSize.set(IS_TOUCH || GFX.fast ? 1024 : 2048, IS_TOUCH || GFX.fast ? 1024 : 2048);
   const sc = sun.shadow.camera; sc.left = -70; sc.right = 70; sc.top = 70; sc.bottom = -70; sc.near = 1; sc.far = 420;
   sun.shadow.bias = -0.0007; scene.add(sun); scene.add(sun.target);
   // sky dome (vertex gradient)

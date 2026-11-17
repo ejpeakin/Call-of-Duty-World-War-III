@@ -383,6 +383,7 @@ button:focus-visible{outline:2px solid var(--sun-2);outline-offset:2px}
   #teamList{display:none}
   #buildbar{bottom:calc(360px + var(--sb))}
 }
+#gfxSel{background:rgba(5,14,36,.7);color:var(--ink);border:1px solid rgba(150,195,255,.3);border-radius:8px;font:600 13px var(--f-body);padding:6px 8px;max-width:100%}
 .mp{display:flex;flex-direction:column;gap:8px}
 .mp-row{display:flex;gap:8px}
 .mp-row input{flex:1;min-width:0;background:rgba(5,14,36,.6);border:1px solid rgba(150,195,255,.25);border-radius:8px;color:var(--ink);font:600 15px var(--f-body);padding:9px 11px}
@@ -592,6 +593,8 @@ body.pad{cursor:none}
   <div class="card">
     <h2>Paused</h2>
     <div class="sens"><label for="sensIn">Look sensitivity</label><input type="range" id="sensIn" min="0.3" max="2.5" step="0.05"></div>
+    <div class="sens"><label for="gfxSel">Graphics</label><select id="gfxSel"><option value="auto">Auto (recommended)</option><option value="fast">Fast: smoother on Chromebooks</option><option value="pretty">Pretty: sharper, needs a strong computer</option></select></div>
+    <div class="hint" id="gfxNote"></div>
     <label class="check"><input type="checkbox" id="shadowChk"> Shadows</label>
     <div class="keys">
       <kbd>WASD / Shift</kbd><span>Move / sprint</span>
@@ -662,7 +665,7 @@ body.pad{cursor:none}
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js"></script>
 <script async src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>
-const BUILD_ID = '1117-1813';
+const BUILD_ID = '1117-1855';
 'use strict';
 // =====================================================================
 //  FORTDAY — core utilities, data tables, profile, audio
@@ -848,7 +851,7 @@ const COS = {
     { id: 'tycoon', build: 'heavy', hair: 0x1a1a1a, name: 'Gilt Tycoon', r: 4, shirt: 0xd4a72c, pants: 0xd4a72c, skin: 0xe8c06a, sleeve: 0x1a1a1a, hat: 'tophat', hatC: 0x1a1a1a, unlock: 'tier:25' },
     { id: 'stormborn', build: 'average', hair: 0x0e0e10, name: 'Pluma Peso', r: 4, shirt: 0x141416, pants: 0x17181d, skin: 0xf1cdb0, sleeve: 0x141416, hat: 'none', hoodie: true, jeans: true, shiesty: 0x0e0e10, sneakers: 0xf6f6f4, unlock: 'tier:30' },
     { id: 'nova', build: 'average', name: 'Juice Earth', r: 4, shirt: 0xf3f2ee, pants: 0xe8731e, skin: 0x70482f, sleeve: 0xf3f2ee,
-      hat: 'dreads', hatC: 0x1c120c, tip: 0xcfa552, cargo: true, chain: true, beard: true, shoes: 0x6b4423, boots: true, back: '999', personal: true, unlock: 'shop', price: 1500 },
+      hat: 'dreads', hatC: 0x1c120c, tip: 0xcfa552, cargo: true, chain: true, beard: true, shoes: 0x6b4423, boots: true, back: '999', personal: true, unlock: 'shop', price: 5000 },
     { id: 'tripy', build: 'slim', name: 'Tripy Red', r: 4, shirt: 0x161618, pants: 0x18181c, skin: 0x8a5a3c, sleeve: 0x161618, hair: 0x6a0c10,
       hat: 'dreads', hatC: 0x6a0c10, tip: 0xff2a2a, hairSeed: 777, hoodie: true, cargo: true, shades: 0x0c0c0e, faceTats: true, personal: true, unlock: 'shop', price: 1500 },
     { id: 'uzi', build: 'slim', name: 'Lil Uzi', r: 4, shirt: 0xff4fa8, jacket: 0x141418, pants: 0x121216, skin: 0x7a4a30, sleeve: 0x141418, hair: 0x141010, shoes: 0xf2f2f2,
@@ -1094,14 +1097,37 @@ function makeTex(kind) {
   const t = new THREE.CanvasTexture(c); t.anisotropy = 4; return t;
 }
 
+// Graphics quality. 'auto' uses Fast on low-power graphics chips (Chromebooks, phones, Intel UHD), and while
+// playing the game also steps the resolution down whenever the frame rate stays low.
+const GFX = {
+  fast: false, base: 1, pr: 1, tWin: 0, nWin: 0, steps: 0,
+  lowPower: /CrOS/.test(navigator.userAgent) || IS_TOUCH,
+  pick() { const g = Profile.d.gfx || 'auto'; return g === 'fast' || (g === 'auto' && (this.lowPower || SOFT_GL)); },
+  shadows() { return !!Profile.d.shadows && !this.fast && !SOFT_GL; },
+  apply() {
+    this.fast = this.pick(); const dpr = window.devicePixelRatio || 1;
+    this.base = SOFT_GL ? 0.6 : this.fast ? Math.min(dpr, 1) * 0.8 : Math.min(dpr, IS_TOUCH ? 1.25 : 1.5);
+    this.pr = this.base; this.steps = 0; renderer.setPixelRatio(this.pr); renderer.setSize(innerWidth, innerHeight);
+    if (sun) sun.castShadow = Match.state === 'play' ? this.shadows() : false;
+  },
+  // called every frame with the time since the last one: if a match runs under ~38 fps for a few seconds, draw fewer pixels
+  watch(dt) {
+    if (Match.state !== 'play' || Match.paused || document.hidden || dt > 1.5) { this.tWin = this.nWin = 0; return; }   // a long gap is a tab switch or a load, not a slow frame
+    this.tWin += dt; this.nWin++; if (this.tWin < 2.5) return;
+    const fps = this.nWin / this.tWin; this.tWin = this.nWin = 0;
+    if (fps >= 38 || (Profile.d.gfx || 'auto') === 'pretty') return;
+    if (sun && sun.castShadow) { sun.castShadow = false; this.steps++; return; }
+    if (this.pr > 0.5) { this.pr = Math.max(0.5, this.pr * 0.85); this.steps++; renderer.setPixelRatio(this.pr); renderer.setSize(innerWidth, innerHeight); }
+  },
+};
 function initEngine() {
-  const canvas = $('fdView');
-  renderer = new THREE.WebGLRenderer({ canvas, antialias: !IS_TOUCH, powerPreference: 'high-performance' });
+  const canvas = $('fdView'), g0 = Profile.d.gfx || 'auto';
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: g0 === 'pretty' || (g0 === 'auto' && !GFX.lowPower), powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, IS_TOUCH ? 1.25 : 1.5));
   renderer.setSize(innerWidth, innerHeight);
   // no graphics acceleration (software drawing): fewer pixels and no shadows, or every frame takes seconds
-  try { const gl = renderer.getContext(), dbg = gl.getExtension('WEBGL_debug_renderer_info'), name = dbg ? String(gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL)) : ''; SOFT_GL = /swiftshader|llvmpipe|software|basic render/i.test(name) && !window.__testGL; } catch (e) { /* unknown: assume a real GPU */ }
-  if (SOFT_GL) renderer.setPixelRatio(0.6);
+  try { const gl = renderer.getContext(), dbg = gl.getExtension('WEBGL_debug_renderer_info'), name = dbg ? String(gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL)) : ''; SOFT_GL = /swiftshader|llvmpipe|software|basic render/i.test(name) && !window.__testGL; if (/UHD Graphics|HD Graphics [0-9]|ADL-N|JSL|Mali-G[0-5]|PowerVR/i.test(name)) GFX.lowPower = true; } catch (e) { /* unknown: assume a real GPU */ }
+  GFX.apply();
   canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); checkGL(); });
   canvas.addEventListener('webglcontextrestored', () => { const el = document.getElementById('problemBar'); if (el && el.dataset.gl) el.remove(); });
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
@@ -1109,7 +1135,7 @@ function initEngine() {
   camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.1, 1700);
   hemi = new THREE.HemisphereLight(0xffffff, 0x445533, 0.6); scene.add(hemi);
   sun = new THREE.DirectionalLight(0xffffff, 0.9); sun.castShadow = true;
-  sun.shadow.mapSize.set(IS_TOUCH ? 1024 : 2048, IS_TOUCH ? 1024 : 2048);
+  sun.shadow.mapSize.set(IS_TOUCH || GFX.fast ? 1024 : 2048, IS_TOUCH || GFX.fast ? 1024 : 2048);
   const sc = sun.shadow.camera; sc.left = -70; sc.right = 70; sc.top = 70; sc.bottom = -70; sc.near = 1; sc.far = 420;
   sun.shadow.bias = -0.0007; scene.add(sun); scene.add(sun.target);
   // sky dome (vertex gradient)
@@ -2333,7 +2359,7 @@ const GroundCover = {
   },
   build() {
     const th = W.theme, s = th.style, nat = NAT[s], G = CoverGeo; GB.rnd = mulberry32(th.seed);
-    const desert = s === 'desert', dense = IS_TOUCH ? 0.6 : 1;
+    const desert = s === 'desert', dense = IS_TOUCH || GFX.fast ? 0.55 : 1;
     this.add(G.tuft(desert ? 7 : 10, desert ? 0.4 : 0.34, 0.035, desert ? 0.25 : 0.42), { cell: desert ? 2.0 : 0.92, M: Math.round((desert ? 44 : 76) * dense), prob: desert ? 0.5 : 0.95, hab: desert ? 'land' : 'grass', s: [0.7, 1.45], cols: nat.tuft, sway: 0.2 });
     nat.flowers.forEach((hex, i) => this.add(G.flower(hex, nat.glow), { cell: 3.1, M: Math.round(26 * dense), prob: desert ? 0.12 : 0.62, hab: 'open', s: [0.8, 1.45], sway: 0.14, glow: nat.glow, patch: 0.021 + i * 0.004 }));
     this.add(G.bush(nat.bush, nat.berry), { cell: 9, M: 20, prob: desert ? 0.16 : 0.34, hab: 'grass', s: [0.8, 1.9], cols: [0xffffff, 0xe8e8e8, 0xd4d4d4], sway: 0.02 });
@@ -5566,7 +5592,7 @@ function animateRig(R, a, dt, t) { if (R.skinned) CharModel.animate(R, a, dt); e
 
 // ---------------------------------------------------------------- nearby bots borrow a full body from a small pool; far ones stay on the instanced rig
 const CharPool = {
-  rigs: [], N: 18, near: 85, keep: 100, t: 0,
+  rigs: [], N: 18, near: 85, keep: 100, t: 0,   // in Fast graphics only the closest players get the detailed body
   clear() { for (const R of this.rigs) this.release(R); },
   release(R) { if (R.actor) { R.actor._cm = null; if (R.actor.ri >= 0) BotRig.hide(R.actor.ri); } R.actor = null; R.root.visible = false; },
   update(dt) {
@@ -5580,7 +5606,7 @@ const CharPool = {
       const free = this.rigs.filter(R => !R.actor);
       if (free.length) {
         const cand = [];
-        for (const a of actors) if (!a._cm && a.alive && ok(a)) { const d = a.pos.distanceTo(cam); if (d < this.near) cand.push([d, a]); }
+        const near = GFX.fast ? 45 : this.near; for (const a of actors) if (!a._cm && a.alive && ok(a)) { const d = a.pos.distanceTo(cam); if (d < near) cand.push([d, a]); }
         cand.sort((p, q) => p[0] - q[0]);
         for (let i = 0; i < cand.length && free.length; i++) {
           const R = free.pop(), a = cand[i][1]; R.actor = a; a._cm = R; a._dieT = null;
@@ -6113,7 +6139,7 @@ const Match = {
     LiveEvent.init(this.mode); if (Net.inMatch) LiveEvent.state = 'off'; else Creatures.spawn();
     if (PlayerRig) scene.remove(PlayerRig.root);
     PlayerRig = makeRig(Profile.d.eq); scene.add(PlayerRig.root);
-    sun.castShadow = !!Profile.d.shadows && !SOFT_GL;
+    sun.castShadow = GFX.shadows(); GFX.pr = GFX.base; renderer.setPixelRatio(GFX.pr); renderer.setSize(innerWidth, innerHeight);
     this.recount();
     this.state = 'play'; Net.building = false;
     if (Net.hosting) Net.hostStart(); else if (Net.guest) Net.flush();
@@ -7652,7 +7678,8 @@ function boot() {
   $('dLobbyBtn').addEventListener('click', () => { Match.showResults(); });
   $('rLobbyBtn').addEventListener('click', () => Match.toLobby());
   $('sensIn').value = Profile.d.sens; $('sensIn').addEventListener('input', e => { Profile.d.sens = +e.target.value; Profile.save(); });
-  $('shadowChk').checked = !!Profile.d.shadows; $('shadowChk').addEventListener('change', e => { Profile.d.shadows = e.target.checked; sun.castShadow = e.target.checked; Profile.save(); });
+  $('shadowChk').checked = !!Profile.d.shadows; $('shadowChk').addEventListener('change', e => { Profile.d.shadows = e.target.checked; sun.castShadow = GFX.shadows(); Profile.save(); });
+  $('gfxSel').value = Profile.d.gfx || 'auto'; $('gfxSel').addEventListener('change', e => { Profile.d.gfx = e.target.value; Profile.save(); GFX.apply(); $('gfxNote').textContent = 'Saved. Grass and edge smoothing change after you reload the page.'; });
   $('fdView').addEventListener('click', () => { if (Match.state === 'play' && !Match.paused && !Input.locked) Input.requestLock(); });
   requestAnimationFrame(frame);
   checkGL(); setInterval(checkGL, 3000);
@@ -7690,9 +7717,6 @@ const Diag = {
   tick(ms) {
     this.frames++; this.n++; this.ms = this.ms * 0.9 + ms * 0.1;
     const now = performance.now();
-    // frames taking far too long: draw fewer pixels and turn shadows off, a step at a time
-    if (this.ms > 90 && !document.hidden) { this.slowT += ms / 1000; if (this.slowT > 2.5 && renderer.getPixelRatio() > 0.5) { this.slowT = 0; this.ms = 40; this.drops++; renderer.setPixelRatio(Math.max(0.5, renderer.getPixelRatio() * 0.7)); renderer.setSize(innerWidth, innerHeight); if (sun) sun.castShadow = false; Profile.d.shadows = false; } }
-    else this.slowT = 0;
     if (now - this.t0 < 500) return;
     this.fps = Math.round(this.n * 1000 / (now - this.t0)); this.n = 0; this.t0 = now;
     if (!this.on) return;
@@ -7700,7 +7724,7 @@ const Diag = {
     if (!this.gpu) try { const gl = renderer.getContext(), d = gl.getExtension('WEBGL_debug_renderer_info'); this.gpu = d ? gl.getParameter(d.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER); } catch (e) { this.gpu = '?'; }
     let lost = '?', buf = '?'; try { const gl = renderer.getContext(); lost = gl.isContextLost(); buf = gl.drawingBufferWidth + 'x' + gl.drawingBufferHeight; } catch (e) { /* */ }
     let pads = 0; try { pads = [...(navigator.getGamepads ? navigator.getGamepads() : [])].filter(Boolean).length; } catch (e) { /* */ }
-    this.el.textContent = ['FortDay build ' + BUILD_ID, 'state ' + Match.state + (Match.paused ? ' (paused)' : '') + ' · frames ' + this.frames + ' · ' + this.fps + ' fps · ' + this.ms.toFixed(0) + ' ms/frame', 'graphics ' + this.gpu, 'context lost ' + lost + ' · buffer ' + buf + ' · pixel ratio ' + renderer.getPixelRatio().toFixed(2) + ' · lowered ' + this.drops + 'x', 'window ' + innerWidth + 'x' + innerHeight + ' · dpr ' + (devicePixelRatio || 1) + ' · hidden ' + document.hidden + ' · pads ' + pads + (Input.pad.on ? ' (in use)' : ''), this.screen(), 'character ' + (CharModel.ready ? 'ready' : 'not loaded') + ' · online lib ' + (typeof Peer === 'function' ? 'ok' : 'missing') + ' · net ' + Net.state + (Net.p2p ? ' p2p' : ' relay')].concat(this.errs.length ? ['errors:'].concat(this.errs) : []).join('\n');
+    this.el.textContent = ['FortDay build ' + BUILD_ID, 'state ' + Match.state + (Match.paused ? ' (paused)' : '') + ' · frames ' + this.frames + ' · ' + this.fps + ' fps · ' + this.ms.toFixed(0) + ' ms/frame', 'graphics ' + this.gpu, 'context lost ' + lost + ' · buffer ' + buf + ' · pixel ratio ' + renderer.getPixelRatio().toFixed(2) + ' · graphics ' + (Profile.d.gfx || 'auto') + (GFX.fast ? ' (fast)' : '') + ' · lowered ' + GFX.steps + 'x', 'window ' + innerWidth + 'x' + innerHeight + ' · dpr ' + (devicePixelRatio || 1) + ' · hidden ' + document.hidden + ' · pads ' + pads + (Input.pad.on ? ' (in use)' : ''), this.screen(), 'character ' + (CharModel.ready ? 'ready' : 'not loaded') + ' · online lib ' + (typeof Peer === 'function' ? 'ok' : 'missing') + ' · net ' + Net.state + (Net.p2p ? ' p2p' : ' relay')].concat(this.errs.length ? ['errors:'].concat(this.errs) : []).join('\n');
   },
 };
 const GAME_IDS = new Set([...document.querySelectorAll('body > [id]')].map(e => e.id).concat(['problemBar', 'stageWait', 'diagPanel']));
@@ -7709,7 +7733,7 @@ setTimeout(() => { const cv = document.getElementById('fdView'); if (cv && getCo
 addEventListener('error', e => Diag.log(e.message || e)); addEventListener('unhandledrejection', e => Diag.log('promise: ' + (e.reason && e.reason.message || e.reason)));
 function frame(now) {
   requestAnimationFrame(frame);
-  const t0 = performance.now();
+  const t0 = performance.now(); GFX.watch(Math.max(0, (now - lastFrame) / 1000));
   try {
     step(now);
     Diag.tick(performance.now() - t0);
