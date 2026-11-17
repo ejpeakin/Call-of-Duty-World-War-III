@@ -240,7 +240,7 @@ const Match = {
         else if (r < 0.7 && W.vaults.length) { const v = pick(W.vaults); tx = v.x + rnd(-25, 25); tz = v.z + rnd(-25, 25); }
         else { for (let k = 0; k < 10; k++) { const ang = Math.random() * TAU, d = Math.sqrt(Math.random()) * W.R * 0.85; tx = Math.cos(ang) * d; tz = Math.sin(ang) * d; if (groundH(tx, tz) > W.waterY + 1) break; } }
         a.ai.drop.set(tx, 0, tz);
-        const lat = Bus.lateral(tx, tz); a.ai.deployH = lat > 320 ? 280 : lat > 200 ? 180 : lat > 120 ? 110 : lat > 60 ? 65 : 36 + Math.random() * 15;
+        const lat = Bus.lateral(tx, tz); a.ai.deployH = lat > 320 ? 280 : lat > 200 ? 180 : lat > 120 ? 110 : lat > 60 ? 80 : GLIDER_AUTO + Math.random() * 15;
         a.ai.jumpAt = a.leader ? Bus.dur - 0.5 : Bus.timeNear(tx, tz) - Math.random() * 2.5;
       }
     }
@@ -285,7 +285,7 @@ const Match = {
     const z = Storm.safe(); const p = zonePoint(first ? 0.9 : 0.8);
     a.alive = true; a.hp = 100; a.shield = 50; a.stamina = 100; a.exhausted = false; a.over = a.overMax; a.state = 'sky'; a.vel.set(0, -10, 0); a.invuln = first ? 0 : 2.5;
     a.pos.set(p.x + rnd(-6, 6), Math.max(groundH(p.x, p.z), W.waterY) + 95, p.z + rnd(-6, 6)); a.respawnT = 0; a.useT = 0; a.reloadT = 0;
-    if (a.ai) { a.ai.target = null; a.ai.mode = 'roam'; a.ai.drop.set(p.x, 0, p.z); a.ai.deployH = 40; a.ai.loot = null; }
+    if (a.ai) { a.ai.target = null; a.ai.mode = 'roam'; a.ai.drop.set(p.x, 0, p.z); a.ai.deployH = GLIDER_AUTO; a.ai.loot = null; }
     if (!first) this.rumbleKit(a);   // everything they carried was dropped where they fell
     if (a === player) HUD.dirty = true;
     void z;

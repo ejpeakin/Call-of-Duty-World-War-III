@@ -149,7 +149,7 @@ function physicsActor(a, dt) {
   }
   if (!Number.isFinite(a.pos.x + a.pos.y + a.pos.z + a.vel.x + a.vel.y + a.vel.z)) { a.vel.set(0, 0, 0); a.pos.set(clamp(a.pos.x || 0, -W.half, W.half), 0, clamp(a.pos.z || 0, -W.half, W.half)); a.pos.y = topSurface(a.pos.x, a.pos.z); }
   // auto-glider
-  if (a.state === 'sky' && a.pos.y - g < 34) a.state = 'glide';
+  if (a.state === 'sky' && a.pos.y - g < GLIDER_AUTO) a.state = 'glide';   // the glider opens by itself this high above the ground
 }
 function onLand(a) {
   a.vel.x *= 0.4; a.vel.z *= 0.4; a.landT = Match.time;

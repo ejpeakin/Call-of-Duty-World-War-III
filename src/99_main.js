@@ -30,6 +30,13 @@ let frameErrs = 0, firstFrame = false;
 const Diag = {
   on: /[?&]diag\b/.test(location.search), frames: 0, slowT: 0, ms: 0, fps: 0, n: 0, t0: performance.now(), errs: [], el: null, gpu: '', drops: 0,
   log(m) { this.errs.push(String(m).slice(0, 140)); if (this.errs.length > 4) this.errs.shift(); },
+  // what is actually on screen where the 3D view should be, and what colour the last frame was there
+  screen() {
+    const cv = $('game'), r = cv.getBoundingClientRect(), cs = getComputedStyle(cv), x = Math.round(innerWidth * 0.3), y = Math.round(innerHeight * 0.5), el = document.elementFromPoint(x, y);
+    let px = '?'; try { const gl = renderer.getContext(), p = new Uint8Array(4); renderer.render(Match.state === 'lobby' ? Lobby.scene : scene, Match.state === 'lobby' ? Lobby.cam : camera); gl.readPixels(Math.round(gl.drawingBufferWidth * 0.3), gl.drawingBufferHeight >> 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, p); px = [...p].join(','); } catch (e) { px = 'err'; }
+    const attrs = (() => { try { const a = renderer.getContext().getContextAttributes(); return (a.alpha ? 'alpha ' : '') + (a.antialias ? 'aa ' : '') + (a.desynchronized ? 'desync ' : '') + (a.powerPreference || ''); } catch (e) { return '?'; } })();
+    return 'canvas ' + Math.round(r.width) + 'x' + Math.round(r.height) + ' at ' + Math.round(r.left) + ',' + Math.round(r.top) + ' · ' + cs.display + '/' + cs.visibility + '/op ' + cs.opacity + ' · on top: ' + (el ? el.tagName.toLowerCase() + (el.id ? '#' + el.id : '') + (el.className && typeof el.className === 'string' ? '.' + el.className.split(' ')[0] : '') : 'none') + '\nframe pixel ' + px + ' · ' + attrs + ' · ua ' + navigator.userAgent.replace(/^Mozilla\/5\.0 /, '').slice(0, 90);
+  },
   tick(ms) {
     this.frames++; this.n++; this.ms = this.ms * 0.9 + ms * 0.1;
     const now = performance.now();
@@ -43,7 +50,7 @@ const Diag = {
     if (!this.gpu) try { const gl = renderer.getContext(), d = gl.getExtension('WEBGL_debug_renderer_info'); this.gpu = d ? gl.getParameter(d.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER); } catch (e) { this.gpu = '?'; }
     let lost = '?', buf = '?'; try { const gl = renderer.getContext(); lost = gl.isContextLost(); buf = gl.drawingBufferWidth + 'x' + gl.drawingBufferHeight; } catch (e) { /* */ }
     let pads = 0; try { pads = [...(navigator.getGamepads ? navigator.getGamepads() : [])].filter(Boolean).length; } catch (e) { /* */ }
-    this.el.textContent = ['FortDay build ' + BUILD_ID, 'state ' + Match.state + (Match.paused ? ' (paused)' : '') + ' · frames ' + this.frames + ' · ' + this.fps + ' fps · ' + this.ms.toFixed(0) + ' ms/frame', 'graphics ' + this.gpu, 'context lost ' + lost + ' · buffer ' + buf + ' · pixel ratio ' + renderer.getPixelRatio().toFixed(2) + ' · lowered ' + this.drops + 'x', 'window ' + innerWidth + 'x' + innerHeight + ' · dpr ' + (devicePixelRatio || 1) + ' · hidden ' + document.hidden + ' · pads ' + pads + (Input.pad.on ? ' (in use)' : ''), 'character ' + (CharModel.ready ? 'ready' : 'not loaded') + ' · online lib ' + (typeof Peer === 'function' ? 'ok' : 'missing') + ' · net ' + Net.state + (Net.p2p ? ' p2p' : ' relay')].concat(this.errs.length ? ['errors:'].concat(this.errs) : []).join('\n');
+    this.el.textContent = ['FortDay build ' + BUILD_ID, 'state ' + Match.state + (Match.paused ? ' (paused)' : '') + ' · frames ' + this.frames + ' · ' + this.fps + ' fps · ' + this.ms.toFixed(0) + ' ms/frame', 'graphics ' + this.gpu, 'context lost ' + lost + ' · buffer ' + buf + ' · pixel ratio ' + renderer.getPixelRatio().toFixed(2) + ' · lowered ' + this.drops + 'x', 'window ' + innerWidth + 'x' + innerHeight + ' · dpr ' + (devicePixelRatio || 1) + ' · hidden ' + document.hidden + ' · pads ' + pads + (Input.pad.on ? ' (in use)' : ''), this.screen(), 'character ' + (CharModel.ready ? 'ready' : 'not loaded') + ' · online lib ' + (typeof Peer === 'function' ? 'ok' : 'missing') + ' · net ' + Net.state + (Net.p2p ? ' p2p' : ' relay')].concat(this.errs.length ? ['errors:'].concat(this.errs) : []).join('\n');
   },
 };
 addEventListener('error', e => Diag.log(e.message || e)); addEventListener('unhandledrejection', e => Diag.log('promise: ' + (e.reason && e.reason.message || e.reason)));

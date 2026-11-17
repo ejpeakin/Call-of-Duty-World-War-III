@@ -150,6 +150,7 @@ const THEMES = {
 const THEME_ORDER = ['greenvale', 'floodtide', 'neon', 'olympia', 'dune'];
 // Map rotation: everyone starts on Greenvale. 30 days after a player's first match the next island opens and
 // the previous one closes, in THEME_ORDER, starting over after the last.
+const GLIDER_AUTO = 65;   // metres above the ground where the glider opens on its own (was 34)
 const MAP_DAYS = 30, DAY_MS = 86400000;
 const MapRotation = {
   start() { const f = Profile.d.firstPlay; return Number.isFinite(f) && f > 0 ? f : 0; },
