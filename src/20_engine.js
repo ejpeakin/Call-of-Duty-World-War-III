@@ -1,7 +1,13 @@
 // =====================================================================
 //  Engine: renderer, scene, sky, materials, particles, tracers
 // =====================================================================
-let renderer, scene, camera, sun, hemi, sky, stars, waterMesh, stormMesh;
+let renderer, scene, camera, sun, hemi, sky, stars, waterMesh, stormMesh, SOFT_GL = false;
+// a message bar for when the 3D view cannot draw, so a black screen always says why
+function showProblem(msg) {
+  let el = document.getElementById('problemBar');
+  if (!el) { el = document.createElement('div'); el.id = 'problemBar'; el.style.cssText = 'position:fixed;left:16px;bottom:16px;z-index:99;max-width:min(560px,calc(100vw - 32px));background:#3a0f1c;border:1px solid #ff6a7a;color:#fff;font:600 14px/1.4 system-ui,sans-serif;padding:12px 14px;border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,.5)'; document.body.appendChild(el); }
+  if (el.dataset.msg === msg) return; el.dataset.msg = msg; el.textContent = msg;
+}
 const _v1 = new THREE.Vector3(), _v2 = new THREE.Vector3(), _v3 = new THREE.Vector3(), _v4 = new THREE.Vector3();
 const _c1 = new THREE.Color(), _c2 = new THREE.Color();
 const ZERO_M = new THREE.Matrix4().makeScale(0, 0, 0);
@@ -41,6 +47,10 @@ function initEngine() {
   renderer = new THREE.WebGLRenderer({ canvas, antialias: !IS_TOUCH, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, IS_TOUCH ? 1.25 : 1.5));
   renderer.setSize(innerWidth, innerHeight);
+  // no graphics acceleration (software drawing): fewer pixels and no shadows, or every frame takes seconds
+  try { const gl = renderer.getContext(), dbg = gl.getExtension('WEBGL_debug_renderer_info'), name = dbg ? String(gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL)) : ''; SOFT_GL = /swiftshader|llvmpipe|software|basic render/i.test(name) && !window.__testGL; } catch (e) { /* unknown: assume a real GPU */ }
+  if (SOFT_GL) renderer.setPixelRatio(0.6);
+  canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); showProblem('The graphics card stopped drawing the game. Reload the page to get it back.'); });
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
   scene = new THREE.Scene();
   camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.1, 1700);

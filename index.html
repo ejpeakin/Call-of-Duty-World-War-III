@@ -396,6 +396,7 @@ body.pad{cursor:none}
 </head>
 <body>
 <canvas id="game" tabindex="0"></canvas>
+<div id="stageWait" style="position:fixed;left:0;top:45%;width:60vw;text-align:center;color:#9fb8e8;font:600 15px system-ui,sans-serif;pointer-events:none;z-index:0">Loading the 3D view…</div>
 
 <div id="loading" hidden>
   <div class="ld-title">FORT<span>DAY</span></div>
@@ -873,7 +874,7 @@ for (const [cat] of COS_CATS) for (const c of COS[cat]) c.cat = cat;
 const RARITY_PRICE = [0, 400, 800, 1200, 1500, 2500, 2000];
 function itemPrice(c) { return c.price || RARITY_PRICE[c.r] || 0; }
 const COIN = 'FortBux';
-const PASS_TIERS = 30, XP_PER_TIER = 5000, XP_PER_LEVEL = 5000, LEVEL_COINS = 100, TICKET_CHANCE = 1 / 10000, TICKET_DEMO = 1;
+const PASS_TIERS = 30, XP_PER_TIER = 5000, XP_PER_LEVEL = 5000, LEVEL_COINS = 100, TICKET_CHANCE = 1 / 10000;
 // ---------------------------------------------------------------- seasons: 30 days each, the first is Music Festival 2026
 const SEASON_EPOCH = Date.UTC(2026, 10, 16), SEASON_DAYS = 30, SEASON_NAMES = ['Music Festival 2026'];
 const Season = {
@@ -896,7 +897,7 @@ const Profile = {
     xp: 0, wins: 0, matches: 0, kills: 0, top10: 0, rp: 0, umbrella: false, coins: 1500, owned: {},
     eq: { outfit: 'rae', body: 'woman', backpack: 'ruck', pickaxe: 'pick', glider: 'sail', wrap: 'none', emote: 'groove', car: 'street' },
     sens: 1, shadows: !IS_TOUCH, mode: 'solo', build: true, theme: 'greenvale', ranked: false, novaGiven: true,
-    season: -1, seasonXp: 0, firstBonus: false, thankSeason: -1, ticketSeason: -1, ticketDemo: 0,
+    season: -1, seasonXp: 0, firstBonus: false, thankSeason: -1, ticketSeason: -1,
   },
   load() {
     try {
@@ -996,7 +997,13 @@ const Sfx = {
 // =====================================================================
 //  Engine: renderer, scene, sky, materials, particles, tracers
 // =====================================================================
-let renderer, scene, camera, sun, hemi, sky, stars, waterMesh, stormMesh;
+let renderer, scene, camera, sun, hemi, sky, stars, waterMesh, stormMesh, SOFT_GL = false;
+// a message bar for when the 3D view cannot draw, so a black screen always says why
+function showProblem(msg) {
+  let el = document.getElementById('problemBar');
+  if (!el) { el = document.createElement('div'); el.id = 'problemBar'; el.style.cssText = 'position:fixed;left:16px;bottom:16px;z-index:99;max-width:min(560px,calc(100vw - 32px));background:#3a0f1c;border:1px solid #ff6a7a;color:#fff;font:600 14px/1.4 system-ui,sans-serif;padding:12px 14px;border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,.5)'; document.body.appendChild(el); }
+  if (el.dataset.msg === msg) return; el.dataset.msg = msg; el.textContent = msg;
+}
 const _v1 = new THREE.Vector3(), _v2 = new THREE.Vector3(), _v3 = new THREE.Vector3(), _v4 = new THREE.Vector3();
 const _c1 = new THREE.Color(), _c2 = new THREE.Color();
 const ZERO_M = new THREE.Matrix4().makeScale(0, 0, 0);
@@ -1036,6 +1043,10 @@ function initEngine() {
   renderer = new THREE.WebGLRenderer({ canvas, antialias: !IS_TOUCH, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, IS_TOUCH ? 1.25 : 1.5));
   renderer.setSize(innerWidth, innerHeight);
+  // no graphics acceleration (software drawing): fewer pixels and no shadows, or every frame takes seconds
+  try { const gl = renderer.getContext(), dbg = gl.getExtension('WEBGL_debug_renderer_info'), name = dbg ? String(gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL)) : ''; SOFT_GL = /swiftshader|llvmpipe|software|basic render/i.test(name) && !window.__testGL; } catch (e) { /* unknown: assume a real GPU */ }
+  if (SOFT_GL) renderer.setPixelRatio(0.6);
+  canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); showProblem('The graphics card stopped drawing the game. Reload the page to get it back.'); });
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
   scene = new THREE.Scene();
   camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.1, 1700);
@@ -4335,7 +4346,7 @@ function openChest(c, a) {
   if (c.opened) return;
   if (Net.guest && !Net.applying) {   // the host opens it, so everyone sees the same loot
     if (c.asked > Match.time) return; c.asked = Match.time + 1.5; a.chests++; Net.emit({ k: 'chest', x: c.x, z: c.z });
-    if (a === player && (Match.ticketDemo || (!Profile.ticket() && (Math.random() < TICKET_CHANCE || window.__forceTicket)))) Ticket.found(c, Match.ticketDemo);
+    if (a === player && !Profile.ticket() && (Math.random() < TICKET_CHANCE || window.__forceTicket)) Ticket.found(c);
     return;
   }
   c.opened = true; c.claim = null; if (!Net.applying) a.chests++;
@@ -4351,7 +4362,7 @@ function openChest(c, a) {
   if (near) { FX.burst(c.x, c.y + 0.8, c.z, c.kind === 'exotic' ? 0x2fe0d0 : 0xffd84a, 16, 3, 0.8, 0.12, -1); if (Sfx.vol(c.x, c.y, c.z) > 0.3) Sfx.chest(); }
   if (a === player) HUD.dirty = true;
   // Music Concert Ticket: one per season, a tiny chance in any chest you open
-  if (a === player && (Match.ticketDemo || (!Profile.ticket() && (Math.random() < TICKET_CHANCE || window.__forceTicket)))) Ticket.found(c, Match.ticketDemo);
+  if (a === player && !Profile.ticket() && (Math.random() < TICKET_CHANCE || window.__forceTicket)) Ticket.found(c);
 }
 function playerTakePickup(p) {
   const it = p.item, a = player;
@@ -4656,10 +4667,9 @@ const Vehicles = {
 
 // ---------------------------------------------------------------- the Music Concert Ticket reveal
 const Ticket = {
-  // demo: the one-off preview match where every chest plays the reveal without handing out the real ticket
-  found(c, demo) {
-    window.__forceTicket = false; this.demo = !!demo;
-    if (!demo) { Profile.d.ticketSeason = Season.id(); Profile.save(); }
+  found(c) {
+    window.__forceTicket = false;
+    Profile.d.ticketSeason = Season.id(); Profile.save();
     for (let i = 0; i < 4; i++) setTimeout(() => FX.burst(c.x, c.y + 1 + i * 0.4, c.z, i % 2 ? 0xff7ae0 : 0xffd84a, 26, 6, 1.1, 0.16, -2), i * 120);
     HUD.banner('Something golden is inside...', '', 1.2);
     setTimeout(() => this.show(), 700);
@@ -4667,8 +4677,7 @@ const Ticket = {
   show() {
     const dl = Season.daysLeft();
     $('tkSeason').textContent = Season.name();
-    $('tkDesc').textContent = this.demo ? 'Preview: this is what finding the ticket looks like. Every chest has one for this match only, and it is not kept. The real ticket is still a 1 in 10,000 find.'
-      : 'Everything in the Item Shop is yours until ' + Season.name() + ' ends — ' + (dl === 1 ? '1 day' : dl + ' days') + ' left. Equip any skin, glider, wrap or car from your Locker.';
+    $('tkDesc').textContent = 'Everything in the Item Shop is yours until ' + Season.name() + ' ends — ' + (dl === 1 ? '1 day' : dl + ' days') + ' left. Equip any skin, glider, wrap or car from your Locker.';
     const conf = $('tkConf'); conf.innerHTML = '';
     const cols = ['#ffd84a', '#ff7ae0', '#7fd8ff', '#ffffff', '#ff8a3c', '#9b6bff'];
     for (let i = 0; i < 70; i++) { const e = document.createElement('i'); e.style.left = (Math.random() * 100) + 'vw'; e.style.background = cols[i % cols.length]; e.style.animationDuration = (2.6 + Math.random() * 3) + 's'; e.style.animationDelay = (-Math.random() * 5) + 's'; e.style.transform = 'rotate(' + Math.random() * 360 + 'deg)'; conf.appendChild(e); }
@@ -6047,10 +6056,7 @@ const Match = {
     LiveEvent.init(this.mode); if (Net.inMatch) LiveEvent.state = 'off'; else Creatures.spawn();
     if (PlayerRig) scene.remove(PlayerRig.root);
     PlayerRig = makeRig(Profile.d.eq); scene.add(PlayerRig.root);
-    sun.castShadow = !!Profile.d.shadows;
-    // one-off preview: the first match after this update, every chest shows the Music Concert Ticket reveal
-    this.ticketDemo = Profile.d.ticketDemo !== TICKET_DEMO;
-    if (this.ticketDemo) { Profile.d.ticketDemo = TICKET_DEMO; Profile.save(); setTimeout(() => { if (Match.state === 'play' && Match.ticketDemo) HUD.banner('Ticket preview match', 'Every chest holds a Music Concert Ticket, this match only', 5); }, 4500); }
+    sun.castShadow = !!Profile.d.shadows && !SOFT_GL;
     this.recount();
     this.state = 'play'; Net.building = false;
     if (Net.hosting) Net.hostStart(); else if (Net.guest) Net.flush();
@@ -6177,7 +6183,6 @@ const Match = {
     $('death').hidden = true; $('results').hidden = false;
   },
   toLobby() {
-    this.ticketDemo = false;
     if (Net.inMatch) { if (Net.isHost) { if (!this.hasWinner) Net.emit({ k: 'end' }); } else if (this.state === 'play') Net.send('h', { k: 'bye' }); Net.inMatch = false; Net.queue.length = 0; }
     this.state = 'lobby'; $('results').hidden = true; $('death').hidden = true; $('pause').hidden = true; $('hud').hidden = true; $('bigmap').hidden = true; $('clickHint').hidden = true;
     if (document.pointerLockElement) document.exitPointerLock();
@@ -7560,6 +7565,7 @@ const Lobby = {
 let gameTime = 0, lastFrame = performance.now();
 function boot() {
   initEngine();
+  if (SOFT_GL) Profile.d.shadows = false;
   BotRig.init(112);
   Build.init();
   Trails.init(); ElimFX.init();
@@ -7579,7 +7585,17 @@ function boot() {
   $('game').addEventListener('click', () => { if (Match.state === 'play' && !Match.paused && !Input.locked) Input.requestLock(); });
   requestAnimationFrame(frame);
 }
-function frame(now) { requestAnimationFrame(frame); step(now); }
+let frameErrs = 0, firstFrame = false;
+function frame(now) {
+  requestAnimationFrame(frame);
+  try {
+    step(now);
+    if (!firstFrame) { firstFrame = true; const el = $('stageWait'); if (el) el.remove(); }
+  } catch (e) {
+    console.error(e); lastFrame = performance.now();
+    if (++frameErrs <= 3 || frameErrs % 300 === 0) showProblem('Something went wrong drawing the game (' + (e && e.message ? e.message : e) + '). Try reloading the page. If it keeps happening, send a screenshot of this message.');
+  }
+}
 // The host's browser runs the shared match, and browsers stop drawing hidden tabs.
 // So while the host's tab is in the background, keep the match moving from a timer.
 setInterval(() => {

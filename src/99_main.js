@@ -4,6 +4,7 @@
 let gameTime = 0, lastFrame = performance.now();
 function boot() {
   initEngine();
+  if (SOFT_GL) Profile.d.shadows = false;
   BotRig.init(112);
   Build.init();
   Trails.init(); ElimFX.init();
@@ -23,7 +24,17 @@ function boot() {
   $('game').addEventListener('click', () => { if (Match.state === 'play' && !Match.paused && !Input.locked) Input.requestLock(); });
   requestAnimationFrame(frame);
 }
-function frame(now) { requestAnimationFrame(frame); step(now); }
+let frameErrs = 0, firstFrame = false;
+function frame(now) {
+  requestAnimationFrame(frame);
+  try {
+    step(now);
+    if (!firstFrame) { firstFrame = true; const el = $('stageWait'); if (el) el.remove(); }
+  } catch (e) {
+    console.error(e); lastFrame = performance.now();
+    if (++frameErrs <= 3 || frameErrs % 300 === 0) showProblem('Something went wrong drawing the game (' + (e && e.message ? e.message : e) + '). Try reloading the page. If it keeps happening, send a screenshot of this message.');
+  }
+}
 // The host's browser runs the shared match, and browsers stop drawing hidden tabs.
 // So while the host's tab is in the background, keep the match moving from a timer.
 setInterval(() => {
