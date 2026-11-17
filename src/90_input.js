@@ -287,6 +287,7 @@ function updatePlayer(dt) {
   }
   if (P.has('KeyM')) $('bigmap').hidden = !$('bigmap').hidden;
   if (!a.alive) {
+    Input.scoped = false;
     inp.f = inp.r = 0; inp.fire = inp.jump = inp.ads = false;
     if (P.has('Space') || P.has('Click')) cycleSpectate();
     P.clear(); Input.wheel = 0; return;
@@ -297,7 +298,10 @@ function updatePlayer(dt) {
   inp.sprint = H('sprint') || (tc.on && Math.hypot(tc.mx, tc.mz) > 0.92) || pd.sprint;
   inp.jump = H('jump') || tc.jump || pd.jump;
   inp.fire = H('fire') || tc.fire || pd.fire;
-  inp.ads = H('ads') || tc.ads || pd.ads;
+  // the scope key toggles aiming; it drops when you switch away, sprint, build, crawl or get in a car
+  if (P.has('KeyV')) { const w = a.inv[a.slot]; Input.scoped = !Input.scoped && !!w && w.kind === 'weapon'; }
+  { const w = a.inv[a.slot]; if (Input.scoped && (!w || w.kind !== 'weapon' || Build.active || a.crawl || a.vehicle || a.state !== 'ground' || (H('sprint') && f > 0.3) || a.slot !== Input.scopeSlot)) Input.scoped = false; Input.scopeSlot = a.slot; }
+  inp.ads = H('ads') || tc.ads || pd.ads || Input.scoped;
   if (a.state === 'bus') { inp.f = inp.r = 0; inp.fire = false; if (P.has('Space')) busJump(a); }
   else if (a.state === 'sky') { if (P.has('Space')) a.state = 'glide'; }
   for (let i = 1; i <= 6; i++) if (P.has('Digit' + i)) { switchSlot(a, i - 1); Build.active = false; }

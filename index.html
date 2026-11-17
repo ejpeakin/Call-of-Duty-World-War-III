@@ -728,7 +728,7 @@ body.pad{cursor:none}
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js"></script>
 <script async src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>
-const BUILD_ID = '1117-2135';
+const BUILD_ID = '1117-2352';
 'use strict';
 // =====================================================================
 //  FORTDAY — core utilities, data tables, profile, audio
@@ -887,7 +887,7 @@ const THEME_ORDER = ['greenvale', 'floodtide', 'neon', 'olympia', 'dune'];
 const KEY_ACTIONS = [
   ['forward', 'Move forward', 'KeyW'], ['back', 'Move back', 'KeyS'], ['left', 'Move left', 'KeyA'], ['right', 'Move right', 'KeyD'],
   ['jump', 'Jump / leave bus / glider', 'Space'], ['sprint', 'Sprint', 'ShiftLeft'],
-  ['fire', 'Fire / harvest / build', 'Mouse0'], ['ads', 'Aim down sights', 'Mouse2'], ['reload', 'Reload', 'KeyR'], ['use', 'Pick up / open / drive', 'KeyE'],
+  ['fire', 'Fire / harvest / build', 'Mouse0'], ['ads', 'Aim / scope (hold)', 'Mouse2'], ['scope', 'Scope in / out (press)', 'KeyV'], ['reload', 'Reload', 'KeyR'], ['use', 'Pick up / open / drive', 'KeyE'],
   ['slot1', 'Harvesting tool', 'Digit1'], ['slot2', 'Slot 2', 'Digit2'], ['slot3', 'Slot 3', 'Digit3'], ['slot4', 'Slot 4', 'Digit4'], ['slot5', 'Slot 5', 'Digit5'], ['slot6', 'Slot 6', 'Digit6'],
   ['build', 'Build mode on / off', 'KeyQ'], ['wall', 'Build wall', 'KeyZ'], ['ramp', 'Build ramp', 'KeyX'], ['floor', 'Build floor', 'KeyC'], ['material', 'Switch material', 'KeyG'],
   ['emote', 'Emote', 'KeyB'], ['map', 'Full map', 'KeyM'],
@@ -7432,6 +7432,7 @@ function updatePlayer(dt) {
   }
   if (P.has('KeyM')) $('bigmap').hidden = !$('bigmap').hidden;
   if (!a.alive) {
+    Input.scoped = false;
     inp.f = inp.r = 0; inp.fire = inp.jump = inp.ads = false;
     if (P.has('Space') || P.has('Click')) cycleSpectate();
     P.clear(); Input.wheel = 0; return;
@@ -7442,7 +7443,10 @@ function updatePlayer(dt) {
   inp.sprint = H('sprint') || (tc.on && Math.hypot(tc.mx, tc.mz) > 0.92) || pd.sprint;
   inp.jump = H('jump') || tc.jump || pd.jump;
   inp.fire = H('fire') || tc.fire || pd.fire;
-  inp.ads = H('ads') || tc.ads || pd.ads;
+  // the scope key toggles aiming; it drops when you switch away, sprint, build, crawl or get in a car
+  if (P.has('KeyV')) { const w = a.inv[a.slot]; Input.scoped = !Input.scoped && !!w && w.kind === 'weapon'; }
+  { const w = a.inv[a.slot]; if (Input.scoped && (!w || w.kind !== 'weapon' || Build.active || a.crawl || a.vehicle || a.state !== 'ground' || (H('sprint') && f > 0.3) || a.slot !== Input.scopeSlot)) Input.scoped = false; Input.scopeSlot = a.slot; }
+  inp.ads = H('ads') || tc.ads || pd.ads || Input.scoped;
   if (a.state === 'bus') { inp.f = inp.r = 0; inp.fire = false; if (P.has('Space')) busJump(a); }
   else if (a.state === 'sky') { if (P.has('Space')) a.state = 'glide'; }
   for (let i = 1; i <= 6; i++) if (P.has('Digit' + i)) { switchSlot(a, i - 1); Build.active = false; }
@@ -7971,7 +7975,7 @@ const Lobby = {
   refresh() {
     const d = Profile.d;
     Net.render(); $('buildTag').textContent = 'build ' + BUILD_ID;
-    { const k = a => '<kbd>' + esc(Keys.of(a)) + '</kbd>'; $('kbHint').innerHTML = k('forward') + k('left') + k('back') + k('right') + ' move · ' + k('fire') + ' fire · ' + k('ads') + ' aim · ' + k('jump') + ' jump · ' + k('sprint') + ' sprint · ' + k('use') + ' pick up / open · ' + k('reload') + ' reload · ' + k('wall') + k('ramp') + k('floor') + ' build · ' + k('material') + ' material · ' + k('emote') + ' emote · ' + k('map') + ' map. Change any of these in Settings.'; }
+    { const k = a => '<kbd>' + esc(Keys.of(a)) + '</kbd>'; $('kbHint').innerHTML = k('forward') + k('left') + k('back') + k('right') + ' move · ' + k('fire') + ' fire · ' + k('ads') + ' aim (or ' + k('scope') + ' to toggle the scope) · ' + k('jump') + ' jump · ' + k('sprint') + ' sprint · ' + k('use') + ' pick up / open · ' + k('reload') + ' reload · ' + k('wall') + k('ramp') + k('floor') + ' build · ' + k('material') + ' material · ' + k('emote') + ' emote · ' + k('map') + ' map. Change any of these in Settings.'; }
     $('coinLbl').textContent = d.coins.toLocaleString();
     [...$('tabs').children].forEach(b => b.classList.toggle('on', b.dataset.tab === this.tab));
     for (const t of ['play', 'locker', 'pass', 'career', 'shop']) $('tab-' + t).hidden = t !== this.tab;
