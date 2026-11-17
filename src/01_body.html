@@ -19,7 +19,7 @@
       <button data-tab="shop" class="shop-tab">Shop</button>
     </nav>
     <div class="lb-tier"><span id="tierLbl" class="num">Tier 1</span><div class="mini-bar"><i id="tierFill"></i></div></div>
-    <div class="lb-coins" title="FortBux"><i class="coin"></i><span id="coinLbl" class="num">1,500</span></div>
+    <div class="lb-coins" title="FortBux"><i class="coin"></i><span id="coinLbl" class="num">0</span></div>
   </header>
 
   <div class="side">
@@ -90,7 +90,7 @@
     <section class="panel shop" id="tab-shop" hidden>
       <div class="shop-head">
         <h2>Item Shop</h2>
-        <span class="shop-bal"><i class="coin"></i><b id="shopBal" class="num">1,500</b><span>FortBux</span></span>
+        <span class="shop-bal"><i class="coin"></i><b id="shopBal" class="num">0</b><span>FortBux</span></span>
       </div>
       <div class="shop-filters" id="shopFilters" role="tablist" aria-label="Item categories"></div>
       <article class="shop-detail" id="shopDetail">
@@ -104,6 +104,10 @@
         <div class="sd-buy">
           <span class="sd-price"><i class="coin"></i><b id="shopPrice" class="num">1,500</b></span>
           <button id="buyBtn" class="buy">Buy</button>
+        </div>
+        <div class="sd-code" id="codeBox">
+          <button class="sd-code-link" id="codeLink" type="button">Have a code for this skin?</button>
+          <div class="sd-code-row" id="codeRow" hidden><input id="codeIn" maxlength="16" placeholder="ABCD-EFGH-JKLM" autocomplete="off" autocapitalize="characters" spellcheck="false"><button id="codeBtn" type="button">Redeem</button></div>
         </div>
         <p class="sd-msg" id="shopMsg" role="status"></p>
       </article>

@@ -136,6 +136,12 @@ button:focus-visible{outline:2px solid var(--sun-2);outline-offset:2px}
 .sd-price{display:flex;align-items:center;gap:7px;font-size:22px;font-weight:800;color:#ffe9a6}
 .sd-price .coin{width:18px;height:18px}
 .sd-price.owned{color:#7be39a;font-size:15px}
+.sd-code{grid-column:1 / -1;display:flex;flex-direction:column;align-items:flex-end;gap:6px;margin-top:-4px}
+.sd-code-link{background:none;border:0;padding:2px 0;color:var(--mute);font:600 12.5px var(--f-body);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.sd-code-link:hover{color:var(--ink)}
+.sd-code-row{display:flex;gap:6px;width:100%;justify-content:flex-end}
+.sd-code-row input{flex:1;max-width:220px;min-width:0;background:rgba(5,14,36,.6);border:1px solid rgba(150,195,255,.25);border-radius:8px;color:var(--ink);font:700 14px var(--f-body);letter-spacing:.12em;text-transform:uppercase;padding:7px 10px;-webkit-user-select:text;user-select:text}
+.sd-code-row button{background:rgba(63,149,255,.22);border:1px solid rgba(150,195,255,.4);border-radius:8px;color:var(--ink);font:700 13px var(--f-body);padding:7px 12px}
 .sd-msg{grid-column:1 / -1;margin:0;font-size:12.5px;font-weight:600;min-height:16px;color:#ffe9a6}
 .buy{border:0;border-radius:10px;padding:10px 24px;font-weight:800;font-size:14px;color:#2a1a00;background:linear-gradient(180deg,#ffe066,#ffb52e);box-shadow:0 3px 0 #a86a08;min-width:120px}
 .buy:active{transform:translateY(2px);box-shadow:0 1px 0 #a86a08}
@@ -417,7 +423,7 @@ body.pad{cursor:none}
       <button data-tab="shop" class="shop-tab">Shop</button>
     </nav>
     <div class="lb-tier"><span id="tierLbl" class="num">Tier 1</span><div class="mini-bar"><i id="tierFill"></i></div></div>
-    <div class="lb-coins" title="FortBux"><i class="coin"></i><span id="coinLbl" class="num">1,500</span></div>
+    <div class="lb-coins" title="FortBux"><i class="coin"></i><span id="coinLbl" class="num">0</span></div>
   </header>
 
   <div class="side">
@@ -488,7 +494,7 @@ body.pad{cursor:none}
     <section class="panel shop" id="tab-shop" hidden>
       <div class="shop-head">
         <h2>Item Shop</h2>
-        <span class="shop-bal"><i class="coin"></i><b id="shopBal" class="num">1,500</b><span>FortBux</span></span>
+        <span class="shop-bal"><i class="coin"></i><b id="shopBal" class="num">0</b><span>FortBux</span></span>
       </div>
       <div class="shop-filters" id="shopFilters" role="tablist" aria-label="Item categories"></div>
       <article class="shop-detail" id="shopDetail">
@@ -502,6 +508,10 @@ body.pad{cursor:none}
         <div class="sd-buy">
           <span class="sd-price"><i class="coin"></i><b id="shopPrice" class="num">1,500</b></span>
           <button id="buyBtn" class="buy">Buy</button>
+        </div>
+        <div class="sd-code" id="codeBox">
+          <button class="sd-code-link" id="codeLink" type="button">Have a code for this skin?</button>
+          <div class="sd-code-row" id="codeRow" hidden><input id="codeIn" maxlength="16" placeholder="ABCD-EFGH-JKLM" autocomplete="off" autocapitalize="characters" spellcheck="false"><button id="codeBtn" type="button">Redeem</button></div>
         </div>
         <p class="sd-msg" id="shopMsg" role="status"></p>
       </article>
@@ -645,7 +655,7 @@ body.pad{cursor:none}
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js"></script>
 <script async src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>
-const BUILD_ID = '1117-1526';
+const BUILD_ID = '1117-1529';
 'use strict';
 // =====================================================================
 //  FORTDAY — core utilities, data tables, profile, audio
@@ -875,6 +885,19 @@ const COS = {
 const COS_CATS = [['outfit', 'Skins'], ['backpack', 'Back Bling'], ['pickaxe', 'Harvest Tool'], ['glider', 'Glider'], ['wrap', 'Weapon Wrap'], ['emote', 'Emote'], ['car', 'Car']];
 for (const [cat] of COS_CATS) for (const c of COS[cat]) c.cat = cat;
 const RARITY_PRICE = [0, 400, 800, 1200, 1500, 2500, 2000];
+// Skin codes: each unlocks one skin. Only a hash of each code is stored here, so the codes cannot be read from the page.
+const SKIN_CODES = {"b988f760c06661598b2306f9190cf3e2b49eede966a437b893f9cec8b7da4e94": "outfit:moss", "c9f8ccf00415edf51af71a754d7ff028524b44e8460a6b3ae71782999a660226": "outfit:comet", "6c20490c4a51a9daf0e4a506051bbef481b69064ad73f1dc55c730b4ab67669c": "outfit:siren", "0482d235e2b487cb4bd726f72f61f4bccaf818d6490108418b5bb454e75286a0": "outfit:toast", "d29e86b0e73b5f53bad9eef6e3cac179a1b954cceca8fab647db777288b95123": "outfit:nightwarden", "d415b6c930bf893cab24401df88e72dc4ef49125a8d35fdbb3d22dc5145ba25e": "outfit:tycoon", "b24e8cb0fb398c0acc64c00a5f55ae9b9277e60bb507b1d55388c2a1b5be067b": "outfit:stormborn", "a45886e085b42acdb18940bc409c2d3ba927f3cebcd7f6ad8120cca9a917c400": "outfit:headliner"};
+async function redeemCode(raw) {
+  const code = String(raw || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (code.length < 8) return { err: 'Type the whole code, like ABCD-EFGH-JKLM.' };
+  if (!window.crypto || !crypto.subtle) return { err: 'This browser cannot check codes. Try Chrome, Edge, Firefox or Safari.' };
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('fortday:' + code));
+  const hex = [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join(''), hit = SKIN_CODES[hex];
+  if (!hit) return { err: 'That code does not work. Check the letters and try again.' };
+  const [cat, id] = hit.split(':'), it = cosById(cat, id); if (!it) return { err: 'That code does not work.' };
+  const had = Profile.owns(it); Profile.d.owned[cat + ':' + id] = true; Profile.d.eq[cat] = id; Profile.save();
+  return { it, had };
+}
 function itemPrice(c) { return c.price || RARITY_PRICE[c.r] || 0; }
 const COIN = 'FortBux';
 const PASS_TIERS = 30, XP_PER_TIER = 5000, XP_PER_LEVEL = 5000, LEVEL_COINS = 100, TICKET_CHANCE = 1 / 10000;
@@ -897,7 +920,7 @@ function passRewards() {
 // ---------------------------------------------------------------- profile (per-viewer, localStorage)
 const Profile = {
   d: {
-    xp: 0, wins: 0, matches: 0, kills: 0, top10: 0, rp: 0, umbrella: false, coins: 1500, owned: {},
+    xp: 0, wins: 0, matches: 0, kills: 0, top10: 0, rp: 0, umbrella: false, coins: 0, owned: {},
     eq: { outfit: 'rae', body: 'woman', backpack: 'ruck', pickaxe: 'pick', glider: 'sail', wrap: 'none', emote: 'groove', car: 'street' },
     sens: 1, shadows: !IS_TOUCH, mode: 'solo', build: true, theme: 'greenvale', ranked: false, novaGiven: true,
     season: -1, seasonXp: 0, firstBonus: false, thankSeason: -1, ticketSeason: -1,
@@ -7435,6 +7458,16 @@ const Lobby = {
       this.shopSel = { cat: sel.cat, id: item.id }; this.tab = 'shop'; this.refresh(); $('tab-shop').scrollTop = 0;
     });
     $('buyBtn').addEventListener('click', () => this.buy(this.shopSel.cat, this.shopSel.id));
+    $('codeLink').addEventListener('click', () => { const r = $('codeRow'); r.hidden = !r.hidden; if (!r.hidden) $('codeIn').focus(); });
+    const redeem = async () => {
+      const msg = $('shopMsg'), inp = $('codeIn'); Sfx.init(); msg.textContent = 'Checking…';
+      let r; try { r = await redeemCode(inp.value); } catch (e) { r = { err: 'Could not check that code.' }; }
+      if (r.err) { msg.textContent = r.err; return; }
+      inp.value = ''; $('codeRow').hidden = true; Sfx.chest(); this.shopSel = { cat: r.it.cat, id: r.it.id }; this.lockSel = null;
+      this.refresh(); $('shopMsg').textContent = r.had ? r.it.name + ' was already yours, so it is now equipped.' : 'Code redeemed! ' + r.it.name + ' is unlocked and equipped.';
+    };
+    $('codeBtn').addEventListener('click', redeem);
+    $('codeIn').addEventListener('keydown', e => { if (e.key === 'Enter') redeem(); e.stopPropagation(); });
     $('thankBtn').addEventListener('click', () => {
       const d = Profile.d; if (d.thankSeason === Season.id()) return;
       d.thankSeason = Season.id(); const lv = Profile.addXp(1000); Profile.save(); Sfx.init();
@@ -7482,6 +7515,7 @@ const Lobby = {
     pr.innerHTML = own ? '<b id="shopPrice">' + (eq ? 'Equipped' : 'Owned') + '</b>' : '<i class="coin"></i><b id="shopPrice" class="num">' + price.toLocaleString() + '</b>';
     const btn = $('buyBtn'); btn.textContent = own ? (eq ? 'Equipped' : 'Equip') : 'Buy for ' + price.toLocaleString();
     btn.className = 'buy' + (own && eq ? ' owned' : own ? ' equip' : ''); btn.disabled = own && eq;
+    const coded = !own && Object.values(SKIN_CODES).includes(sel.cat + ':' + sel.id); $('codeBox').hidden = !coded; if (!coded) $('codeRow').hidden = true;
   },
   lockerView() {
     const d = Profile.d, cat = this.cat, catName = COS_CATS.find(c => c[0] === cat)[1];

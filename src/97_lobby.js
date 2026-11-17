@@ -79,6 +79,16 @@ const Lobby = {
       this.shopSel = { cat: sel.cat, id: item.id }; this.tab = 'shop'; this.refresh(); $('tab-shop').scrollTop = 0;
     });
     $('buyBtn').addEventListener('click', () => this.buy(this.shopSel.cat, this.shopSel.id));
+    $('codeLink').addEventListener('click', () => { const r = $('codeRow'); r.hidden = !r.hidden; if (!r.hidden) $('codeIn').focus(); });
+    const redeem = async () => {
+      const msg = $('shopMsg'), inp = $('codeIn'); Sfx.init(); msg.textContent = 'Checking…';
+      let r; try { r = await redeemCode(inp.value); } catch (e) { r = { err: 'Could not check that code.' }; }
+      if (r.err) { msg.textContent = r.err; return; }
+      inp.value = ''; $('codeRow').hidden = true; Sfx.chest(); this.shopSel = { cat: r.it.cat, id: r.it.id }; this.lockSel = null;
+      this.refresh(); $('shopMsg').textContent = r.had ? r.it.name + ' was already yours, so it is now equipped.' : 'Code redeemed! ' + r.it.name + ' is unlocked and equipped.';
+    };
+    $('codeBtn').addEventListener('click', redeem);
+    $('codeIn').addEventListener('keydown', e => { if (e.key === 'Enter') redeem(); e.stopPropagation(); });
     $('thankBtn').addEventListener('click', () => {
       const d = Profile.d; if (d.thankSeason === Season.id()) return;
       d.thankSeason = Season.id(); const lv = Profile.addXp(1000); Profile.save(); Sfx.init();
@@ -126,6 +136,7 @@ const Lobby = {
     pr.innerHTML = own ? '<b id="shopPrice">' + (eq ? 'Equipped' : 'Owned') + '</b>' : '<i class="coin"></i><b id="shopPrice" class="num">' + price.toLocaleString() + '</b>';
     const btn = $('buyBtn'); btn.textContent = own ? (eq ? 'Equipped' : 'Equip') : 'Buy for ' + price.toLocaleString();
     btn.className = 'buy' + (own && eq ? ' owned' : own ? ' equip' : ''); btn.disabled = own && eq;
+    const coded = !own && Object.values(SKIN_CODES).includes(sel.cat + ':' + sel.id); $('codeBox').hidden = !coded; if (!coded) $('codeRow').hidden = true;
   },
   lockerView() {
     const d = Profile.d, cat = this.cat, catName = COS_CATS.find(c => c[0] === cat)[1];

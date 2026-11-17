@@ -132,6 +132,12 @@ button:focus-visible{outline:2px solid var(--sun-2);outline-offset:2px}
 .sd-price{display:flex;align-items:center;gap:7px;font-size:22px;font-weight:800;color:#ffe9a6}
 .sd-price .coin{width:18px;height:18px}
 .sd-price.owned{color:#7be39a;font-size:15px}
+.sd-code{grid-column:1 / -1;display:flex;flex-direction:column;align-items:flex-end;gap:6px;margin-top:-4px}
+.sd-code-link{background:none;border:0;padding:2px 0;color:var(--mute);font:600 12.5px var(--f-body);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.sd-code-link:hover{color:var(--ink)}
+.sd-code-row{display:flex;gap:6px;width:100%;justify-content:flex-end}
+.sd-code-row input{flex:1;max-width:220px;min-width:0;background:rgba(5,14,36,.6);border:1px solid rgba(150,195,255,.25);border-radius:8px;color:var(--ink);font:700 14px var(--f-body);letter-spacing:.12em;text-transform:uppercase;padding:7px 10px;-webkit-user-select:text;user-select:text}
+.sd-code-row button{background:rgba(63,149,255,.22);border:1px solid rgba(150,195,255,.4);border-radius:8px;color:var(--ink);font:700 13px var(--f-body);padding:7px 12px}
 .sd-msg{grid-column:1 / -1;margin:0;font-size:12.5px;font-weight:600;min-height:16px;color:#ffe9a6}
 .buy{border:0;border-radius:10px;padding:10px 24px;font-weight:800;font-size:14px;color:#2a1a00;background:linear-gradient(180deg,#ffe066,#ffb52e);box-shadow:0 3px 0 #a86a08;min-width:120px}
 .buy:active{transform:translateY(2px);box-shadow:0 1px 0 #a86a08}
