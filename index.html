@@ -34,7 +34,8 @@
 }
 [hidden]{display:none!important}
 html,body{height:100%;margin:0;overflow:hidden;background:var(--night);color:var(--ink);font-family:var(--f-body);-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
-#game{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;outline:none}
+/* opacity just under 1 keeps ChromeOS from handing the 3D view to a hardware overlay, which shows nothing on some Intel Chromebooks */
+#game{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;outline:none;opacity:.999}
 button{font-family:var(--f-body);color:var(--ink);cursor:pointer}
 button:focus-visible{outline:2px solid var(--sun-2);outline-offset:2px}
 .num{font-variant-numeric:tabular-nums}
@@ -660,7 +661,7 @@ body.pad{cursor:none}
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js"></script>
 <script async src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>
-const BUILD_ID = '1117-1536';
+const BUILD_ID = '1117-1538';
 'use strict';
 // =====================================================================
 //  FORTDAY — core utilities, data tables, profile, audio
