@@ -572,6 +572,16 @@ const CharModel = {
   TWIST: ['pelvis', 'spine_01', 'spine_02', 'spine_03', 'neck_01'],
   reset(R) { if (R.pure) this.TWIST.forEach((n, i) => R.B[n].quaternion.copy(R.pure[i])); R.mixer.stopAllAction(); R.L.cur = R.U.cur = null; R.L.act = R.U.act = null; R.st.fresh = true; R.st.legYaw = 0; R.st.rev = false; R.st.vy = null; },
   emoteClip: { groove: 'Dance_Body_Roll', robot: 'Dance_Charleston', jacks: 'Jumping_Jacks', wave: 'Greeting', airguitar: 'Dance_Simple', micdrop: 'Victory' },
+  // a crawling player glows red so everyone can see they are hurt
+  redTint(R, a) {
+    const want = !!(a.crawl && a.alive);
+    if (want) {
+      const base = R._redBase && R.mesh.material === R._redMat ? R._redBase : R.mesh.material;
+      if (!R._redMat || R._redBase !== base) { if (R._redMat) R._redMat.dispose(); R._redBase = base; R._redMat = base.clone(); R._redMat.emissive = new THREE.Color(0x9a0000); }
+      R._redMat.emissiveIntensity = 0.55 + 0.35 * Math.sin(performance.now() / 180);
+      if (R.mesh.material !== R._redMat) R.mesh.material = R.shirt.material = R._redMat;
+    } else if (R._redMat && R.mesh.material === R._redMat) { R.mesh.material = R.shirt.material = R._redBase; }
+  },
   animate(R, a, dt) {
     const st = R.st, L = R.L, U = R.U;
     // bots turn smoothly instead of snapping to a new target; the player's body follows the aim exactly
@@ -586,6 +596,7 @@ const CharModel = {
     else if (a.state === 'glide') { full = 'Glide'; glider = true; oy = 0.04; }
     else if (a.emote) full = this.emoteClip[a.emote] || 'Dance_Simple';
     else if (a.mantleT > 0) full = 'ClimbUp_1m_RM';
+    else if (a.crawl && !a.inWater) { full = 'Crawl'; ts = sp > 0.3 ? clamp(sp / 1.2, 0.6, 1.5) : 0.08; showHeld = !!held && held === 'medkit'; }
     else if (a.inWater) { full = sp > 1 ? 'Swim_Fwd' : 'Swim_Idle'; ts = sp > 1 ? clamp(sp / 2.5, 0.7, 1.6) : 1; oy = sp > 1 ? -0.1 : -0.55; }
     else {
       if (!a.onGround) base = 'Jump_air';
@@ -601,6 +612,7 @@ const CharModel = {
       showGun = !!gun; showPick = !it || it.kind === 'pick'; showHeld = !gun && !showPick && !!held;
       aim = gun;
     }
+    this.redTint(R, a);
     // ---- lower body
     const once = full === 'ClimbUp_1m_RM' || full === 'Death_A'; if (full === 'Death_A') ts = 1.5;
     if (full) { this.play(R, L, full, { ts, once, fade: 0.15 }); }

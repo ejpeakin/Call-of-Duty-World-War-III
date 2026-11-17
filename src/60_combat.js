@@ -220,7 +220,7 @@ function eliminate(t, src, o) {
   if (t.vehicle) Vehicles.exit(t, true);
   // the elimination drone takes the body (it stays visible until the flash); too far away to see: it just vanishes
   if (!ElimFX.start(t)) { if (t.ri >= 0) BotRig.hide(t.ri); FX.burst(t.pos.x, t.pos.y + 1.2, t.pos.z, 0x6fd0ff, 16, 4, 0.7, 0.14, -2); }
-  if (!Net.inMatch) dropLoot(t);
+  if (!Net.inMatch) { if (Match.mode !== 'tutorial') dropLoot(t); }
   else if (!Net.applying) {   // this game owns the character: tell the others, and get its loot onto the ground
     const ev = { k: 'elim', id: t.id, src: src ? src.id : 0, o: Net.slim(o) };
     if (Net.guest) ev.items = lootOf(t); else dropLoot(t);
@@ -333,6 +333,11 @@ function destroyHarv(hv) {
 }
 
 // ---------------------------------------------------------------- healing items
+function onCrawl(down) {
+  if (down) { Build.active = false; player.emote = null; HUD.banner('You are down!', 'Crawl to cover and use a Med-Kit to get back up', 3); Sfx.tone(180, 0.5, 'sawtooth', 0.12, -60); }
+  else { HUD.banner('Back on your feet', '', 1.5); Sfx.tone(520, 0.18, 'triangle', 0.12, 120); }
+  HUD.dirty = true;
+}
 function healUseful(a, it) {
   const h = HEALS[it.hid];
   if (h.hp) return a.hp < h.hpMax;
@@ -340,6 +345,7 @@ function healUseful(a, it) {
 }
 function startUse(a) {
   const it = a.inv[a.slot]; if (!it || it.kind !== 'heal') return;
+  if (a.crawl && it.hid !== 'medkit') { if (a === player && !a._crawlTold) { a._crawlTold = true; HUD.toast('While you are crawling, only a Med-Kit can heal you'); setTimeout(() => { a._crawlTold = false; }, 1500); } return; }
   if (!healUseful(a, it)) { if (a === player) HUD.toast(HEALS[it.hid].hp ? 'Health is already full enough for this' : 'Shield is already full enough for this'); return; }
   const h = HEALS[it.hid]; a.useT = a.useDur = h.time; a.useSlot = a.slot; a.reloadT = 0; a.emote = null;
 }
@@ -362,8 +368,11 @@ function actorTick(a, dt) {
   if (a.reloadT > 0) { a.reloadT -= dt; if (a.reloadT <= 0) finishReload(a); }
   if (a.useT > 0) { a.useT -= dt; if (a.useT <= 0) finishUse(a); }
   if (a.overMax > 0 && Match.time - a.lastDmgT > 5 && a.over < a.overMax) a.over = Math.min(a.overMax, a.over + 14 * dt);
+  // players at low health fall to the ground and crawl (bots fight on as before)
+  if (a.isPlayer) { const c = a.hp <= CRAWL_HP && a.state === 'ground' && !a.vehicle; if (c !== !!a.crawl) { a.crawl = c; if (a === player) onCrawl(c); } }
   if (a.state !== 'ground' || a.vehicle || a.mantleT > 0) return;
   if (a === player && Build.active) return;
+  if (a.crawl) { const ci = a.inv[a.slot]; if (ci && ci.kind === 'heal' && a.input.fire && a.useT <= 0) startUse(a); return; }   // crawling: no shooting or harvesting, only healing
   const it = a.inv[a.slot], fire = a.input.fire;
   if (!it || it.kind === 'pick') { if (fire && a.pickCD <= 0) swingPick(a); }
   else if (it.kind === 'weapon') {

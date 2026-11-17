@@ -239,7 +239,7 @@ const Net = {
   // ---------------------------------------------------------------- per-frame traffic
   enc(a) {
     const it = a.inv[a.slot], S = { bus: 0, sky: 1, glide: 2, ground: 3 };
-    const code = (S[a.state] || 0) | (a.alive ? 4 : 0) | (a.onGround ? 8 : 0) | (a.inWater ? 16 : 0) | (a.input.ads ? 32 : 0) | (a.pickAnim > 0.2 ? 64 : 0) | (a.useT > 0 ? 128 : 0) | (a.reloadT > 0 ? 256 : 0) | (a.mantleT > 0 ? 512 : 0) | (Math.round(clamp(a.dive || 0, 0, 1) * 3) << 10);
+    const code = (S[a.state] || 0) | (a.alive ? 4 : 0) | (a.onGround ? 8 : 0) | (a.inWater ? 16 : 0) | (a.input.ads ? 32 : 0) | (a.pickAnim > 0.2 ? 64 : 0) | (a.useT > 0 ? 128 : 0) | (a.reloadT > 0 ? 256 : 0) | (a.mantleT > 0 ? 512 : 0) | (Math.round(clamp(a.dive || 0, 0, 1) * 3) << 10) | (a.crawl ? 4096 : 0);
     return [a.id, Math.round(a.pos.x * 10), Math.round(a.pos.y * 10), Math.round(a.pos.z * 10), Math.round(a.yaw * 100), Math.round(a.pitch * 100), code,
       !it || it.kind === 'pick' ? 0 : it.kind === 'weapon' ? 'w' + it.wid + ':' + it.rarity : 'h' + it.hid, Math.ceil(a.hp), Math.ceil(a.shield), a.emote || 0];
   },
@@ -253,7 +253,7 @@ const Net = {
     if (n.fresh || jump || Math.hypot(a.pos.x - x, a.pos.y - y, a.pos.z - z) > 25) { a.pos.set(x, y, z); a.yaw = n.yaw; n.fresh = false; }
     a.state = st; a.onGround = !!(c & 8); a.inWater = !!(c & 16); a.input.ads = !!(c & 32);
     if ((c & 64) && a.pickAnim <= 0) a.pickAnim = 0.32;
-    a.useT = c & 128 ? 1 : 0; a.reloadT = c & 256 ? 1 : 0; a.mantleT = c & 512 ? 0.2 : 0; a.dive = ((c >> 10) & 3) / 3;
+    a.useT = c & 128 ? 1 : 0; a.reloadT = c & 256 ? 1 : 0; a.mantleT = c & 512 ? 0.2 : 0; a.dive = ((c >> 10) & 3) / 3; a.crawl = !!(c & 4096);
     const ic = s[7] || 0;
     if (ic !== n.ic) {
       n.ic = ic;

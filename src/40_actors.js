@@ -38,6 +38,7 @@ function computePose(a, P, t) {
   P.kL = P.kR = 0.06; P.eL = P.eR = -0.18;
   P.head = -a.pitch * 0.5; P.gun = false; P.pick = false; P.glider = false; P.held = null;
   if (a.state === 'sky') { P.body = 1.25 + (a.dive || 0) * 0.8; P.aL[0] = -0.3; P.aR[0] = -0.3; P.aL[2] = 1.35; P.aR[2] = -1.35; P.eL = P.eR = -0.35; P.legL[0] = 0.25; P.legR[0] = -0.15 + Math.sin(t * 9) * 0.12; P.kL = 0.55; P.kR = 0.3; P.head = -0.9; return P; }
+  if (a.crawl && a.alive && a.state === 'ground') { P.body = 1.35; P.bob = -0.55; P.aL[0] = -2.6 + Math.sin(a.walkPhase) * 0.4; P.aR[0] = -2.6 - Math.sin(a.walkPhase) * 0.4; P.legL[0] = 0.2; P.legR[0] = -0.1; P.kL = P.kR = 0.4; P.head = -1.0; return P; }
   if (a.state === 'glide') { P.body = 0.15; P.aL[0] = -Math.PI + 0.15; P.aR[0] = -Math.PI + 0.15; P.aL[2] = 0.22; P.aR[2] = -0.22; P.eL = P.eR = -0.12; P.legL[0] = 0.2 + Math.sin(t * 3) * 0.1; P.legR[0] = 0.1 - Math.sin(t * 3) * 0.1; P.kL = 0.35; P.kR = 0.25; P.glider = true; return P; }
   const run = Math.min(1, sp / 6.5), sw = Math.sin(a.walkPhase) * 0.75 * run;
   if (a.onGround || a.inWater) {

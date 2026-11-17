@@ -3,7 +3,7 @@ then embeds it as base64 in src/77b_character_data.js. Root-motion position trac
 import struct, json, base64, sys
 KEEP = ['Idle_A', 'Walk', 'Jog', 'Sprint', 'Jump_air', 'Flying_Forward', 'Glide', 'Swim_Fwd', 'Swim_Idle',
         'Pistol_Idle', 'Pistol_Shoot', 'Pistol_Reload', 'Chop_Tree', 'Consume', 'ClimbUp_1m_RM', 'Death_A',
-        'Dance_Body_Roll', 'Dance_Charleston', 'Dance_Simple', 'Jumping_Jacks', 'Greeting', 'Victory']
+        'Dance_Body_Roll', 'Dance_Charleston', 'Dance_Simple', 'Jumping_Jacks', 'Greeting', 'Victory', 'Crawl']
 d = open('assets/character_full.glb', 'rb').read(); off = 12; ch = []
 while off < len(d):
     clen, ct = struct.unpack('<I4s', d[off:off + 8]); ch.append(d[off + 8:off + 8 + clen]); off += 8 + clen

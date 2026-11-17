@@ -64,6 +64,8 @@ const HUD = {
     if (this.bannerT > 0) { this.bannerT -= dt; if (this.bannerT <= 0) $('banner').style.opacity = 0; }
     if (this.hitT > 0) { this.hitT -= dt; if (this.hitT <= 0) $('hitmarker').style.opacity = 0; }
     if (this.hurtT > 0) { this.hurtT -= dt; $('hurtVig').style.opacity = clamp(this.hurtT * 1.6, 0, 1); }
+    { const down = !!(player && player.alive && player.crawl && Cam.view === player); if ($('downVig').hidden === down) $('downVig').hidden = !down;
+      if (down) { const has = player.inv.some(it => it && it.kind === 'heal' && it.hid === 'medkit'), tip = has ? 'Switch to your Med-Kit and hold ' + (Input.pad.on ? 'RT' : Keys.of('fire')) + ' to heal' : 'Find a Med-Kit to get back up'; if (this.last.down !== tip) { this.last.down = tip; $('downTip').textContent = tip; } } }
     // damage numbers
     for (const n of this.nums) {
       if (n.t <= 0) continue; n.t -= dt; n.y += dt * 1.3;

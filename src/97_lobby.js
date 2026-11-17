@@ -57,6 +57,7 @@ const Lobby = {
     const bt = (this.t * 0.05) % 1; this.bus.position.set(lerp(-50, 50, bt), 4.5 + Math.sin(this.t) * 0.4, -26); this.bus.rotation.y = Math.PI / 2;
     for (const p of this.bus.userData.props) p.rotation.z += dt * 20;
     this.isl.rotation.y += dt * 0.05;
+    Opening.cam(this.cam, dt);
     renderer.render(this.scene, this.cam);
   },
   bindUI() {

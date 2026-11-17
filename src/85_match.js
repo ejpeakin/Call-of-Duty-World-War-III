@@ -194,7 +194,7 @@ const Match = {
   state: 'lobby', mode: 'solo', build: true, ranked: false, theme: 'greenvale', time: 0, aliveCount: 0, teamsAlive: 0,
   score: [0, 0], ending: false, endT: 0, spectate: null, paused: false, result: null, deathShown: false, hasWinner: false,
   start(o) {
-    Object.assign(this, o); MapRotation.began();   // the 30-day island timer starts with a player's first match
+    Object.assign(this, o); if (this.mode !== 'tutorial') MapRotation.began();   // the 30-day island timer starts with a player's first match
     this.state = 'loading'; $('loading').hidden = false; $('lobby').hidden = true; $('ldFill').style.width = '15%';
     $('ldMsg').textContent = 'Raising ' + THEMES[this.theme].name + '…';
     Sfx.init();
@@ -212,7 +212,7 @@ const Match = {
     Net.humans.clear();
     player = newActor({ name: 'You', isPlayer: true, team: 0 });
     actors.push(player);
-    const N = this.mode === 'rumble' ? 32 : 100;
+    const N = this.mode === 'tutorial' ? 1 : this.mode === 'rumble' ? 32 : 100;
     for (let i = 1; i < N; i++) {
       const team = this.mode === 'solo' ? i : this.mode === 'squads' ? Math.floor(i / 4) : (i < 16 ? 0 : 1);
       const hm = Net.hosting ? Net.slotMember(i, this.mode) : null;
@@ -222,11 +222,12 @@ const Match = {
       if (this.mode === 'squads' && team === 0) b.leader = player;
       BotRig.setLook(b.ri, b.look); actors.push(b);
     }
-    if (this.mode !== 'rumble') for (const v of W.vaults) this.spawnVault(v);
+    if (this.mode !== 'rumble' && this.mode !== 'tutorial') for (const v of W.vaults) this.spawnVault(v);
     for (const a of actors) if (!this.build && !a.npc) { a.overMax = 50; a.over = 50; }
     this.time = 0; this.firstLander = null; this.sharkKills = 0; this.score = [0, 0]; this.ending = false; this.spectate = null; this.paused = false; this.result = null; this.deathShown = false; this.hasWinner = false;
     Storm.init(this.mode);
-    if (this.mode === 'rumble') {
+    if (this.mode === 'tutorial') Tutorial.setup();
+    else if (this.mode === 'rumble') {
       Bus.active = false; if (Bus.mesh) Bus.mesh.visible = false;
       for (const a of actors) if (!a.npc) this.respawn(a, true);
       Storm.start();
@@ -247,7 +248,7 @@ const Match = {
     }
     this.time = this.time || 0; this.firstLander = null; this.sharkKills = 0; if (Net.guest) { this.score = [0, 0]; this.ending = false; this.spectate = null; this.paused = false; this.result = null; this.deathShown = false; this.hasWinner = false; }
     if (this.mode !== 'rumble') player.shield = 50;   // everyone drops in with half a shield
-    LiveEvent.init(this.mode); if (Net.inMatch) LiveEvent.state = 'off'; else Creatures.spawn();
+    LiveEvent.init(this.mode); if (Net.inMatch || this.mode === 'tutorial') LiveEvent.state = 'off'; else Creatures.spawn();
     if (PlayerRig) scene.remove(PlayerRig.root);
     PlayerRig = makeRig(Profile.d.eq); scene.add(PlayerRig.root);
     sun.castShadow = GFX.shadows(); GFX.pr = GFX.base; renderer.setPixelRatio(GFX.pr); renderer.setSize(innerWidth, innerHeight);
@@ -256,7 +257,8 @@ const Match = {
     if (Net.hosting) Net.hostStart(); else if (Net.guest) Net.flush();
     $('loading').hidden = true; HUD.startMatch();
     Input.requestLock();
-    if (this.mode !== 'rumble') HUD.banner('Welcome aboard the Sky Coach', Input.pad.on ? 'Press A to jump out' : IS_TOUCH ? 'Tap JUMP to leave the bus' : 'Press ' + Keys.of('jump').toUpperCase() + ' to jump out', 4);
+    if (this.mode === 'tutorial') { /* the step box explains everything */ }
+    else if (this.mode !== 'rumble') HUD.banner('Welcome aboard the Sky Coach', Input.pad.on ? 'Press A to jump out' : IS_TOUCH ? 'Tap JUMP to leave the bus' : 'Press ' + Keys.of('jump').toUpperCase() + ' to jump out', 4);
     else HUD.banner('Storm Rumble', 'First team to 40 eliminations wins. You respawn.', 4);
   },
   spawnVault(v) {
@@ -293,6 +295,7 @@ const Match = {
   recount() { const s = new Set(); let n = 0; for (const a of actors) if (a.alive && !a.npc) { n++; s.add(a.team); } this.aliveCount = n; this.teamsAlive = s.size; },
   teamAlive(t) { return actors.some(a => a.alive && !a.npc && a.team === t); },
   onElim(t, src, o = {}) {
+    if (this.mode === 'tutorial') return;   // targets only; the tutorial puts you back on your feet itself
     if (t.npc) { if (t.boss) HUD.banner(t.name + ' has fallen', 'Its Mythic weapon is on the floor of the vault', 4); return; }
     if (this.mode === 'rumble') {
       if (src && src !== t && src.team !== t.team) this.score[src.team]++; else this.score[1 - t.team]++;
@@ -339,6 +342,7 @@ const Match = {
     if (this.ending) { this.endT -= dt; if (this.endT <= 0) { this.ending = false; this.showResults(); } }
   },
   showResults() {
+    if (this.mode === 'tutorial') { Tutorial.stop(); this.toLobby(); return; }
     if (Net.hosting && !this.hasWinner) Net.emit({ k: 'end' });   // the host runs the match, so it ends for everyone
     this.state = 'results';
     if (document.pointerLockElement) document.exitPointerLock();
@@ -377,6 +381,7 @@ const Match = {
     $('death').hidden = true; $('results').hidden = false;
   },
   toLobby() {
+    Tutorial.stop();
     if (Net.inMatch) { if (Net.isHost) { if (!this.hasWinner) Net.emit({ k: 'end' }); } else if (this.state === 'play') Net.send('h', { k: 'bye' }); Net.inMatch = false; Net.queue.length = 0; }
     this.state = 'lobby'; $('results').hidden = true; $('death').hidden = true; $('pause').hidden = true; $('hud').hidden = true; $('bigmap').hidden = true; $('clickHint').hidden = true;
     if (document.pointerLockElement) document.exitPointerLock();

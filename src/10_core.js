@@ -186,6 +186,8 @@ const Keys = {
   },
   of(act) { return this.name(this.get(act)); },
 };
+// at or below this much health a player drops and crawls until a Med-Kit gets them back up
+const CRAWL_HP = 25;
 const GLIDER_AUTO = 65;   // metres above the ground where the glider opens on its own (was 34)
 const MAP_DAYS = 30, DAY_MS = 86400000;
 const MapRotation = {

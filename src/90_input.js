@@ -24,7 +24,7 @@ const Input = {
   // menus: the D-pad or left stick moves a highlight between buttons, A presses it, B goes back, LB / RB change tab
   padMenu(dt) {
     const pd = this.pad; if (!pd.gp) return;
-    const root = ['settings', 'ticket', 'results', 'death', 'pause', 'mpPanel', 'lobby'].map(id => $(id)).find(el => el && !el.hidden); if (!root) return;
+    const root = ['settings', 'tutAsk', 'tutEnd', 'ticket', 'results', 'death', 'pause', 'mpPanel', 'lobby'].map(id => $(id)).find(el => el && !el.hidden); if (!root) return;
     const els = [...root.querySelectorAll('button, [data-id], [data-mode], [data-isl], [data-f], [data-cat], [data-build], [data-body], input')].filter(el => el.offsetParent !== null && !el.disabled && el.getBoundingClientRect().width > 4);
     if (!els.length) return;
     if (!pd.focus || !els.includes(pd.focus)) { if (pd.focus) pd.focus.classList.remove('padfocus'); pd.focus = els.find(el => /readyBtn|resumeBtn|rLobbyBtn|specBtn|tkBtn/.test(el.id)) || els[0]; if (pd.on) pd.focus.classList.add('padfocus'); }
@@ -73,8 +73,8 @@ const Input = {
     cv.addEventListener('wheel', e => { if (Match.state === 'play') { this.wheel += Math.sign(e.deltaY); e.preventDefault(); } }, { passive: false });
     document.addEventListener('pointerlockchange', () => {
       this.locked = document.pointerLockElement === cv;
-      $('clickHint').hidden = this.locked || IS_TOUCH || Match.state !== 'play' || Match.paused || !$('death').hidden;
-      if (!this.locked && Match.state === 'play' && !Match.paused && !IS_TOUCH && $('death').hidden && $('results').hidden && !Match.ending) togglePause(true);
+      $('clickHint').hidden = this.locked || IS_TOUCH || Match.state !== 'play' || Match.paused || !$('death').hidden || !$('tutEnd').hidden;
+      if (!this.locked && Match.state === 'play' && !Match.paused && !IS_TOUCH && $('death').hidden && $('results').hidden && $('tutEnd').hidden && !Match.ending) togglePause(true);
     });
     document.addEventListener('pointerlockerror', () => { this.free = true; $('clickHint').hidden = true; });
     this.initTouch();
@@ -85,7 +85,7 @@ const Input = {
     if (IS_TOUCH || this.touch.on || this.pad.on) return;
     const cv = $('fdView');
     try { const p = cv.requestPointerLock(); if (p && p.catch) p.catch(() => { this.free = true; }); } catch (e) { this.free = true; }
-    setTimeout(() => { if (!this.locked && Match.state === 'play' && !Match.paused && !this.free) $('clickHint').hidden = false; }, 400);
+    setTimeout(() => { if (!this.locked && Match.state === 'play' && !Match.paused && !this.free && $('tutEnd').hidden) $('clickHint').hidden = false; }, 400);
   },
   initTouch() {
     const t = this.touch, ui = $('touchUI'), stick = $('stick'), knob = stick.querySelector('i');
@@ -204,6 +204,7 @@ const Cam = {
     else if (this.scoped) { dist = 0; side = 0; up = 0; py = 1.72; }
     else if (a === player && a.input.ads) { dist = 2.0; side = 0.72; up = 0.12; py = 1.62; }
     else { dist = 3.5; side = 0.82; up = 0.28; py = 1.62; }
+    if (a.crawl && !a.vehicle && a.state === 'ground') { py = 0.6; dist = Math.max(dist, 3.2); up = 0.5; }
     if (innerHeight > innerWidth * 1.2 && !this.scoped) { dist *= 1.35; side *= 0.6; }
     if (a.emote && a === player) { dist = 4.2; side = 0; }
     const s = a.scale * BODY_SCALE, px = a.pos.x + rx * side * 0.35, pyy = a.pos.y + py * s, pz = a.pos.z + rz * side * 0.35;
@@ -310,6 +311,7 @@ function updatePlayer(dt) {
   if (P.has('KeyZ')) setBuildPiece('wall');
   if (P.has('KeyX')) setBuildPiece('ramp');
   if (P.has('KeyC')) setBuildPiece('floor');
+  if (a.crawl) { P.delete('KeyQ'); P.delete('KeyZ'); P.delete('KeyX'); P.delete('KeyC'); P.delete('TouchBuild'); P.delete('KeyB'); }
   if (P.has('KeyQ') && Match.build) { Build.active = !Build.active; HUD.dirty = true; }
   if (P.has('TouchBuild')) { if (!Build.active) setBuildPiece('wall'); else if (Build.piece === 'wall') setBuildPiece('ramp'); else if (Build.piece === 'ramp') setBuildPiece('floor'); else { Build.active = false; HUD.dirty = true; } }
   if (P.has('KeyG') && Match.build) { const i = MAT_ORDER.indexOf(a.mat); a.mat = MAT_ORDER[(i + 1) % 3]; HUD.dirty = true; }

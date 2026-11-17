@@ -10,7 +10,7 @@ function boot() {
   try { Creatures.load(); } catch (e) { console.warn(e); }
   try { CharModel.load(); } catch (e) { console.warn(e); }
   HUD.init();
-  Input.init(); Settings.init();
+  Input.init(); Settings.init(); Tutorial.init();
   Lobby.init();
   $('resumeBtn').addEventListener('click', () => togglePause());
   $('tkBtn').addEventListener('click', () => Ticket.close());
@@ -22,6 +22,7 @@ function boot() {
   $('shadowChk').checked = !!Profile.d.shadows; $('shadowChk').addEventListener('change', e => { Profile.d.shadows = e.target.checked; sun.castShadow = GFX.shadows(); Profile.save(); });
   $('gfxSel').value = Profile.d.gfx || 'auto'; $('gfxSel').addEventListener('change', e => { Profile.d.gfx = e.target.value; Profile.save(); GFX.apply(); $('gfxNote').textContent = 'Saved. Grass and edge smoothing change after you reload the page.'; });
   $('fdView').addEventListener('click', () => { if (Match.state === 'play' && !Match.paused && !Input.locked) Input.requestLock(); });
+  Opening.start();
   requestAnimationFrame(frame);
   checkGL(); setInterval(checkGL, 3000);
 }
@@ -99,7 +100,7 @@ setInterval(() => {
 function step(now) {
   let dt = Math.min(0.05, Math.max(0.0005, (now - lastFrame) / 1000)); lastFrame = now;
   Input.pollPad();
-  if (Match.state !== 'play' || Match.paused || !$('death').hidden || !$('results').hidden || !$('ticket').hidden) Input.padMenu(dt);
+  if (Match.state !== 'play' || Match.paused || !$('death').hidden || !$('results').hidden || !$('ticket').hidden || !$('tutEnd').hidden) Input.padMenu(dt);
   if (Match.state === 'lobby' || Match.state === 'loading') { Lobby.render(dt); return; }
   if (Match.paused && !Net.inMatch) { renderer.render(scene, camera); return; }   // a shared match keeps running while you are in the menu
   gameTime += dt;
@@ -110,7 +111,7 @@ function step(now) {
     Vehicles.update(dt);
     Creatures.update(dt);
     Rockets.update(dt);
-    Match.update(dt); Net.update(dt);
+    Match.update(dt); Net.update(dt); Tutorial.update(dt);
     Interact.find();
   }
   Pickups.update(dt); Build.update(dt); FX.update(dt);

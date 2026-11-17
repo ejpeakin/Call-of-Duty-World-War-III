@@ -1,4 +1,14 @@
 <canvas id="fdView" tabindex="0"></canvas>
+<div id="opening" hidden>
+  <div class="op-rays"></div>
+  <div class="op-mid">
+    <div class="op-logo">FORT<span>DAY</span></div>
+    <div class="op-season">Season · Music Festival 2026</div>
+    <button class="op-play" type="button">PLAY</button>
+    <div class="op-hint">Click or press any key</div>
+  </div>
+</div>
+<div class="overlay" id="tutAsk" hidden><div class="card"><h2>Welcome to FortDay!</h2><p class="hint">New here? A quick tutorial shows you how to move, harvest, build, loot and fight. It takes a few minutes.</p><div class="btn-row"><button class="btn pri" id="tutAskGo" type="button">Play the tutorial</button><button class="btn" id="tutAskNo" type="button">Skip for now</button></div></div></div>
 <div id="stageWait" style="position:fixed;left:0;top:45%;width:60vw;text-align:center;color:#9fb8e8;font:600 15px system-ui,sans-serif;pointer-events:none;z-index:0">Loading the 3D view…</div>
 
 <div id="loading" hidden>
@@ -25,6 +35,7 @@
 
   <div class="side">
     <section class="panel" id="tab-play">
+      <button class="tut-card" id="tutBtn" type="button"><b>Tutorial</b><span>Learn to move, build, loot and fight in a few minutes</span></button>
       <h3>Play with friends</h3>
       <div class="mp" id="mpBox"></div>
       <h3>Mode</h3>
@@ -127,8 +138,11 @@
 
 <!-- ================= HUD ================= -->
 <div id="hud" hidden>
+  <div id="tutBox" hidden><span id="tutStep"></span><b id="tutTitle"></b><p id="tutText"></p><div id="tutBar"><i id="tutFill"></i></div><button id="tutSkip" type="button">Skip tutorial</button></div>
+  <div id="tutEnd" class="overlay" hidden><div class="card"><h2>You are ready!</h2><p class="hint">That is everything you need for a real match: drop from the bus, loot chests, build when you need cover, and stay ahead of the storm.</p><div class="btn-row"><button class="btn pri" id="tutDone" type="button">Back to the lobby</button></div></div></div>
   <div id="stormVig"></div>
   <div id="hurtVig"></div>
+  <div id="downVig" hidden><b>You are down</b><span id="downTip"></span></div>
   <div id="scope" hidden></div>
   <div id="dmgNums"></div>
   <div id="killfeed"></div>

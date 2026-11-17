@@ -81,7 +81,7 @@ const Build = {
     for (const p of this.pieces) if (p.anim > 0) { p.anim -= dt; p.mesh.scale.setScalar(p.anim > 0 ? 1 - p.anim / 0.14 * 0.6 : 1); }
     this.placeCD -= dt;
     this.hideGhost();
-    if (!this.active || !player || !player.alive || player.state !== 'ground' || player.vehicle || !Match.build) { this.tgt = null; return; }
+    if (!this.active || !player || !player.alive || player.crawl || player.state !== 'ground' || player.vehicle || !Match.build) { this.tgt = null; return; }
     const t = this.compute(player, this.piece); this.tgt = t;
     const g = this.ghosts[this.geoKey(t)]; this.pose(t, g);
     const ok = !this.map.has(t.key) && MAT_ORDER.some(m => player.mats[m] >= 10);
