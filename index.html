@@ -728,7 +728,7 @@ body.pad{cursor:none}
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js"></script>
 <script async src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>
-const BUILD_ID = '1117-2119';
+const BUILD_ID = '1117-2135';
 'use strict';
 // =====================================================================
 //  FORTDAY — core utilities, data tables, profile, audio
@@ -6583,11 +6583,24 @@ const _efM = new THREE.Matrix4(), _efQ = new THREE.Quaternion(), _efE = new THRE
 //     PeerJS). A free public PeerJS broker only introduces them; the host's browser then plays the relay.
 // =====================================================================
 const NET_RANGE = 350;
+// TURN relay: when a network blocks direct browser-to-browser links (common at schools), game messages go through
+// this relay instead. Fill in ONE of these from the TURN provider (see README "Multiplayer on school networks"):
+//  - credentialsUrl: an address that returns the current list of relay servers (Metered gives one), or
+//  - servers: the list itself, e.g. [{ urls: 'turns:relay.example.com:443?transport=tcp', username: '...', credential: '...' }]
+const NET_TURN = { credentialsUrl: '', servers: [] };
 const P2P_CHUNK = 15000;   // characters per data-channel message: every browser accepts this size
 const P2P = {
   peer: null, conn: null, hosting: false, room: null, nextId: 2, parts: new Map(), joinT: 0,
   ok() { return typeof Peer === 'function'; },
-  opts() { return Net.peerOpts || { debug: 0, config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }, { urls: 'stun:global.stun.twilio.com:3478' }] } }; },
+  turn: null,
+  opts() { return Net.peerOpts || { debug: 0, config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }, { urls: 'stun:global.stun.twilio.com:3478' }].concat(this.turn || NET_TURN.servers || []) } }; },
+  // fetch the relay list once (it may hand out short-lived logins); a few seconds at most, then carry on without it
+  loadTurn() {
+    if (this.turn || !NET_TURN.credentialsUrl) return Promise.resolve();
+    const t = new Promise(r => setTimeout(r, 4000));
+    const f = fetch(NET_TURN.credentialsUrl).then(r => r.ok ? r.json() : null).then(list => { if (Array.isArray(list) && list.length) this.turn = list.filter(s => s && s.urls); }).catch(() => {});
+    return Promise.race([f, t]);
+  },
   pid(code) { return 'fortday-room-v1-' + code.toLowerCase(); },
   clean(v, n) { return String(v == null ? '' : v).replace(/[^\w \-'.!]/g, '').trim().slice(0, n); },
   reset() { const p = this.peer; this.peer = null; this.conn = null; this.hosting = false; this.room = null; this.parts.clear(); clearTimeout(this.joinT); if (p) try { p.destroy(); } catch (e) { /* already gone */ } },
@@ -6718,7 +6731,7 @@ const Net = {
   linkP2P(go) {
     if (!this.supported) { this.fail('Multiplayer works on the website version of FortDay.'); return; }
     if (!P2P.ok()) { this.fail('The online play library did not load. Check your connection and reload the page.'); return; }
-    this.state = 'connecting'; this.err = ''; Lobby.refresh(); go();
+    this.state = 'connecting'; this.err = ''; Lobby.refresh(); P2P.loadTurn().then(go);
   },
   create() { if (this.p2p) this.linkP2P(() => P2P.host(this.me_())); else this.connect(() => this.raw(Object.assign({ t: 'create' }, this.me_()))); },
   join(code) {

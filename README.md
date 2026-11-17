@@ -20,3 +20,8 @@ The host's browser runs the bots, storm and loot, and each player's browser runs
 - **`npm start`:** `server.js` also relays players over a WebSocket at `/ws` (the `ws` package), which works on networks that block direct links.
 
 Cars, sharks and the Skywhale event are switched off in shared matches.
+
+## Multiplayer on school networks
+
+Some networks block direct browser-to-browser links, and players then see "Could not connect to that room". A TURN relay fixes that by passing the game messages through a server on the normal secure web port. To turn it on, put the relay details from a TURN provider into `NET_TURN` at the top of `src/87_net.js`, then run `bash build.sh` and push. Whatever goes there is visible to anyone who opens the page, so use a free plan with a usage limit.
+
