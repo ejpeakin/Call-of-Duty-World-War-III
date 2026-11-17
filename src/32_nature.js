@@ -347,8 +347,10 @@ const CoverGeo = {
   weed() { const b = new GB(); b.add(new THREE.IcosahedronGeometry(0.42, 1).scale(1, 0.85, 1).translate(0, 0.38, 0), 0xb89a5a, { jit: 0.3, flat: true }); return b.build(); },
 };
 const GroundCover = {
-  layers: [], shown: true,
-  clear() { for (const l of this.layers) { if (l.m.dispose) l.m.dispose(); l.m.geometry.dispose(); l.m.material.dispose(); } this.layers = []; },
+  layers: [], shown: true, thin: false,
+  // when a match runs slowly: keep the grass, hide flowers, ferns, mushrooms, reeds and shells
+  thinOut() { this.thin = true; this.layers.forEach((l, i) => { if (i > 0 && l.cell < 6) { l.m.visible = false; l.off = true; } }); },
+  clear() { for (const l of this.layers) { if (l.m.dispose) l.m.dispose(); l.m.geometry.dispose(); l.m.material.dispose(); } this.layers = []; this.thin = false; },
   // hab: 'grass' | 'open' | 'forest' | 'sand' | 'shore' | 'land'
   add(geo, o) {
     const M = o.M, mat = coverMat(!!o.glow, o.cell * M * 0.5 * 0.72, o.cell * M * 0.5 * 0.97, o.sway || 0);
@@ -359,7 +361,7 @@ const GroundCover = {
   },
   build() {
     const th = W.theme, s = th.style, nat = NAT[s], G = CoverGeo; GB.rnd = mulberry32(th.seed);
-    const desert = s === 'desert', dense = IS_TOUCH || GFX.fast ? 0.55 : 1;
+    const desert = s === 'desert', dense = IS_TOUCH ? 0.6 : GFX.fast ? 0.7 : 1;
     this.add(G.tuft(desert ? 7 : 10, desert ? 0.4 : 0.34, 0.035, desert ? 0.25 : 0.42), { cell: desert ? 2.0 : 0.92, M: Math.round((desert ? 44 : 76) * dense), prob: desert ? 0.5 : 0.95, hab: desert ? 'land' : 'grass', s: [0.7, 1.45], cols: nat.tuft, sway: 0.2 });
     nat.flowers.forEach((hex, i) => this.add(G.flower(hex, nat.glow), { cell: 3.1, M: Math.round(26 * dense), prob: desert ? 0.12 : 0.62, hab: 'open', s: [0.8, 1.45], sway: 0.14, glow: nat.glow, patch: 0.021 + i * 0.004 }));
     this.add(G.bush(nat.bush, nat.berry), { cell: 9, M: 20, prob: desert ? 0.16 : 0.34, hab: 'grass', s: [0.8, 1.9], cols: [0xffffff, 0xe8e8e8, 0xd4d4d4], sway: 0.02 });
@@ -398,7 +400,7 @@ const GroundCover = {
   update(cam) {
     if (!this.layers.length || !W.cls) return;
     const show = cam.y - groundH(cam.x, cam.z) < 75;
-    if (show !== this.shown) { this.shown = show; for (const l of this.layers) l.m.visible = show; }
+    if (show !== this.shown) { this.shown = show; for (const l of this.layers) l.m.visible = show && !l.off; }
     if (!show) return;
     for (const l of this.layers) {
       const cx = Math.floor(cam.x / l.cell), cz = Math.floor(cam.z / l.cell); if (cx === l.cx && cz === l.cz) continue;

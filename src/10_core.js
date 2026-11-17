@@ -314,13 +314,15 @@ const Profile = {
     xp: 0, wins: 0, matches: 0, kills: 0, top10: 0, rp: 0, umbrella: false, coins: 0, owned: {},
     eq: { outfit: 'rae', body: 'woman', backpack: 'ruck', pickaxe: 'pick', glider: 'sail', wrap: 'none', emote: 'groove', car: 'street' },
     sens: 1, shadows: !IS_TOUCH, mode: 'solo', build: true, theme: 'greenvale', ranked: false, novaGiven: true,
-    season: -1, seasonXp: 0, firstBonus: false, thankSeason: -1, ticketSeason: -1, skinsPaid: true, keys: {},
+    season: -1, seasonXp: 0, firstBonus: false, thankSeason: -1, ticketSeason: -1, skinsPaid: true, keys: {}, gfxV: 2,
   },
   load() {
     try {
       const s = localStorage.getItem('stormbreak.v1');
       if (s) { const o = JSON.parse(s); const eq = Object.assign({}, this.d.eq, o.eq || {}); Object.assign(this.d, o); this.d.eq = eq; if (!this.d.owned || typeof this.d.owned !== 'object') this.d.owned = {}; if (!this.d.novaGiven) { this.d.eq.outfit = 'nova'; this.d.novaGiven = true; } if (typeof this.d.coins !== 'number') this.d.coins = 1500;
         // these four skins used to be free: players who already had a save keep them
+        // earlier builds could save shadows off or Fast graphics on their own: start everyone from full quality once
+        if (o.gfxV !== 2) { this.d.shadows = !IS_TOUCH; this.d.gfx = 'auto'; this.d.gfxV = 2; this.save(); }
         if (!o.skinsPaid) { for (const id of ['nova', 'tripy', 'uzi', 'week']) this.d.owned['outfit:' + id] = true; this.d.skinsPaid = true; this.save(); } }
     } catch (e) { /* storage unavailable */ }
   },

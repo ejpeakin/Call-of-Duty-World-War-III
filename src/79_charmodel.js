@@ -681,7 +681,7 @@ const CharPool = {
       const free = this.rigs.filter(R => !R.actor);
       if (free.length) {
         const cand = [];
-        const near = GFX.fast ? 45 : this.near; for (const a of actors) if (!a._cm && a.alive && ok(a)) { const d = a.pos.distanceTo(cam); if (d < near) cand.push([d, a]); }
+        const near = GFX.fast ? 65 : this.near; for (const a of actors) if (!a._cm && a.alive && ok(a)) { const d = a.pos.distanceTo(cam); if (d < near) cand.push([d, a]); }
         cand.sort((p, q) => p[0] - q[0]);
         for (let i = 0; i < cand.length && free.length; i++) {
           const R = free.pop(), a = cand[i][1]; R.actor = a; a._cm = R; a._dieT = null;

@@ -34,9 +34,8 @@
 }
 [hidden]{display:none!important}
 html,body{height:100%;margin:0;overflow:hidden;background:var(--night);color:var(--ink);font-family:var(--f-body);-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
-/* The 3D view is #fdView, not #game: the BetterCanvas / BetterCampus extension hides [id~="game"] on every site.
-   opacity just under 1 keeps ChromeOS from handing it to a hardware overlay, which shows nothing on some Intel Chromebooks */
-#fdView{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;outline:none;opacity:.999}
+/* The 3D view is #fdView, not #game: the BetterCanvas / BetterCampus extension hides [id~="game"] on every site. */
+#fdView{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;outline:none}
 button{font-family:var(--f-body);color:var(--ink);cursor:pointer}
 button:focus-visible{outline:2px solid var(--sun-2);outline-offset:2px}
 .num{font-variant-numeric:tabular-nums}
@@ -621,7 +620,7 @@ body.pad{cursor:none}
   <div class="card set-card">
     <h2>Settings</h2>
     <div class="sens"><label for="sensIn">Look sensitivity</label><input type="range" id="sensIn" min="0.3" max="2.5" step="0.05"></div>
-    <div class="sens"><label for="gfxSel">Graphics</label><select id="gfxSel"><option value="auto">Auto (recommended)</option><option value="fast">Fast: smoother on Chromebooks</option><option value="pretty">Pretty: sharper, needs a strong computer</option></select></div>
+    <div class="sens"><label for="gfxSel">Graphics</label><select id="gfxSel"><option value="auto">Auto (recommended)</option><option value="fast">Fast: lighter, for slow computers</option><option value="pretty">Pretty: sharper, needs a strong computer</option></select></div>
     <div class="hint" id="gfxNote"></div>
     <label class="check"><input type="checkbox" id="shadowChk"> Shadows</label>
     <h3 class="set-h">Keybinds</h3>
@@ -674,7 +673,7 @@ body.pad{cursor:none}
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js"></script>
 <script async src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>
-const BUILD_ID = '1117-1903';
+const BUILD_ID = '1117-1939';
 'use strict';
 // =====================================================================
 //  FORTDAY — core utilities, data tables, profile, audio
@@ -991,13 +990,15 @@ const Profile = {
     xp: 0, wins: 0, matches: 0, kills: 0, top10: 0, rp: 0, umbrella: false, coins: 0, owned: {},
     eq: { outfit: 'rae', body: 'woman', backpack: 'ruck', pickaxe: 'pick', glider: 'sail', wrap: 'none', emote: 'groove', car: 'street' },
     sens: 1, shadows: !IS_TOUCH, mode: 'solo', build: true, theme: 'greenvale', ranked: false, novaGiven: true,
-    season: -1, seasonXp: 0, firstBonus: false, thankSeason: -1, ticketSeason: -1, skinsPaid: true, keys: {},
+    season: -1, seasonXp: 0, firstBonus: false, thankSeason: -1, ticketSeason: -1, skinsPaid: true, keys: {}, gfxV: 2,
   },
   load() {
     try {
       const s = localStorage.getItem('stormbreak.v1');
       if (s) { const o = JSON.parse(s); const eq = Object.assign({}, this.d.eq, o.eq || {}); Object.assign(this.d, o); this.d.eq = eq; if (!this.d.owned || typeof this.d.owned !== 'object') this.d.owned = {}; if (!this.d.novaGiven) { this.d.eq.outfit = 'nova'; this.d.novaGiven = true; } if (typeof this.d.coins !== 'number') this.d.coins = 1500;
         // these four skins used to be free: players who already had a save keep them
+        // earlier builds could save shadows off or Fast graphics on their own: start everyone from full quality once
+        if (o.gfxV !== 2) { this.d.shadows = !IS_TOUCH; this.d.gfx = 'auto'; this.d.gfxV = 2; this.save(); }
         if (!o.skinsPaid) { for (const id of ['nova', 'tripy', 'uzi', 'week']) this.d.owned['outfit:' + id] = true; this.d.skinsPaid = true; this.save(); } }
     } catch (e) { /* storage unavailable */ }
   },
@@ -1142,32 +1143,35 @@ function makeTex(kind) {
   const t = new THREE.CanvasTexture(c); t.anisotropy = 4; return t;
 }
 
-// Graphics quality. 'auto' uses Fast on low-power graphics chips (Chromebooks, phones, Intel UHD), and while
-// playing the game also steps the resolution down whenever the frame rate stays low.
+// Graphics quality. 'auto' starts at full quality and, only if a match actually runs slowly, gives up the things that
+// are least noticeable first: shadows, then the small ground plants, then a little resolution (never below 75%).
+// 'fast' is the lighter look chosen on purpose; 'pretty' never steps down.
 const GFX = {
   fast: false, base: 1, pr: 1, tWin: 0, nWin: 0, steps: 0,
   lowPower: /CrOS/.test(navigator.userAgent) || IS_TOUCH,
-  pick() { const g = Profile.d.gfx || 'auto'; return g === 'fast' || (g === 'auto' && (this.lowPower || SOFT_GL)); },
+  pick() { return (Profile.d.gfx || 'auto') === 'fast' || SOFT_GL; },
   shadows() { return !!Profile.d.shadows && !this.fast && !SOFT_GL; },
   apply() {
     this.fast = this.pick(); const dpr = window.devicePixelRatio || 1;
-    this.base = SOFT_GL ? 0.6 : this.fast ? Math.min(dpr, 1) * 0.8 : Math.min(dpr, IS_TOUCH ? 1.25 : 1.5);
+    this.base = SOFT_GL ? 0.6 : this.fast ? Math.min(dpr, 1) * 0.9 : Math.min(dpr, IS_TOUCH ? 1.25 : 1.5);
     this.pr = this.base; this.steps = 0; renderer.setPixelRatio(this.pr); renderer.setSize(innerWidth, innerHeight);
     if (sun) sun.castShadow = Match.state === 'play' ? this.shadows() : false;
   },
-  // called every frame with the time since the last one: if a match runs under ~38 fps for a few seconds, draw fewer pixels
+  // called every frame with the time since the last one: if a match stays under ~30 fps for 4 seconds, take one step down
   watch(dt) {
     if (Match.state !== 'play' || Match.paused || document.hidden || dt > 1.5) { this.tWin = this.nWin = 0; return; }   // a long gap is a tab switch or a load, not a slow frame
-    this.tWin += dt; this.nWin++; if (this.tWin < 2.5) return;
+    this.tWin += dt; this.nWin++; if (this.tWin < 4) return;
     const fps = this.nWin / this.tWin; this.tWin = this.nWin = 0;
-    if (fps >= 38 || (Profile.d.gfx || 'auto') === 'pretty') return;
+    if (fps >= 30 || (Profile.d.gfx || 'auto') === 'pretty') return;
     if (sun && sun.castShadow) { sun.castShadow = false; this.steps++; return; }
-    if (this.pr > 0.5) { this.pr = Math.max(0.5, this.pr * 0.85); this.steps++; renderer.setPixelRatio(this.pr); renderer.setSize(innerWidth, innerHeight); }
+    if (!GroundCover.thin) { GroundCover.thinOut(); this.steps++; return; }
+    const floor = Math.min(this.base, 0.75);
+    if (this.pr > floor + 0.01) { this.pr = Math.max(floor, this.pr * 0.9); this.steps++; renderer.setPixelRatio(this.pr); renderer.setSize(innerWidth, innerHeight); }
   },
 };
 function initEngine() {
   const canvas = $('fdView'), g0 = Profile.d.gfx || 'auto';
-  renderer = new THREE.WebGLRenderer({ canvas, antialias: g0 === 'pretty' || (g0 === 'auto' && !GFX.lowPower), powerPreference: 'high-performance' });
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: g0 !== 'fast', powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, IS_TOUCH ? 1.25 : 1.5));
   renderer.setSize(innerWidth, innerHeight);
   // no graphics acceleration (software drawing): fewer pixels and no shadows, or every frame takes seconds
@@ -2392,8 +2396,10 @@ const CoverGeo = {
   weed() { const b = new GB(); b.add(new THREE.IcosahedronGeometry(0.42, 1).scale(1, 0.85, 1).translate(0, 0.38, 0), 0xb89a5a, { jit: 0.3, flat: true }); return b.build(); },
 };
 const GroundCover = {
-  layers: [], shown: true,
-  clear() { for (const l of this.layers) { if (l.m.dispose) l.m.dispose(); l.m.geometry.dispose(); l.m.material.dispose(); } this.layers = []; },
+  layers: [], shown: true, thin: false,
+  // when a match runs slowly: keep the grass, hide flowers, ferns, mushrooms, reeds and shells
+  thinOut() { this.thin = true; this.layers.forEach((l, i) => { if (i > 0 && l.cell < 6) { l.m.visible = false; l.off = true; } }); },
+  clear() { for (const l of this.layers) { if (l.m.dispose) l.m.dispose(); l.m.geometry.dispose(); l.m.material.dispose(); } this.layers = []; this.thin = false; },
   // hab: 'grass' | 'open' | 'forest' | 'sand' | 'shore' | 'land'
   add(geo, o) {
     const M = o.M, mat = coverMat(!!o.glow, o.cell * M * 0.5 * 0.72, o.cell * M * 0.5 * 0.97, o.sway || 0);
@@ -2404,7 +2410,7 @@ const GroundCover = {
   },
   build() {
     const th = W.theme, s = th.style, nat = NAT[s], G = CoverGeo; GB.rnd = mulberry32(th.seed);
-    const desert = s === 'desert', dense = IS_TOUCH || GFX.fast ? 0.55 : 1;
+    const desert = s === 'desert', dense = IS_TOUCH ? 0.6 : GFX.fast ? 0.7 : 1;
     this.add(G.tuft(desert ? 7 : 10, desert ? 0.4 : 0.34, 0.035, desert ? 0.25 : 0.42), { cell: desert ? 2.0 : 0.92, M: Math.round((desert ? 44 : 76) * dense), prob: desert ? 0.5 : 0.95, hab: desert ? 'land' : 'grass', s: [0.7, 1.45], cols: nat.tuft, sway: 0.2 });
     nat.flowers.forEach((hex, i) => this.add(G.flower(hex, nat.glow), { cell: 3.1, M: Math.round(26 * dense), prob: desert ? 0.12 : 0.62, hab: 'open', s: [0.8, 1.45], sway: 0.14, glow: nat.glow, patch: 0.021 + i * 0.004 }));
     this.add(G.bush(nat.bush, nat.berry), { cell: 9, M: 20, prob: desert ? 0.16 : 0.34, hab: 'grass', s: [0.8, 1.9], cols: [0xffffff, 0xe8e8e8, 0xd4d4d4], sway: 0.02 });
@@ -2443,7 +2449,7 @@ const GroundCover = {
   update(cam) {
     if (!this.layers.length || !W.cls) return;
     const show = cam.y - groundH(cam.x, cam.z) < 75;
-    if (show !== this.shown) { this.shown = show; for (const l of this.layers) l.m.visible = show; }
+    if (show !== this.shown) { this.shown = show; for (const l of this.layers) l.m.visible = show && !l.off; }
     if (!show) return;
     for (const l of this.layers) {
       const cx = Math.floor(cam.x / l.cell), cz = Math.floor(cam.z / l.cell); if (cx === l.cx && cz === l.cz) continue;
@@ -5651,7 +5657,7 @@ const CharPool = {
       const free = this.rigs.filter(R => !R.actor);
       if (free.length) {
         const cand = [];
-        const near = GFX.fast ? 45 : this.near; for (const a of actors) if (!a._cm && a.alive && ok(a)) { const d = a.pos.distanceTo(cam); if (d < near) cand.push([d, a]); }
+        const near = GFX.fast ? 65 : this.near; for (const a of actors) if (!a._cm && a.alive && ok(a)) { const d = a.pos.distanceTo(cam); if (d < near) cand.push([d, a]); }
         cand.sort((p, q) => p[0] - q[0]);
         for (let i = 0; i < cand.length && free.length; i++) {
           const R = free.pop(), a = cand[i][1]; R.actor = a; a._cm = R; a._dieT = null;
@@ -7758,7 +7764,6 @@ const Lobby = {
 let gameTime = 0, lastFrame = performance.now();
 function boot() {
   initEngine();
-  if (SOFT_GL) Profile.d.shadows = false;
   BotRig.init(112);
   Build.init();
   Trails.init(); ElimFX.init();

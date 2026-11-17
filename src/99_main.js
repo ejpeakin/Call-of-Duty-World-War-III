@@ -4,7 +4,6 @@
 let gameTime = 0, lastFrame = performance.now();
 function boot() {
   initEngine();
-  if (SOFT_GL) Profile.d.shadows = false;
   BotRig.init(112);
   Build.init();
   Trails.init(); ElimFX.init();
