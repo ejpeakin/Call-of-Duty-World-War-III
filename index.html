@@ -661,7 +661,7 @@ body.pad{cursor:none}
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js"></script>
 <script async src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>
-const BUILD_ID = '1117-1538';
+const BUILD_ID = '1117-1739';
 'use strict';
 // =====================================================================
 //  FORTDAY — core utilities, data tables, profile, audio
@@ -7661,12 +7661,30 @@ let frameErrs = 0, firstFrame = false;
 const Diag = {
   on: /[?&]diag\b/.test(location.search), frames: 0, slowT: 0, ms: 0, fps: 0, n: 0, t0: performance.now(), errs: [], el: null, gpu: '', drops: 0,
   log(m) { this.errs.push(String(m).slice(0, 140)); if (this.errs.length > 4) this.errs.shift(); },
+  // who is hiding the 3D view: an attribute, an inline style, a style rule (and where it came from), or nodes the game did not add
+  hider() {
+    const cv = $('game'), out = []; if (!cv) return 'no #game element';
+    out.push('hidden attr ' + cv.hasAttribute('hidden') + ' · inline style "' + (cv.getAttribute('style') || '').slice(0, 120) + '"');
+    for (const sh of document.styleSheets) {
+      let rules; try { rules = sh.cssRules; } catch (e) { out.push('sheet (unreadable): ' + (sh.href || '?')); continue; }
+      const src = sh.href ? sh.href.replace(/^https?:\/\//, '').slice(0, 60) : sh.ownerNode ? sh.ownerNode.tagName.toLowerCase() + (sh.ownerNode.id ? '#' + sh.ownerNode.id : '') + (sh.ownerNode.parentNode === document.head ? ' in head' : sh.ownerNode.parentNode === document.body ? ' in body' : ' elsewhere') : '?';
+      const walk = list => { for (const r of list) { if (r.cssRules && !r.selectorText) { try { if (!r.media || matchMedia(r.media.mediaText).matches) walk(r.cssRules); } catch (e) { /* */ } continue; } if (!r.selectorText || !r.style) continue; let m = false; try { m = cv.matches(r.selectorText); } catch (e) { /* */ } if (m && (r.style.display || r.style.visibility || r.style.opacity)) out.push('rule from ' + src + ': ' + r.selectorText.slice(0, 60) + ' {' + (r.style.display ? 'display:' + r.style.display + (r.style.getPropertyPriority('display') ? '!' : '') : '') + (r.style.visibility ? ' visibility:' + r.style.visibility : '') + (r.style.opacity ? ' opacity:' + r.style.opacity : '') + '}'); } };
+      walk(rules);
+    }
+    const ours = new Set(['SCRIPT', 'STYLE', 'LINK', 'META', 'TITLE', 'CANVAS']), extra = [];
+    for (const el of [...document.documentElement.children, ...document.head.children, ...document.body.children]) { if (el === document.head || el === document.body || ours.has(el.tagName) || (el.id && document.querySelector('#' + CSS.escape(el.id)) === el && GAME_IDS.has(el.id))) continue; extra.push(el.tagName.toLowerCase() + (el.id ? '#' + el.id : '') + (el.className && typeof el.className === 'string' ? '.' + el.className.split(' ')[0] : '')); }
+    for (const el of document.querySelectorAll('style, link[rel=stylesheet]')) if (!el.dataset.fd && el.id !== 'fdStyle' && !(el.href && /fonts\.googleapis/.test(el.href)) && el.parentNode !== document.head) extra.push(el.tagName.toLowerCase() + ' in ' + el.parentNode.tagName.toLowerCase());
+    if (extra.length) out.push('added by something else: ' + extra.slice(0, 8).join(', '));
+    if (Diag.changes.length) out.push('canvas changed at: ' + Diag.changes.slice(0, 4).join(' | '));
+    return out.join('\n');
+  },
+  changes: [],
   // what is actually on screen where the 3D view should be, and what colour the last frame was there
   screen() {
     const cv = $('game'), r = cv.getBoundingClientRect(), cs = getComputedStyle(cv), x = Math.round(innerWidth * 0.3), y = Math.round(innerHeight * 0.5), el = document.elementFromPoint(x, y);
     let px = '?'; try { const gl = renderer.getContext(), p = new Uint8Array(4); renderer.render(Match.state === 'lobby' ? Lobby.scene : scene, Match.state === 'lobby' ? Lobby.cam : camera); gl.readPixels(Math.round(gl.drawingBufferWidth * 0.3), gl.drawingBufferHeight >> 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, p); px = [...p].join(','); } catch (e) { px = 'err'; }
     const attrs = (() => { try { const a = renderer.getContext().getContextAttributes(); return (a.alpha ? 'alpha ' : '') + (a.antialias ? 'aa ' : '') + (a.desynchronized ? 'desync ' : '') + (a.powerPreference || ''); } catch (e) { return '?'; } })();
-    return 'canvas ' + Math.round(r.width) + 'x' + Math.round(r.height) + ' at ' + Math.round(r.left) + ',' + Math.round(r.top) + ' · ' + cs.display + '/' + cs.visibility + '/op ' + cs.opacity + ' · on top: ' + (el ? el.tagName.toLowerCase() + (el.id ? '#' + el.id : '') + (el.className && typeof el.className === 'string' ? '.' + el.className.split(' ')[0] : '') : 'none') + '\nframe pixel ' + px + ' · ' + attrs + ' · ua ' + navigator.userAgent.replace(/^Mozilla\/5\.0 /, '').slice(0, 90);
+    return (cs.display === 'none' || r.width < 2 ? this.hider() + '\n' : '') + 'canvas ' + Math.round(r.width) + 'x' + Math.round(r.height) + ' at ' + Math.round(r.left) + ',' + Math.round(r.top) + ' · ' + cs.display + '/' + cs.visibility + '/op ' + cs.opacity + ' · on top: ' + (el ? el.tagName.toLowerCase() + (el.id ? '#' + el.id : '') + (el.className && typeof el.className === 'string' ? '.' + el.className.split(' ')[0] : '') : 'none') + '\nframe pixel ' + px + ' · ' + attrs + ' · ua ' + navigator.userAgent.replace(/^Mozilla\/5\.0 /, '').slice(0, 90);
   },
   tick(ms) {
     this.frames++; this.n++; this.ms = this.ms * 0.9 + ms * 0.1;
@@ -7677,13 +7695,16 @@ const Diag = {
     if (now - this.t0 < 500) return;
     this.fps = Math.round(this.n * 1000 / (now - this.t0)); this.n = 0; this.t0 = now;
     if (!this.on) return;
-    if (!this.el) { this.el = document.createElement('pre'); this.el.style.cssText = 'position:fixed;left:8px;top:64px;z-index:98;margin:0;max-width:calc(100vw - 16px);background:rgba(0,0,0,.82);color:#9ff0a8;font:12px/1.4 ui-monospace,monospace;padding:10px 12px;border-radius:8px;pointer-events:none;white-space:pre-wrap'; document.body.appendChild(this.el); }
+    if (!this.el) { this.el = document.createElement('pre'); this.el.id = 'diagPanel'; this.el.style.cssText = 'position:fixed;left:8px;top:64px;z-index:98;margin:0;max-width:calc(100vw - 16px);background:rgba(0,0,0,.82);color:#9ff0a8;font:12px/1.4 ui-monospace,monospace;padding:10px 12px;border-radius:8px;pointer-events:none;white-space:pre-wrap'; document.body.appendChild(this.el); }
     if (!this.gpu) try { const gl = renderer.getContext(), d = gl.getExtension('WEBGL_debug_renderer_info'); this.gpu = d ? gl.getParameter(d.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER); } catch (e) { this.gpu = '?'; }
     let lost = '?', buf = '?'; try { const gl = renderer.getContext(); lost = gl.isContextLost(); buf = gl.drawingBufferWidth + 'x' + gl.drawingBufferHeight; } catch (e) { /* */ }
     let pads = 0; try { pads = [...(navigator.getGamepads ? navigator.getGamepads() : [])].filter(Boolean).length; } catch (e) { /* */ }
     this.el.textContent = ['FortDay build ' + BUILD_ID, 'state ' + Match.state + (Match.paused ? ' (paused)' : '') + ' · frames ' + this.frames + ' · ' + this.fps + ' fps · ' + this.ms.toFixed(0) + ' ms/frame', 'graphics ' + this.gpu, 'context lost ' + lost + ' · buffer ' + buf + ' · pixel ratio ' + renderer.getPixelRatio().toFixed(2) + ' · lowered ' + this.drops + 'x', 'window ' + innerWidth + 'x' + innerHeight + ' · dpr ' + (devicePixelRatio || 1) + ' · hidden ' + document.hidden + ' · pads ' + pads + (Input.pad.on ? ' (in use)' : ''), this.screen(), 'character ' + (CharModel.ready ? 'ready' : 'not loaded') + ' · online lib ' + (typeof Peer === 'function' ? 'ok' : 'missing') + ' · net ' + Net.state + (Net.p2p ? ' p2p' : ' relay')].concat(this.errs.length ? ['errors:'].concat(this.errs) : []).join('\n');
   },
 };
+const GAME_IDS = new Set([...document.querySelectorAll('body > [id]')].map(e => e.id).concat(['problemBar', 'stageWait', 'diagPanel']));
+{ const cv = document.getElementById('game'), t0 = performance.now(); if (cv && window.MutationObserver) new MutationObserver(ms => { for (const m of ms) Diag.changes.push(m.attributeName + '=' + String(cv.getAttribute(m.attributeName)).slice(0, 50) + ' at ' + Math.round(performance.now() - t0) + 'ms'); if (Diag.changes.length > 8) Diag.changes.length = 8; }).observe(cv, { attributes: true, attributeFilter: ['style', 'hidden', 'class'] }); }
+setTimeout(() => { const cv = document.getElementById('game'); if (cv && getComputedStyle(cv).display === 'none') { Diag.on = true; showProblem('The 3D view is being hidden on this page, so you cannot see the game. The green box above shows what is hiding it: please send a screenshot of this whole page.'); } }, 6000);
 addEventListener('error', e => Diag.log(e.message || e)); addEventListener('unhandledrejection', e => Diag.log('promise: ' + (e.reason && e.reason.message || e.reason)));
 function frame(now) {
   requestAnimationFrame(frame);
