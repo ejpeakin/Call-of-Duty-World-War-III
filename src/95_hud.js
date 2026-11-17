@@ -94,7 +94,7 @@ const HUD = {
       const mk = MAT_ORDER.map(m => v.mats[m]).join(',') + v.mat;
       if (this.last.mats !== mk) { this.last.mats = mk; [...$('mats').children].forEach(el => { const m = el.dataset.m; el.querySelector('span').textContent = v.mats[m]; el.classList.toggle('on', m === v.mat); }); }
       const bk = Build.active + Build.piece + Input.pad.on;
-      if (this.last.bb !== bk) { this.last.bb = bk; const pad = Input.pad.on; $('buildbar').innerHTML = [['wall', 'Z', 'Wall'], ['ramp', 'X', 'Ramp'], ['floor', 'C', 'Floor']].map(([p, k, n]) => `<div class="${Build.active && Build.piece === p ? 'on' : ''}">${pad ? '' : '<kbd>' + k + '</kbd>'}${n}</div>`).join('') + (pad ? '<div><kbd>B</kbd>Build</div><div><kbd>RB</kbd>Piece</div><div><kbd>LB</kbd>Material</div>' : '<div><kbd>G</kbd>Material</div>'); }
+      if (this.last.bb !== bk) { this.last.bb = bk; const pad = Input.pad.on; $('buildbar').innerHTML = [['wall', Keys.of('wall'), 'Wall'], ['ramp', Keys.of('ramp'), 'Ramp'], ['floor', Keys.of('floor'), 'Floor']].map(([p, k, n]) => `<div class="${Build.active && Build.piece === p ? 'on' : ''}">${pad ? '' : '<kbd>' + k + '</kbd>'}${n}</div>`).join('') + (pad ? '<div><kbd>B</kbd>Build</div><div><kbd>RB</kbd>Piece</div><div><kbd>LB</kbd>Material</div>' : '<div><kbd>' + esc(Keys.of('material')) + '</kbd>Material</div>'); }
     }
     // dark purple tint while standing in the storm
     { const inS = v.alive && v.state !== 'bus' && Storm.state !== 'idle' && Storm.outside(v.pos.x, v.pos.z); const st = $('stormTint'); if (st.classList.contains('on') !== inS) st.classList.toggle('on', inS); }
@@ -112,9 +112,9 @@ const HUD = {
     $('scope').hidden = !Cam.scoped;
     // prompt
     const pr = $('prompt'), c = Interact.cur;
-    if (a.alive && a.state === 'bus') { pr.style.display = 'block'; pr.innerHTML = '<kbd>' + (Input.pad.on ? 'A' : IS_TOUCH || Input.touch.on ? 'JUMP' : 'SPACE') + '</kbd>Jump from the bus'; pr.style.setProperty('--pc', '#4fb0ff'); }
-    else if (a.alive && a.state === 'sky') { pr.style.display = 'block'; pr.innerHTML = '<kbd>' + (Input.pad.on ? 'A' : Input.touch.on ? 'JUMP' : 'SPACE') + '</kbd>Open glider early'; pr.style.setProperty('--pc', '#3aa8ff'); }
-    else if (c && a.alive) { pr.style.display = 'block'; const k = (Input.pad.on ? 'X' : Input.touch.on ? 'USE' : 'E'); if (this.last.pr !== c.label + k) { this.last.pr = c.label + k; pr.innerHTML = '<kbd>' + k + '</kbd>' + esc(c.label); } pr.style.setProperty('--pc', c.color); }
+    if (a.alive && a.state === 'bus') { pr.style.display = 'block'; pr.innerHTML = '<kbd>' + (Input.pad.on ? 'A' : IS_TOUCH || Input.touch.on ? 'JUMP' : esc(Keys.of('jump')).toUpperCase()) + '</kbd>Jump from the bus'; pr.style.setProperty('--pc', '#4fb0ff'); }
+    else if (a.alive && a.state === 'sky') { pr.style.display = 'block'; pr.innerHTML = '<kbd>' + (Input.pad.on ? 'A' : Input.touch.on ? 'JUMP' : esc(Keys.of('jump')).toUpperCase()) + '</kbd>Open glider early'; pr.style.setProperty('--pc', '#3aa8ff'); }
+    else if (c && a.alive) { pr.style.display = 'block'; const k = (Input.pad.on ? 'X' : Input.touch.on ? 'USE' : Keys.of('use')); if (this.last.pr !== c.label + k) { this.last.pr = c.label + k; pr.innerHTML = '<kbd>' + k + '</kbd>' + esc(c.label); } pr.style.setProperty('--pc', c.color); }
     else { pr.style.display = 'none'; this.last.pr = null; }
     // channel bar
     let chl = null, chf = 0;

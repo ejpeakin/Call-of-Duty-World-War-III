@@ -256,7 +256,7 @@ const Match = {
     if (Net.hosting) Net.hostStart(); else if (Net.guest) Net.flush();
     $('loading').hidden = true; HUD.startMatch();
     Input.requestLock();
-    if (this.mode !== 'rumble') HUD.banner('Welcome aboard the Sky Coach', Input.pad.on ? 'Press A to jump out' : IS_TOUCH ? 'Tap JUMP to leave the bus' : 'Press SPACE to jump out', 4);
+    if (this.mode !== 'rumble') HUD.banner('Welcome aboard the Sky Coach', Input.pad.on ? 'Press A to jump out' : IS_TOUCH ? 'Tap JUMP to leave the bus' : 'Press ' + Keys.of('jump').toUpperCase() + ' to jump out', 4);
     else HUD.banner('Storm Rumble', 'First team to 40 eliminations wins. You respawn.', 4);
   },
   spawnVault(v) {

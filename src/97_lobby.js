@@ -174,6 +174,7 @@ const Lobby = {
   refresh() {
     const d = Profile.d;
     Net.render(); $('buildTag').textContent = 'build ' + BUILD_ID;
+    { const k = a => '<kbd>' + esc(Keys.of(a)) + '</kbd>'; $('kbHint').innerHTML = k('forward') + k('left') + k('back') + k('right') + ' move · ' + k('fire') + ' fire · ' + k('ads') + ' aim · ' + k('jump') + ' jump · ' + k('sprint') + ' sprint · ' + k('use') + ' pick up / open · ' + k('reload') + ' reload · ' + k('wall') + k('ramp') + k('floor') + ' build · ' + k('material') + ' material · ' + k('emote') + ' emote · ' + k('map') + ' map. Change any of these in Settings.'; }
     $('coinLbl').textContent = d.coins.toLocaleString();
     [...$('tabs').children].forEach(b => b.classList.toggle('on', b.dataset.tab === this.tab));
     for (const t of ['play', 'locker', 'pass', 'career', 'shop']) $('tab-' + t).hidden = t !== this.tab;

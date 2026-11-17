@@ -150,6 +150,42 @@ const THEMES = {
 const THEME_ORDER = ['greenvale', 'floodtide', 'neon', 'olympia', 'dune'];
 // Map rotation: everyone starts on Greenvale. 30 days after a player's first match the next island opens and
 // the previous one closes, in THEME_ORDER, starting over after the last.
+// ---------------------------------------------------------------- keybinds
+// [action, label, default key]. The game reacts to an action's default key name internally, so touch buttons and
+// controllers keep working whatever a player binds; Keys translates the real key or mouse button they press.
+const KEY_ACTIONS = [
+  ['forward', 'Move forward', 'KeyW'], ['back', 'Move back', 'KeyS'], ['left', 'Move left', 'KeyA'], ['right', 'Move right', 'KeyD'],
+  ['jump', 'Jump / leave bus / glider', 'Space'], ['sprint', 'Sprint', 'ShiftLeft'],
+  ['fire', 'Fire / harvest / build', 'Mouse0'], ['ads', 'Aim down sights', 'Mouse2'], ['reload', 'Reload', 'KeyR'], ['use', 'Pick up / open / drive', 'KeyE'],
+  ['slot1', 'Harvesting tool', 'Digit1'], ['slot2', 'Slot 2', 'Digit2'], ['slot3', 'Slot 3', 'Digit3'], ['slot4', 'Slot 4', 'Digit4'], ['slot5', 'Slot 5', 'Digit5'], ['slot6', 'Slot 6', 'Digit6'],
+  ['build', 'Build mode on / off', 'KeyQ'], ['wall', 'Build wall', 'KeyZ'], ['ramp', 'Build ramp', 'KeyX'], ['floor', 'Build floor', 'KeyC'], ['material', 'Switch material', 'KeyG'],
+  ['emote', 'Emote', 'KeyB'], ['map', 'Full map', 'KeyM'],
+];
+const KEY_DEF = Object.fromEntries(KEY_ACTIONS.map(k => [k[0], k[2]]));
+const Keys = {
+  get(act) { const k = Profile.d.keys && Profile.d.keys[act]; return typeof k === 'string' && k ? k : KEY_DEF[act]; },
+  token(act) { return KEY_DEF[act]; },
+  actionsFor(code) { const out = []; for (const [a] of KEY_ACTIONS) { const k = this.get(a); if (k === code || (k === 'ShiftLeft' && code === 'ShiftRight') || (k === 'ControlLeft' && code === 'ControlRight') || (k === 'AltLeft' && code === 'AltRight')) out.push(a); } return out; },
+  held(act, keys) { const k = this.get(act); return !!(keys[k] || (k === 'ShiftLeft' && keys.ShiftRight) || (k === 'ControlLeft' && keys.ControlRight) || (k === 'AltLeft' && keys.AltRight)); },
+  bound(code) { return this.actionsFor(code).length > 0; },
+  // swap with whatever already used that key, so every action always has a key
+  set(act, code) {
+    const d = Profile.d; if (!d.keys || typeof d.keys !== 'object') d.keys = {};
+    const old = this.get(act); for (const [a] of KEY_ACTIONS) if (a !== act && this.get(a) === code) d.keys[a] = old;
+    d.keys[act] = code; Profile.save();
+  },
+  reset() { Profile.d.keys = {}; Profile.save(); },
+  name(code) {
+    if (!code) return '—';
+    const M = { Mouse0: 'Left click', Mouse1: 'Middle click', Mouse2: 'Right click', Mouse3: 'Mouse 4', Mouse4: 'Mouse 5', Space: 'Space', ShiftLeft: 'Shift', ShiftRight: 'Right Shift', ControlLeft: 'Ctrl', ControlRight: 'Right Ctrl', AltLeft: 'Alt', AltRight: 'Right Alt', MetaLeft: 'Search', CapsLock: 'Caps Lock', Tab: 'Tab', Enter: 'Enter', Backspace: 'Backspace', ArrowUp: '↑', ArrowDown: '↓', ArrowLeft: '←', ArrowRight: '→', Backquote: '`', Minus: '-', Equal: '=', BracketLeft: '[', BracketRight: ']', Backslash: '\\', Semicolon: ';', Quote: "'", Comma: ',', Period: '.', Slash: '/' };
+    if (M[code]) return M[code];
+    if (/^Key[A-Z]$/.test(code)) return code.slice(3);
+    if (/^Digit\d$/.test(code)) return code.slice(5);
+    if (/^Numpad/.test(code)) return 'Num ' + code.slice(6);
+    return code.replace(/([a-z])([A-Z])/g, '$1 $2');
+  },
+  of(act) { return this.name(this.get(act)); },
+};
 const GLIDER_AUTO = 65;   // metres above the ground where the glider opens on its own (was 34)
 const MAP_DAYS = 30, DAY_MS = 86400000;
 const MapRotation = {
@@ -278,7 +314,7 @@ const Profile = {
     xp: 0, wins: 0, matches: 0, kills: 0, top10: 0, rp: 0, umbrella: false, coins: 0, owned: {},
     eq: { outfit: 'rae', body: 'woman', backpack: 'ruck', pickaxe: 'pick', glider: 'sail', wrap: 'none', emote: 'groove', car: 'street' },
     sens: 1, shadows: !IS_TOUCH, mode: 'solo', build: true, theme: 'greenvale', ranked: false, novaGiven: true,
-    season: -1, seasonXp: 0, firstBonus: false, thankSeason: -1, ticketSeason: -1, skinsPaid: true,
+    season: -1, seasonXp: 0, firstBonus: false, thankSeason: -1, ticketSeason: -1, skinsPaid: true, keys: {},
   },
   load() {
     try {

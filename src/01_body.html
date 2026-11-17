@@ -20,6 +20,7 @@
     </nav>
     <div class="lb-tier"><span id="tierLbl" class="num">Tier 1</span><div class="mini-bar"><i id="tierFill"></i></div></div>
     <div class="lb-coins" title="FortBux"><i class="coin"></i><span id="coinLbl" class="num">0</span></div>
+    <button class="lb-set" id="setBtn" type="button" title="Settings: keybinds, look sensitivity, graphics"><i aria-hidden="true"></i>Settings</button>
   </header>
 
   <div class="side">
@@ -42,11 +43,7 @@
       <div class="isl-grid" id="islGrid"></div>
       <div class="hint" id="islNote"></div>
       <label class="check"><input type="checkbox" id="rankedChk"> Ranked queue <span class="hint">(tougher bots, earns rank points)</span></label>
-      <div class="hint">
-        <kbd>WASD</kbd> move · <kbd>Mouse</kbd> aim · <kbd>LMB</kbd> fire · <kbd>RMB</kbd> aim down sights · <kbd>Space</kbd> jump / leave bus / glider ·
-        <kbd>Shift</kbd> sprint · <kbd>1</kbd>–<kbd>6</kbd> slots · <kbd>E</kbd> pick up / open · <kbd>R</kbd> reload ·
-        <kbd>Z</kbd> wall <kbd>X</kbd> ramp <kbd>C</kbd> floor <kbd>G</kbd> material · <kbd>B</kbd> emote · <kbd>M</kbd> map
-      </div>
+      <div class="hint" id="kbHint"></div>
       <div class="hint">Controller: plug one in and press any button. <kbd>RT</kbd> fire · <kbd>LT</kbd> aim · <kbd>A</kbd> jump · <kbd>X</kbd> use / reload · <kbd>Y</kbd> harvesting tool · <kbd>LB</kbd> <kbd>RB</kbd> slots · <kbd>B</kbd> build · <kbd>L3</kbd> sprint</div>
       <div class="hint">Car model: <a href="https://sketchfab.com/3d-models/goodbye-and-good-riddance-nissan-car-fbx-ba71611bcba3445db89287411ca85c87" target="_blank" rel="noopener" style="color:inherit">“Goodbye And Good Riddance Nissan Car FBX”</a> by PixelGTT, licensed <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener" style="color:inherit">CC BY 4.0</a>. Badges removed and paint recolored.</div>
     </section>
@@ -181,22 +178,6 @@
 <div class="overlay" id="pause" hidden>
   <div class="card">
     <h2>Paused</h2>
-    <div class="sens"><label for="sensIn">Look sensitivity</label><input type="range" id="sensIn" min="0.3" max="2.5" step="0.05"></div>
-    <div class="sens"><label for="gfxSel">Graphics</label><select id="gfxSel"><option value="auto">Auto (recommended)</option><option value="fast">Fast: smoother on Chromebooks</option><option value="pretty">Pretty: sharper, needs a strong computer</option></select></div>
-    <div class="hint" id="gfxNote"></div>
-    <label class="check"><input type="checkbox" id="shadowChk"> Shadows</label>
-    <div class="keys">
-      <kbd>WASD / Shift</kbd><span>Move / sprint</span>
-      <kbd>Space</kbd><span>Jump, leave the bus, open glider</span>
-      <kbd>LMB / RMB</kbd><span>Fire or harvest / aim down sights</span>
-      <kbd>1 – 6, wheel</kbd><span>Harvesting tool and five item slots</span>
-      <kbd>E</kbd><span>Pick up, swap, open chests</span>
-      <kbd>R</kbd><span>Reload</span>
-      <kbd>Z X C</kbd><span>Build wall, ramp, floor (Build mode)</span>
-      <kbd>G</kbd><span>Switch build material</span>
-      <kbd>B</kbd><span>Emote</span>
-      <kbd>M</kbd><span>Full map</span>
-    </div>
     <div class="keys padkeys">
       <kbd>Sticks</kbd><span>Move / look (click the left stick to sprint)</span>
       <kbd>RT / LT</kbd><span>Fire or harvest / aim down sights</span>
@@ -208,7 +189,22 @@
       <kbd>D-pad</kbd><span>Up map · down emote</span>
       <kbd>Start</kbd><span>Pause</span>
     </div>
-    <div class="btn-row"><button class="btn pri" id="resumeBtn">Resume</button><button class="btn" id="quitBtn">Leave match</button></div>
+    <div class="btn-row"><button class="btn pri" id="resumeBtn">Resume</button><button class="btn" id="pauseSetBtn">Settings</button><button class="btn" id="quitBtn">Leave match</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="settings" hidden>
+  <div class="card set-card">
+    <h2>Settings</h2>
+    <div class="sens"><label for="sensIn">Look sensitivity</label><input type="range" id="sensIn" min="0.3" max="2.5" step="0.05"></div>
+    <div class="sens"><label for="gfxSel">Graphics</label><select id="gfxSel"><option value="auto">Auto (recommended)</option><option value="fast">Fast: smoother on Chromebooks</option><option value="pretty">Pretty: sharper, needs a strong computer</option></select></div>
+    <div class="hint" id="gfxNote"></div>
+    <label class="check"><input type="checkbox" id="shadowChk"> Shadows</label>
+    <h3 class="set-h">Keybinds</h3>
+    <div class="hint">Click a key, then press the new key or mouse button. If another action already uses it, the two swap.</div>
+    <div class="kb-list" id="kbList"></div>
+    <div class="hint kb-msg" id="kbMsg" role="status"></div>
+    <div class="btn-row"><button class="btn" id="kbReset">Reset keys</button><button class="btn pri" id="setDone">Done</button></div>
   </div>
 </div>
 

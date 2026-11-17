@@ -24,7 +24,7 @@ const Input = {
   // menus: the D-pad or left stick moves a highlight between buttons, A presses it, B goes back, LB / RB change tab
   padMenu(dt) {
     const pd = this.pad; if (!pd.gp) return;
-    const root = ['ticket', 'results', 'death', 'pause', 'mpPanel', 'lobby'].map(id => $(id)).find(el => el && !el.hidden); if (!root) return;
+    const root = ['settings', 'ticket', 'results', 'death', 'pause', 'mpPanel', 'lobby'].map(id => $(id)).find(el => el && !el.hidden); if (!root) return;
     const els = [...root.querySelectorAll('button, [data-id], [data-mode], [data-isl], [data-f], [data-cat], [data-build], [data-body], input')].filter(el => el.offsetParent !== null && !el.disabled && el.getBoundingClientRect().width > 4);
     if (!els.length) return;
     if (!pd.focus || !els.includes(pd.focus)) { if (pd.focus) pd.focus.classList.remove('padfocus'); pd.focus = els.find(el => /readyBtn|resumeBtn|rLobbyBtn|specBtn|tkBtn/.test(el.id)) || els[0]; if (pd.on) pd.focus.classList.add('padfocus'); }
@@ -39,6 +39,7 @@ const Input = {
     for (const i of pd.hit) {
       if (i === 0) { Sfx.init(); pd.focus.click(); }
       else if (i === 9 && root.id === 'pause') togglePause();
+      else if (i === 1 && root.id === 'settings') Settings.close();
       else if (i === 1) { if (root.id === 'pause') togglePause(); else if (root.id === 'death') $('specBtn').click(); else if (root.id === 'lobby') { const t = root.querySelector('#tabs [data-tab="play"], #tabs button'); if (t) t.click(); } }
       else if ((i === 4 || i === 5) && root.id === 'lobby') { const tabs = [...$('tabs').querySelectorAll('button')], cur = tabs.findIndex(t => t.classList.contains('on')), n = tabs[(Math.max(0, cur) + (i === 5 ? 1 : tabs.length - 1)) % tabs.length]; if (n) n.click(); }
     }
@@ -49,9 +50,9 @@ const Input = {
     addEventListener('keydown', e => {
       this.padOff();
       if (Match.state !== 'play') return;
-      if (!this.keys[e.code]) this.pressed.add(e.code);
+      if (!this.keys[e.code]) this.press(e.code);
       this.keys[e.code] = true;
-      if (['Space', 'Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
+      if (Keys.bound(e.code) || ['Space', 'Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
       if (e.code === 'Escape' && !IS_TOUCH && !this.locked) togglePause();
     });
     addEventListener('keyup', e => { this.keys[e.code] = false; });
@@ -63,9 +64,11 @@ const Input = {
       Sfx.init();
       if (!this.locked && !IS_TOUCH) this.requestLock();
       if (e.button === 0) this.lmb = true; if (e.button === 2) this.rmb = true;
+      const mc = 'Mouse' + e.button; if (!this.keys[mc]) this.press(mc); this.keys[mc] = true;
       if (!player || !player.alive) this.pressed.add('Click');
     });
-    addEventListener('mouseup', e => { if (e.button === 0) this.lmb = false; if (e.button === 2) this.rmb = false; });
+    addEventListener('mouseup', e => { if (e.button === 0) this.lmb = false; if (e.button === 2) this.rmb = false; this.keys['Mouse' + e.button] = false; });
+    cv.addEventListener('auxclick', e => e.preventDefault());
     cv.addEventListener('contextmenu', e => e.preventDefault());
     cv.addEventListener('wheel', e => { if (Match.state === 'play') { this.wheel += Math.sign(e.deltaY); e.preventDefault(); } }, { passive: false });
     document.addEventListener('pointerlockchange', () => {
@@ -76,6 +79,8 @@ const Input = {
     document.addEventListener('pointerlockerror', () => { this.free = true; $('clickHint').hidden = true; });
     this.initTouch();
   },
+  // a key or mouse button went down: queue the actions bound to it (under each action's default key name)
+  press(code) { for (const a of Keys.actionsFor(code)) this.pressed.add(Keys.token(a)); },
   requestLock() {
     if (IS_TOUCH || this.touch.on || this.pad.on) return;
     const cv = $('fdView');
@@ -126,6 +131,50 @@ const Input = {
     btn('tBuild', () => this.pressed.add('TouchBuild'));
     btn('tMap', () => this.pressed.add('KeyM'));
     btn('tPause', () => togglePause());
+  },
+};
+
+// ---------------------------------------------------------------- settings window (look, graphics and keybinds)
+const Settings = {
+  wait: null,
+  open() { this.render(); $('settings').hidden = false; if (document.pointerLockElement) document.exitPointerLock(); },
+  close() { if (!$('settings') || $('settings').hidden) return; this.stop(); $('settings').hidden = true; Lobby.refresh(); HUD.last = {}; HUD.dirty = true; },
+  stop() { if (this.wait) { const b = $('kbList').querySelector('[data-kb="' + this.wait + '"]'); if (b) b.classList.remove('wait'); } this.wait = null; $('kbMsg').textContent = ''; },
+  render() {
+    $('kbList').innerHTML = KEY_ACTIONS.map(([a, label]) => `<span>${esc(label)}</span><button type="button" data-kb="${a}" class="${Keys.get(a) !== KEY_DEF[a] ? 'changed' : ''}">${esc(Keys.of(a))}</button>`).join('');
+  },
+  take(code) {
+    const a = this.wait; if (!a) return;
+    const before = KEY_ACTIONS.find(k => k[0] !== a && Keys.get(k[0]) === code);
+    Keys.set(a, code); this.wait = null; this.render();
+    $('kbMsg').textContent = before ? Keys.name(code) + ' was used for ' + before[1] + ', so that now uses ' + Keys.of(before[0]) + '.' : '';
+  },
+  init() {
+    $('kbList').addEventListener('click', e => {
+      const b = e.target.closest('[data-kb]'); if (!b) return; e.stopPropagation();
+      if (this.wait === b.dataset.kb) { this.stop(); return; }
+      this.stop(); this.wait = b.dataset.kb; b.classList.add('wait'); b.textContent = 'Press a key…'; $('kbMsg').textContent = 'Press a key or mouse button for ' + KEY_ACTIONS.find(k => k[0] === this.wait)[1] + '. Esc cancels.';
+    });
+    // while waiting for a key, catch it before the game sees it
+    addEventListener('keydown', e => {
+      if (!this.wait) { if (e.code === 'Escape' && !$('settings').hidden) { e.preventDefault(); e.stopImmediatePropagation(); this.close(); } return; }
+      e.preventDefault(); e.stopImmediatePropagation();
+      if (e.code === 'Escape') { this.stop(); this.render(); return; }
+      if (e.code) this.take(e.code);
+    }, true);
+    // a mouse press while waiting becomes the binding (the click that started waiting has already finished)
+    addEventListener('mousedown', e => {
+      if (!this.wait) return;
+      if (e.target.closest && e.target.closest('#kbReset, #setDone')) { this.stop(); this.render(); return; }
+      e.preventDefault(); e.stopImmediatePropagation(); this.eat = true; this.take('Mouse' + e.button);
+    }, true);
+    addEventListener('click', e => { if (this.eat) { this.eat = false; e.preventDefault(); e.stopImmediatePropagation(); } }, true);
+    addEventListener('auxclick', e => { if (this.eat) { this.eat = false; e.preventDefault(); e.stopImmediatePropagation(); } }, true);
+    addEventListener('contextmenu', e => { if (!$('settings').hidden) e.preventDefault(); }, true);
+    $('kbReset').addEventListener('click', () => { Keys.reset(); this.stop(); this.render(); $('kbMsg').textContent = 'All keys are back to the defaults.'; });
+    $('setDone').addEventListener('click', () => this.close());
+    $('setBtn').addEventListener('click', () => { Sfx.init(); this.open(); });
+    $('pauseSetBtn').addEventListener('click', () => this.open());
   },
 };
 
@@ -205,7 +254,7 @@ function togglePause(force) {
   Match.paused = force === true ? true : !Match.paused;
   $('pause').hidden = !Match.paused;
   if (Match.paused) { if (document.pointerLockElement) document.exitPointerLock(); $('clickHint').hidden = true; Input.keys = {}; Input.lmb = Input.rmb = false; Input.pad.prev[9] = true; }
-  else Input.requestLock();
+  else { Settings.close(); Input.requestLock(); }
 }
 function updatePlayer(dt) {
   const a = player; if (!a) return;
@@ -241,12 +290,13 @@ function updatePlayer(dt) {
     if (P.has('Space') || P.has('Click')) cycleSpectate();
     P.clear(); Input.wheel = 0; return;
   }
-  let f = (K.KeyW ? 1 : 0) - (K.KeyS ? 1 : 0) + tc.mz + pd.mz, r = (K.KeyD ? 1 : 0) - (K.KeyA ? 1 : 0) + tc.mx + pd.mx;
+  const H = act => Keys.held(act, K);
+  let f = (H('forward') ? 1 : 0) - (H('back') ? 1 : 0) + tc.mz + pd.mz, r = (H('right') ? 1 : 0) - (H('left') ? 1 : 0) + tc.mx + pd.mx;
   inp.f = clamp(f, -1, 1); inp.r = clamp(r, -1, 1);
-  inp.sprint = !!(K.ShiftLeft || K.ShiftRight) || (tc.on && Math.hypot(tc.mx, tc.mz) > 0.92) || pd.sprint;
-  inp.jump = !!K.Space || tc.jump || pd.jump;
-  inp.fire = Input.lmb || tc.fire || pd.fire;
-  inp.ads = Input.rmb || tc.ads || pd.ads;
+  inp.sprint = H('sprint') || (tc.on && Math.hypot(tc.mx, tc.mz) > 0.92) || pd.sprint;
+  inp.jump = H('jump') || tc.jump || pd.jump;
+  inp.fire = H('fire') || tc.fire || pd.fire;
+  inp.ads = H('ads') || tc.ads || pd.ads;
   if (a.state === 'bus') { inp.f = inp.r = 0; inp.fire = false; if (P.has('Space')) busJump(a); }
   else if (a.state === 'sky') { if (P.has('Space')) a.state = 'glide'; }
   for (let i = 1; i <= 6; i++) if (P.has('Digit' + i)) { switchSlot(a, i - 1); Build.active = false; }

@@ -384,6 +384,19 @@ button:focus-visible{outline:2px solid var(--sun-2);outline-offset:2px}
   #buildbar{bottom:calc(360px + var(--sb))}
 }
 #gfxSel{background:rgba(5,14,36,.7);color:var(--ink);border:1px solid rgba(150,195,255,.3);border-radius:8px;font:600 13px var(--f-body);padding:6px 8px;max-width:100%}
+#settings{z-index:45}
+.set-card{width:min(560px,100%)}
+.set-h{margin:6px 0 0;font:800 13px var(--f-body);letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}
+.kb-list{display:grid;grid-template-columns:1fr auto;gap:6px 14px;align-items:center;font-size:14px}
+.kb-list button{min-width:128px;background:rgba(5,14,36,.6);border:1px solid rgba(150,195,255,.3);border-radius:8px;color:var(--ink);font:700 13px var(--f-body);padding:7px 12px}
+.kb-list button:hover{border-color:var(--sun-2)}
+.kb-list button.changed{border-color:rgba(255,214,90,.6);color:#ffe9a6}
+.kb-list button.wait{background:var(--sun-2);color:#05101f;border-color:var(--sun-2);animation:kbBlink 1s infinite}
+@keyframes kbBlink{50%{opacity:.6}}
+.kb-msg{min-height:16px;color:#ffe9a6}
+.lb-set{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 12px;font-weight:700;font-size:14px}
+.lb-set:hover{border-color:var(--sun-2)}
+.lb-set i{width:14px;height:14px;border-radius:50%;border:3px dotted var(--ink);box-sizing:border-box}
 .mp{display:flex;flex-direction:column;gap:8px}
 .mp-row{display:flex;gap:8px}
 .mp-row input{flex:1;min-width:0;background:rgba(5,14,36,.6);border:1px solid rgba(150,195,255,.25);border-radius:8px;color:var(--ink);font:600 15px var(--f-body);padding:9px 11px}
@@ -431,6 +444,7 @@ body.pad{cursor:none}
     </nav>
     <div class="lb-tier"><span id="tierLbl" class="num">Tier 1</span><div class="mini-bar"><i id="tierFill"></i></div></div>
     <div class="lb-coins" title="FortBux"><i class="coin"></i><span id="coinLbl" class="num">0</span></div>
+    <button class="lb-set" id="setBtn" type="button" title="Settings: keybinds, look sensitivity, graphics"><i aria-hidden="true"></i>Settings</button>
   </header>
 
   <div class="side">
@@ -453,11 +467,7 @@ body.pad{cursor:none}
       <div class="isl-grid" id="islGrid"></div>
       <div class="hint" id="islNote"></div>
       <label class="check"><input type="checkbox" id="rankedChk"> Ranked queue <span class="hint">(tougher bots, earns rank points)</span></label>
-      <div class="hint">
-        <kbd>WASD</kbd> move · <kbd>Mouse</kbd> aim · <kbd>LMB</kbd> fire · <kbd>RMB</kbd> aim down sights · <kbd>Space</kbd> jump / leave bus / glider ·
-        <kbd>Shift</kbd> sprint · <kbd>1</kbd>–<kbd>6</kbd> slots · <kbd>E</kbd> pick up / open · <kbd>R</kbd> reload ·
-        <kbd>Z</kbd> wall <kbd>X</kbd> ramp <kbd>C</kbd> floor <kbd>G</kbd> material · <kbd>B</kbd> emote · <kbd>M</kbd> map
-      </div>
+      <div class="hint" id="kbHint"></div>
       <div class="hint">Controller: plug one in and press any button. <kbd>RT</kbd> fire · <kbd>LT</kbd> aim · <kbd>A</kbd> jump · <kbd>X</kbd> use / reload · <kbd>Y</kbd> harvesting tool · <kbd>LB</kbd> <kbd>RB</kbd> slots · <kbd>B</kbd> build · <kbd>L3</kbd> sprint</div>
       <div class="hint">Car model: <a href="https://sketchfab.com/3d-models/goodbye-and-good-riddance-nissan-car-fbx-ba71611bcba3445db89287411ca85c87" target="_blank" rel="noopener" style="color:inherit">“Goodbye And Good Riddance Nissan Car FBX”</a> by PixelGTT, licensed <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener" style="color:inherit">CC BY 4.0</a>. Badges removed and paint recolored.</div>
     </section>
@@ -592,22 +602,6 @@ body.pad{cursor:none}
 <div class="overlay" id="pause" hidden>
   <div class="card">
     <h2>Paused</h2>
-    <div class="sens"><label for="sensIn">Look sensitivity</label><input type="range" id="sensIn" min="0.3" max="2.5" step="0.05"></div>
-    <div class="sens"><label for="gfxSel">Graphics</label><select id="gfxSel"><option value="auto">Auto (recommended)</option><option value="fast">Fast: smoother on Chromebooks</option><option value="pretty">Pretty: sharper, needs a strong computer</option></select></div>
-    <div class="hint" id="gfxNote"></div>
-    <label class="check"><input type="checkbox" id="shadowChk"> Shadows</label>
-    <div class="keys">
-      <kbd>WASD / Shift</kbd><span>Move / sprint</span>
-      <kbd>Space</kbd><span>Jump, leave the bus, open glider</span>
-      <kbd>LMB / RMB</kbd><span>Fire or harvest / aim down sights</span>
-      <kbd>1 – 6, wheel</kbd><span>Harvesting tool and five item slots</span>
-      <kbd>E</kbd><span>Pick up, swap, open chests</span>
-      <kbd>R</kbd><span>Reload</span>
-      <kbd>Z X C</kbd><span>Build wall, ramp, floor (Build mode)</span>
-      <kbd>G</kbd><span>Switch build material</span>
-      <kbd>B</kbd><span>Emote</span>
-      <kbd>M</kbd><span>Full map</span>
-    </div>
     <div class="keys padkeys">
       <kbd>Sticks</kbd><span>Move / look (click the left stick to sprint)</span>
       <kbd>RT / LT</kbd><span>Fire or harvest / aim down sights</span>
@@ -619,7 +613,22 @@ body.pad{cursor:none}
       <kbd>D-pad</kbd><span>Up map · down emote</span>
       <kbd>Start</kbd><span>Pause</span>
     </div>
-    <div class="btn-row"><button class="btn pri" id="resumeBtn">Resume</button><button class="btn" id="quitBtn">Leave match</button></div>
+    <div class="btn-row"><button class="btn pri" id="resumeBtn">Resume</button><button class="btn" id="pauseSetBtn">Settings</button><button class="btn" id="quitBtn">Leave match</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="settings" hidden>
+  <div class="card set-card">
+    <h2>Settings</h2>
+    <div class="sens"><label for="sensIn">Look sensitivity</label><input type="range" id="sensIn" min="0.3" max="2.5" step="0.05"></div>
+    <div class="sens"><label for="gfxSel">Graphics</label><select id="gfxSel"><option value="auto">Auto (recommended)</option><option value="fast">Fast: smoother on Chromebooks</option><option value="pretty">Pretty: sharper, needs a strong computer</option></select></div>
+    <div class="hint" id="gfxNote"></div>
+    <label class="check"><input type="checkbox" id="shadowChk"> Shadows</label>
+    <h3 class="set-h">Keybinds</h3>
+    <div class="hint">Click a key, then press the new key or mouse button. If another action already uses it, the two swap.</div>
+    <div class="kb-list" id="kbList"></div>
+    <div class="hint kb-msg" id="kbMsg" role="status"></div>
+    <div class="btn-row"><button class="btn" id="kbReset">Reset keys</button><button class="btn pri" id="setDone">Done</button></div>
   </div>
 </div>
 
@@ -665,7 +674,7 @@ body.pad{cursor:none}
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js"></script>
 <script async src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>
-const BUILD_ID = '1117-1855';
+const BUILD_ID = '1117-1903';
 'use strict';
 // =====================================================================
 //  FORTDAY — core utilities, data tables, profile, audio
@@ -818,6 +827,42 @@ const THEMES = {
 const THEME_ORDER = ['greenvale', 'floodtide', 'neon', 'olympia', 'dune'];
 // Map rotation: everyone starts on Greenvale. 30 days after a player's first match the next island opens and
 // the previous one closes, in THEME_ORDER, starting over after the last.
+// ---------------------------------------------------------------- keybinds
+// [action, label, default key]. The game reacts to an action's default key name internally, so touch buttons and
+// controllers keep working whatever a player binds; Keys translates the real key or mouse button they press.
+const KEY_ACTIONS = [
+  ['forward', 'Move forward', 'KeyW'], ['back', 'Move back', 'KeyS'], ['left', 'Move left', 'KeyA'], ['right', 'Move right', 'KeyD'],
+  ['jump', 'Jump / leave bus / glider', 'Space'], ['sprint', 'Sprint', 'ShiftLeft'],
+  ['fire', 'Fire / harvest / build', 'Mouse0'], ['ads', 'Aim down sights', 'Mouse2'], ['reload', 'Reload', 'KeyR'], ['use', 'Pick up / open / drive', 'KeyE'],
+  ['slot1', 'Harvesting tool', 'Digit1'], ['slot2', 'Slot 2', 'Digit2'], ['slot3', 'Slot 3', 'Digit3'], ['slot4', 'Slot 4', 'Digit4'], ['slot5', 'Slot 5', 'Digit5'], ['slot6', 'Slot 6', 'Digit6'],
+  ['build', 'Build mode on / off', 'KeyQ'], ['wall', 'Build wall', 'KeyZ'], ['ramp', 'Build ramp', 'KeyX'], ['floor', 'Build floor', 'KeyC'], ['material', 'Switch material', 'KeyG'],
+  ['emote', 'Emote', 'KeyB'], ['map', 'Full map', 'KeyM'],
+];
+const KEY_DEF = Object.fromEntries(KEY_ACTIONS.map(k => [k[0], k[2]]));
+const Keys = {
+  get(act) { const k = Profile.d.keys && Profile.d.keys[act]; return typeof k === 'string' && k ? k : KEY_DEF[act]; },
+  token(act) { return KEY_DEF[act]; },
+  actionsFor(code) { const out = []; for (const [a] of KEY_ACTIONS) { const k = this.get(a); if (k === code || (k === 'ShiftLeft' && code === 'ShiftRight') || (k === 'ControlLeft' && code === 'ControlRight') || (k === 'AltLeft' && code === 'AltRight')) out.push(a); } return out; },
+  held(act, keys) { const k = this.get(act); return !!(keys[k] || (k === 'ShiftLeft' && keys.ShiftRight) || (k === 'ControlLeft' && keys.ControlRight) || (k === 'AltLeft' && keys.AltRight)); },
+  bound(code) { return this.actionsFor(code).length > 0; },
+  // swap with whatever already used that key, so every action always has a key
+  set(act, code) {
+    const d = Profile.d; if (!d.keys || typeof d.keys !== 'object') d.keys = {};
+    const old = this.get(act); for (const [a] of KEY_ACTIONS) if (a !== act && this.get(a) === code) d.keys[a] = old;
+    d.keys[act] = code; Profile.save();
+  },
+  reset() { Profile.d.keys = {}; Profile.save(); },
+  name(code) {
+    if (!code) return '—';
+    const M = { Mouse0: 'Left click', Mouse1: 'Middle click', Mouse2: 'Right click', Mouse3: 'Mouse 4', Mouse4: 'Mouse 5', Space: 'Space', ShiftLeft: 'Shift', ShiftRight: 'Right Shift', ControlLeft: 'Ctrl', ControlRight: 'Right Ctrl', AltLeft: 'Alt', AltRight: 'Right Alt', MetaLeft: 'Search', CapsLock: 'Caps Lock', Tab: 'Tab', Enter: 'Enter', Backspace: 'Backspace', ArrowUp: '↑', ArrowDown: '↓', ArrowLeft: '←', ArrowRight: '→', Backquote: '`', Minus: '-', Equal: '=', BracketLeft: '[', BracketRight: ']', Backslash: '\\', Semicolon: ';', Quote: "'", Comma: ',', Period: '.', Slash: '/' };
+    if (M[code]) return M[code];
+    if (/^Key[A-Z]$/.test(code)) return code.slice(3);
+    if (/^Digit\d$/.test(code)) return code.slice(5);
+    if (/^Numpad/.test(code)) return 'Num ' + code.slice(6);
+    return code.replace(/([a-z])([A-Z])/g, '$1 $2');
+  },
+  of(act) { return this.name(this.get(act)); },
+};
 const GLIDER_AUTO = 65;   // metres above the ground where the glider opens on its own (was 34)
 const MAP_DAYS = 30, DAY_MS = 86400000;
 const MapRotation = {
@@ -946,7 +991,7 @@ const Profile = {
     xp: 0, wins: 0, matches: 0, kills: 0, top10: 0, rp: 0, umbrella: false, coins: 0, owned: {},
     eq: { outfit: 'rae', body: 'woman', backpack: 'ruck', pickaxe: 'pick', glider: 'sail', wrap: 'none', emote: 'groove', car: 'street' },
     sens: 1, shadows: !IS_TOUCH, mode: 'solo', build: true, theme: 'greenvale', ranked: false, novaGiven: true,
-    season: -1, seasonXp: 0, firstBonus: false, thankSeason: -1, ticketSeason: -1, skinsPaid: true,
+    season: -1, seasonXp: 0, firstBonus: false, thankSeason: -1, ticketSeason: -1, skinsPaid: true, keys: {},
   },
   load() {
     try {
@@ -6145,7 +6190,7 @@ const Match = {
     if (Net.hosting) Net.hostStart(); else if (Net.guest) Net.flush();
     $('loading').hidden = true; HUD.startMatch();
     Input.requestLock();
-    if (this.mode !== 'rumble') HUD.banner('Welcome aboard the Sky Coach', Input.pad.on ? 'Press A to jump out' : IS_TOUCH ? 'Tap JUMP to leave the bus' : 'Press SPACE to jump out', 4);
+    if (this.mode !== 'rumble') HUD.banner('Welcome aboard the Sky Coach', Input.pad.on ? 'Press A to jump out' : IS_TOUCH ? 'Tap JUMP to leave the bus' : 'Press ' + Keys.of('jump').toUpperCase() + ' to jump out', 4);
     else HUD.banner('Storm Rumble', 'First team to 40 eliminations wins. You respawn.', 4);
   },
   spawnVault(v) {
@@ -6854,7 +6899,7 @@ const Input = {
   // menus: the D-pad or left stick moves a highlight between buttons, A presses it, B goes back, LB / RB change tab
   padMenu(dt) {
     const pd = this.pad; if (!pd.gp) return;
-    const root = ['ticket', 'results', 'death', 'pause', 'mpPanel', 'lobby'].map(id => $(id)).find(el => el && !el.hidden); if (!root) return;
+    const root = ['settings', 'ticket', 'results', 'death', 'pause', 'mpPanel', 'lobby'].map(id => $(id)).find(el => el && !el.hidden); if (!root) return;
     const els = [...root.querySelectorAll('button, [data-id], [data-mode], [data-isl], [data-f], [data-cat], [data-build], [data-body], input')].filter(el => el.offsetParent !== null && !el.disabled && el.getBoundingClientRect().width > 4);
     if (!els.length) return;
     if (!pd.focus || !els.includes(pd.focus)) { if (pd.focus) pd.focus.classList.remove('padfocus'); pd.focus = els.find(el => /readyBtn|resumeBtn|rLobbyBtn|specBtn|tkBtn/.test(el.id)) || els[0]; if (pd.on) pd.focus.classList.add('padfocus'); }
@@ -6869,6 +6914,7 @@ const Input = {
     for (const i of pd.hit) {
       if (i === 0) { Sfx.init(); pd.focus.click(); }
       else if (i === 9 && root.id === 'pause') togglePause();
+      else if (i === 1 && root.id === 'settings') Settings.close();
       else if (i === 1) { if (root.id === 'pause') togglePause(); else if (root.id === 'death') $('specBtn').click(); else if (root.id === 'lobby') { const t = root.querySelector('#tabs [data-tab="play"], #tabs button'); if (t) t.click(); } }
       else if ((i === 4 || i === 5) && root.id === 'lobby') { const tabs = [...$('tabs').querySelectorAll('button')], cur = tabs.findIndex(t => t.classList.contains('on')), n = tabs[(Math.max(0, cur) + (i === 5 ? 1 : tabs.length - 1)) % tabs.length]; if (n) n.click(); }
     }
@@ -6879,9 +6925,9 @@ const Input = {
     addEventListener('keydown', e => {
       this.padOff();
       if (Match.state !== 'play') return;
-      if (!this.keys[e.code]) this.pressed.add(e.code);
+      if (!this.keys[e.code]) this.press(e.code);
       this.keys[e.code] = true;
-      if (['Space', 'Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
+      if (Keys.bound(e.code) || ['Space', 'Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
       if (e.code === 'Escape' && !IS_TOUCH && !this.locked) togglePause();
     });
     addEventListener('keyup', e => { this.keys[e.code] = false; });
@@ -6893,9 +6939,11 @@ const Input = {
       Sfx.init();
       if (!this.locked && !IS_TOUCH) this.requestLock();
       if (e.button === 0) this.lmb = true; if (e.button === 2) this.rmb = true;
+      const mc = 'Mouse' + e.button; if (!this.keys[mc]) this.press(mc); this.keys[mc] = true;
       if (!player || !player.alive) this.pressed.add('Click');
     });
-    addEventListener('mouseup', e => { if (e.button === 0) this.lmb = false; if (e.button === 2) this.rmb = false; });
+    addEventListener('mouseup', e => { if (e.button === 0) this.lmb = false; if (e.button === 2) this.rmb = false; this.keys['Mouse' + e.button] = false; });
+    cv.addEventListener('auxclick', e => e.preventDefault());
     cv.addEventListener('contextmenu', e => e.preventDefault());
     cv.addEventListener('wheel', e => { if (Match.state === 'play') { this.wheel += Math.sign(e.deltaY); e.preventDefault(); } }, { passive: false });
     document.addEventListener('pointerlockchange', () => {
@@ -6906,6 +6954,8 @@ const Input = {
     document.addEventListener('pointerlockerror', () => { this.free = true; $('clickHint').hidden = true; });
     this.initTouch();
   },
+  // a key or mouse button went down: queue the actions bound to it (under each action's default key name)
+  press(code) { for (const a of Keys.actionsFor(code)) this.pressed.add(Keys.token(a)); },
   requestLock() {
     if (IS_TOUCH || this.touch.on || this.pad.on) return;
     const cv = $('fdView');
@@ -6956,6 +7006,50 @@ const Input = {
     btn('tBuild', () => this.pressed.add('TouchBuild'));
     btn('tMap', () => this.pressed.add('KeyM'));
     btn('tPause', () => togglePause());
+  },
+};
+
+// ---------------------------------------------------------------- settings window (look, graphics and keybinds)
+const Settings = {
+  wait: null,
+  open() { this.render(); $('settings').hidden = false; if (document.pointerLockElement) document.exitPointerLock(); },
+  close() { if (!$('settings') || $('settings').hidden) return; this.stop(); $('settings').hidden = true; Lobby.refresh(); HUD.last = {}; HUD.dirty = true; },
+  stop() { if (this.wait) { const b = $('kbList').querySelector('[data-kb="' + this.wait + '"]'); if (b) b.classList.remove('wait'); } this.wait = null; $('kbMsg').textContent = ''; },
+  render() {
+    $('kbList').innerHTML = KEY_ACTIONS.map(([a, label]) => `<span>${esc(label)}</span><button type="button" data-kb="${a}" class="${Keys.get(a) !== KEY_DEF[a] ? 'changed' : ''}">${esc(Keys.of(a))}</button>`).join('');
+  },
+  take(code) {
+    const a = this.wait; if (!a) return;
+    const before = KEY_ACTIONS.find(k => k[0] !== a && Keys.get(k[0]) === code);
+    Keys.set(a, code); this.wait = null; this.render();
+    $('kbMsg').textContent = before ? Keys.name(code) + ' was used for ' + before[1] + ', so that now uses ' + Keys.of(before[0]) + '.' : '';
+  },
+  init() {
+    $('kbList').addEventListener('click', e => {
+      const b = e.target.closest('[data-kb]'); if (!b) return; e.stopPropagation();
+      if (this.wait === b.dataset.kb) { this.stop(); return; }
+      this.stop(); this.wait = b.dataset.kb; b.classList.add('wait'); b.textContent = 'Press a key…'; $('kbMsg').textContent = 'Press a key or mouse button for ' + KEY_ACTIONS.find(k => k[0] === this.wait)[1] + '. Esc cancels.';
+    });
+    // while waiting for a key, catch it before the game sees it
+    addEventListener('keydown', e => {
+      if (!this.wait) { if (e.code === 'Escape' && !$('settings').hidden) { e.preventDefault(); e.stopImmediatePropagation(); this.close(); } return; }
+      e.preventDefault(); e.stopImmediatePropagation();
+      if (e.code === 'Escape') { this.stop(); this.render(); return; }
+      if (e.code) this.take(e.code);
+    }, true);
+    // a mouse press while waiting becomes the binding (the click that started waiting has already finished)
+    addEventListener('mousedown', e => {
+      if (!this.wait) return;
+      if (e.target.closest && e.target.closest('#kbReset, #setDone')) { this.stop(); this.render(); return; }
+      e.preventDefault(); e.stopImmediatePropagation(); this.eat = true; this.take('Mouse' + e.button);
+    }, true);
+    addEventListener('click', e => { if (this.eat) { this.eat = false; e.preventDefault(); e.stopImmediatePropagation(); } }, true);
+    addEventListener('auxclick', e => { if (this.eat) { this.eat = false; e.preventDefault(); e.stopImmediatePropagation(); } }, true);
+    addEventListener('contextmenu', e => { if (!$('settings').hidden) e.preventDefault(); }, true);
+    $('kbReset').addEventListener('click', () => { Keys.reset(); this.stop(); this.render(); $('kbMsg').textContent = 'All keys are back to the defaults.'; });
+    $('setDone').addEventListener('click', () => this.close());
+    $('setBtn').addEventListener('click', () => { Sfx.init(); this.open(); });
+    $('pauseSetBtn').addEventListener('click', () => this.open());
   },
 };
 
@@ -7035,7 +7129,7 @@ function togglePause(force) {
   Match.paused = force === true ? true : !Match.paused;
   $('pause').hidden = !Match.paused;
   if (Match.paused) { if (document.pointerLockElement) document.exitPointerLock(); $('clickHint').hidden = true; Input.keys = {}; Input.lmb = Input.rmb = false; Input.pad.prev[9] = true; }
-  else Input.requestLock();
+  else { Settings.close(); Input.requestLock(); }
 }
 function updatePlayer(dt) {
   const a = player; if (!a) return;
@@ -7071,12 +7165,13 @@ function updatePlayer(dt) {
     if (P.has('Space') || P.has('Click')) cycleSpectate();
     P.clear(); Input.wheel = 0; return;
   }
-  let f = (K.KeyW ? 1 : 0) - (K.KeyS ? 1 : 0) + tc.mz + pd.mz, r = (K.KeyD ? 1 : 0) - (K.KeyA ? 1 : 0) + tc.mx + pd.mx;
+  const H = act => Keys.held(act, K);
+  let f = (H('forward') ? 1 : 0) - (H('back') ? 1 : 0) + tc.mz + pd.mz, r = (H('right') ? 1 : 0) - (H('left') ? 1 : 0) + tc.mx + pd.mx;
   inp.f = clamp(f, -1, 1); inp.r = clamp(r, -1, 1);
-  inp.sprint = !!(K.ShiftLeft || K.ShiftRight) || (tc.on && Math.hypot(tc.mx, tc.mz) > 0.92) || pd.sprint;
-  inp.jump = !!K.Space || tc.jump || pd.jump;
-  inp.fire = Input.lmb || tc.fire || pd.fire;
-  inp.ads = Input.rmb || tc.ads || pd.ads;
+  inp.sprint = H('sprint') || (tc.on && Math.hypot(tc.mx, tc.mz) > 0.92) || pd.sprint;
+  inp.jump = H('jump') || tc.jump || pd.jump;
+  inp.fire = H('fire') || tc.fire || pd.fire;
+  inp.ads = H('ads') || tc.ads || pd.ads;
   if (a.state === 'bus') { inp.f = inp.r = 0; inp.fire = false; if (P.has('Space')) busJump(a); }
   else if (a.state === 'sky') { if (P.has('Space')) a.state = 'glide'; }
   for (let i = 1; i <= 6; i++) if (P.has('Digit' + i)) { switchSlot(a, i - 1); Build.active = false; }
@@ -7284,7 +7379,7 @@ const HUD = {
       const mk = MAT_ORDER.map(m => v.mats[m]).join(',') + v.mat;
       if (this.last.mats !== mk) { this.last.mats = mk; [...$('mats').children].forEach(el => { const m = el.dataset.m; el.querySelector('span').textContent = v.mats[m]; el.classList.toggle('on', m === v.mat); }); }
       const bk = Build.active + Build.piece + Input.pad.on;
-      if (this.last.bb !== bk) { this.last.bb = bk; const pad = Input.pad.on; $('buildbar').innerHTML = [['wall', 'Z', 'Wall'], ['ramp', 'X', 'Ramp'], ['floor', 'C', 'Floor']].map(([p, k, n]) => `<div class="${Build.active && Build.piece === p ? 'on' : ''}">${pad ? '' : '<kbd>' + k + '</kbd>'}${n}</div>`).join('') + (pad ? '<div><kbd>B</kbd>Build</div><div><kbd>RB</kbd>Piece</div><div><kbd>LB</kbd>Material</div>' : '<div><kbd>G</kbd>Material</div>'); }
+      if (this.last.bb !== bk) { this.last.bb = bk; const pad = Input.pad.on; $('buildbar').innerHTML = [['wall', Keys.of('wall'), 'Wall'], ['ramp', Keys.of('ramp'), 'Ramp'], ['floor', Keys.of('floor'), 'Floor']].map(([p, k, n]) => `<div class="${Build.active && Build.piece === p ? 'on' : ''}">${pad ? '' : '<kbd>' + k + '</kbd>'}${n}</div>`).join('') + (pad ? '<div><kbd>B</kbd>Build</div><div><kbd>RB</kbd>Piece</div><div><kbd>LB</kbd>Material</div>' : '<div><kbd>' + esc(Keys.of('material')) + '</kbd>Material</div>'); }
     }
     // dark purple tint while standing in the storm
     { const inS = v.alive && v.state !== 'bus' && Storm.state !== 'idle' && Storm.outside(v.pos.x, v.pos.z); const st = $('stormTint'); if (st.classList.contains('on') !== inS) st.classList.toggle('on', inS); }
@@ -7302,9 +7397,9 @@ const HUD = {
     $('scope').hidden = !Cam.scoped;
     // prompt
     const pr = $('prompt'), c = Interact.cur;
-    if (a.alive && a.state === 'bus') { pr.style.display = 'block'; pr.innerHTML = '<kbd>' + (Input.pad.on ? 'A' : IS_TOUCH || Input.touch.on ? 'JUMP' : 'SPACE') + '</kbd>Jump from the bus'; pr.style.setProperty('--pc', '#4fb0ff'); }
-    else if (a.alive && a.state === 'sky') { pr.style.display = 'block'; pr.innerHTML = '<kbd>' + (Input.pad.on ? 'A' : Input.touch.on ? 'JUMP' : 'SPACE') + '</kbd>Open glider early'; pr.style.setProperty('--pc', '#3aa8ff'); }
-    else if (c && a.alive) { pr.style.display = 'block'; const k = (Input.pad.on ? 'X' : Input.touch.on ? 'USE' : 'E'); if (this.last.pr !== c.label + k) { this.last.pr = c.label + k; pr.innerHTML = '<kbd>' + k + '</kbd>' + esc(c.label); } pr.style.setProperty('--pc', c.color); }
+    if (a.alive && a.state === 'bus') { pr.style.display = 'block'; pr.innerHTML = '<kbd>' + (Input.pad.on ? 'A' : IS_TOUCH || Input.touch.on ? 'JUMP' : esc(Keys.of('jump')).toUpperCase()) + '</kbd>Jump from the bus'; pr.style.setProperty('--pc', '#4fb0ff'); }
+    else if (a.alive && a.state === 'sky') { pr.style.display = 'block'; pr.innerHTML = '<kbd>' + (Input.pad.on ? 'A' : Input.touch.on ? 'JUMP' : esc(Keys.of('jump')).toUpperCase()) + '</kbd>Open glider early'; pr.style.setProperty('--pc', '#3aa8ff'); }
+    else if (c && a.alive) { pr.style.display = 'block'; const k = (Input.pad.on ? 'X' : Input.touch.on ? 'USE' : Keys.of('use')); if (this.last.pr !== c.label + k) { this.last.pr = c.label + k; pr.innerHTML = '<kbd>' + k + '</kbd>' + esc(c.label); } pr.style.setProperty('--pc', c.color); }
     else { pr.style.display = 'none'; this.last.pr = null; }
     // channel bar
     let chl = null, chf = 0;
@@ -7601,6 +7696,7 @@ const Lobby = {
   refresh() {
     const d = Profile.d;
     Net.render(); $('buildTag').textContent = 'build ' + BUILD_ID;
+    { const k = a => '<kbd>' + esc(Keys.of(a)) + '</kbd>'; $('kbHint').innerHTML = k('forward') + k('left') + k('back') + k('right') + ' move · ' + k('fire') + ' fire · ' + k('ads') + ' aim · ' + k('jump') + ' jump · ' + k('sprint') + ' sprint · ' + k('use') + ' pick up / open · ' + k('reload') + ' reload · ' + k('wall') + k('ramp') + k('floor') + ' build · ' + k('material') + ' material · ' + k('emote') + ' emote · ' + k('map') + ' map. Change any of these in Settings.'; }
     $('coinLbl').textContent = d.coins.toLocaleString();
     [...$('tabs').children].forEach(b => b.classList.toggle('on', b.dataset.tab === this.tab));
     for (const t of ['play', 'locker', 'pass', 'career', 'shop']) $('tab-' + t).hidden = t !== this.tab;
@@ -7669,7 +7765,7 @@ function boot() {
   try { Creatures.load(); } catch (e) { console.warn(e); }
   try { CharModel.load(); } catch (e) { console.warn(e); }
   HUD.init();
-  Input.init();
+  Input.init(); Settings.init();
   Lobby.init();
   $('resumeBtn').addEventListener('click', () => togglePause());
   $('tkBtn').addEventListener('click', () => Ticket.close());
