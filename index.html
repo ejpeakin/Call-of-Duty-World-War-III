@@ -4326,10 +4326,9 @@ function chestLoot(kind) {
   if (Math.random() < 0.6) o.push({ kind: 'mats', mat: 'wood', count: 30 });
   return o;
 }
-// the opening moment: the lid springs up, the glow switches off and confetti flies
+// the opening moment: the lid springs up and the glow switches off
 function chestPop(c) {
   const u = c.mesh.userData; u.openT = 0; u.lock.visible = false; if (u.star) u.star.visible = false; if (u.beam) u.beam.visible = false;
-  if (player && Math.hypot(c.x - player.pos.x, c.z - player.pos.z) < 90) for (const col of [0xff5fa2, 0x58f0ff, 0x9bff4a, 0xffe14a]) FX.burst(c.x, c.y + 0.9, c.z, col, 7, 4.5, 0.9, 0.09, -3);
 }
 function openChest(c, a) {
   if (c.opened) return;
