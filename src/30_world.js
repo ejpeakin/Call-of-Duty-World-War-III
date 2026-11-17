@@ -604,7 +604,7 @@ function colorGeo(list) {
 const _chestGeo = {}; let CHEST_MAT = null;
 function chestGeo(kind) {
   if (_chestGeo[kind]) return _chestGeo[kind];
-  const [w1, w2, metal, dark, rivet] = { chest: [0xc58628, 0xa86d1f, 0x5d6672, 0x3a2410, 0x9aa3ad], exotic: [0x22a89c, 0x1a8a80, 0xd6eef0, 0x0e3d3a, 0xffffff], supply: [0x2f6fd0, 0x285fb4, 0xe6ebf2, 0x163a7a, 0xffffff] }[kind];
+  const [w1, w2, metal, dark, rivet] = { chest: [0xd9912a, 0xb9741f, 0xffc93a, 0x4a2a12, 0xfff3b0], exotic: [0x22a89c, 0x1a8a80, 0xd6eef0, 0x0e3d3a, 0xffffff], supply: [0x2f6fd0, 0x285fb4, 0xe6ebf2, 0x163a7a, 0xffffff] }[kind];
   const W = 1.1, H = 0.55, D = 0.72, R = D / 2, L = [];
   const box = (sx, sy, sz, x, y, z, hex) => L.push([new THREE.BoxGeometry(sx, sy, sz).translate(x, y, z), hex]);
   const dot = (x, y, z, hex, r = 0.02) => L.push([new THREE.SphereGeometry(r, 6, 4).translate(x, y, z), hex]);
@@ -622,6 +622,7 @@ function chestGeo(kind) {
   box(0.2, 0.2, 0.03, 0, H - 0.09, R + 0.02, metal);
   box(0.03, 0.07, 0.012, 0, H - 0.11, R + 0.038, dark); dot(0, H - 0.07, R + 0.036, dark, 0.017);
   for (const [x, y] of [[-0.075, H - 0.17], [0.075, H - 0.17], [-0.075, H - 0.01], [0.075, H - 0.01]]) dot(x, y, R + 0.036, rivet, 0.013);
+  for (const [x, hex] of [[-0.42, 0xff3b6b], [0.42, 0x3fd0ff]]) L.push([new THREE.OctahedronGeometry(0.06, 0).scale(1, 1.2, 0.6).translate(x, H / 2, R + 0.03), hex]);
   const base = colorGeo(L);
   // lid, in pivot space (pivot = back top edge of the base)
   const LL = [];
@@ -641,17 +642,34 @@ function chestMesh(kind) {
     const lid = new THREE.Group(); lid.position.set(0, 0.55 * s, -0.35 * s); g.add(lid);
     const lm = new THREE.Mesh(GEO.unit, lam(C[1])); lm.scale.set(1.14 * s, 0.24 * s, 0.74 * s); lm.position.set(0, 0.12 * s, 0.35 * s); lid.add(lm);
     const lock = new THREE.Mesh(GEO.unit, basic(C[2])); lock.scale.set(0.16 * s, 0.2 * s, 0.06 * s); lock.position.set(0, 0.5 * s, 0.36 * s); g.add(lock);
-    base.castShadow = lm.castShadow = true; g.userData.lid = lid; g.userData.lock = lock; return g;
+    base.castShadow = lm.castShadow = true; g.userData.lid = lid; g.userData.lock = lock; g.userData.s0 = 1.25; g.scale.setScalar(1.25); return g;
   }
   if (!CHEST_MAT) CHEST_MAT = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });
   const G = chestGeo(kind);
   const base = new THREE.Mesh(G.base, CHEST_MAT); base.castShadow = true; g.add(base);
   const lid = new THREE.Group(); lid.position.set(0, 0.55, -0.36); g.add(lid);
   const lm = new THREE.Mesh(G.lid, CHEST_MAT); lm.castShadow = true; lid.add(lm);
-  const lock = new THREE.Mesh(GEO.unit, basic(kind === 'exotic' ? 0x9ffff5 : 0xfff0a0)); lock.scale.set(0.035, 0.05, 0.01); lock.position.set(0, 0.44, 0.405); g.add(lock);
-  if (kind === 'supply') g.scale.setScalar(1.3);
-  g.userData.lid = lid; g.userData.lock = lock;
+  // glowing parts: a gem lock, a line of light under the lid, treasure inside, a light beam and a spinning star while it is unopened
+  if (!GEO.chestGem) { GEO.chestGem = new THREE.OctahedronGeometry(0.085, 0).scale(1, 1.25, 0.55); GEO.chestStar = (() => { const b = new GB(); for (let k = 0; k < 3; k++) { const o = new THREE.OctahedronGeometry(0.2, 0); o.scale(k === 0 ? 0.32 : 1.25, k === 1 ? 0.32 : 1.25, k === 2 ? 0.32 : 0.32); if (k === 2) o.scale(0.26, 0.26, 1.5); b.add(o, 0xffffff); } return b.build(); })(); }
+  const glowC = kind === 'exotic' ? 0x9ffff5 : kind === 'supply' ? 0xbfe2ff : 0xfff0a0, rar = kind === 'exotic' ? 6 : kind === 'supply' ? 2 : 4;
+  const lock = new THREE.Mesh(GEO.chestGem, basic(kind === 'exotic' ? 0xff5fd0 : 0x58f0ff)); lock.position.set(0, 0.45, 0.42); g.add(lock);
+  const seam = new THREE.Mesh(GEO.unit, basic(glowC)); seam.scale.set(1.12, 0.022, 0.74); seam.position.set(0, 0.552, 0); g.add(seam);
+  const gold = new THREE.Mesh(GEO.unit, basic(kind === 'exotic' ? 0x6ffff0 : 0xffd84a)); gold.scale.set(1.0, 0.06, 0.62); gold.position.set(0, 0.5, 0); g.add(gold);
+  const beam = new THREE.Mesh(GEO.beam, MAT.beam[rar]); beam.scale.set(2.2, 1.5, 2.2); beam.position.y = 0.3; g.add(beam);
+  const star = new THREE.Mesh(GEO.chestStar, basic(glowC)); star.position.y = 1.3; g.add(star);
+  g.userData.lid = lid; g.userData.lock = lock; g.userData.star = star; g.userData.beam = beam; g.userData.s0 = kind === 'supply' ? 1.55 : 1.3;
+  g.scale.setScalar(g.userData.s0);
   return g;
+}
+// loot out in the wild: chests and ammo boxes dotted over the whole island, not just in the towns
+function scatterChests(R) {
+  const n = Math.round(150 * W.R * W.R / (530 * 530)); let made = 0;
+  for (let t = 0; t < n * 12 && made < n; t++) {
+    const a = R() * TAU, r = Math.sqrt(R()) * W.R * 0.97, x = Math.cos(a) * r, z = Math.sin(a) * r, h = groundH(x, z);
+    if (h < W.waterY + 0.8 || nearSite(x, z, 6) || !clearGround(x, z, 2.5)) continue;
+    if (Math.abs(groundH(x + 1.5, z) - h) > 0.9 || Math.abs(groundH(x, z + 1.5) - h) > 0.9) continue;
+    addChest(R() < 0.72 ? 'chest' : 'ammo', x, h, z, R() * TAU, null); W.spots.push({ type: 'loot', x, z, r: 1.6 }); made++;
+  }
 }
 function addChest(kind, x, y, z, rot, path, noBot) {
   const mesh = chestMesh(kind); mesh.position.set(x, y, z); mesh.rotation.y = rot || 0; W.group.add(mesh);
@@ -713,7 +731,7 @@ function genWorld(key) {
     if (eb.count) W.group.add(eb.mesh(MAT.glow, false));
   }
   { const b = new Batch(), eb = new Batch(); buildPathMesh(eb); buildLandmarks(RN, b, eb); if (b.count) W.group.add(b.mesh(MAT.batch, true)); if (eb.count) W.group.add(eb.mesh(MAT.glow, false)); }
-  scatterForest(RN); scatterBoulders(RN); if (!Net.inMatch) placeCars();   // cars are not shared between players yet
+  scatterChests(RN); scatterForest(RN); scatterBoulders(RN); if (!Net.inMatch) placeCars();   // cars are not shared between players yet
   GroundCover.build(); Nature.buildSky(RN);
   // exotic crates near three plazas
   const ps = W.pois.slice().sort(() => R() - 0.5).slice(0, 3);

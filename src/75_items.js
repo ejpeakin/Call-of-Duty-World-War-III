@@ -38,7 +38,7 @@ const Pickups = {
     if (p.id) this.byId.delete(p.id);
     p.alive = false; if (p.mesh) { if (p.mesh.parent) p.mesh.parent.remove(p.mesh); p.mesh = null; } },
   update(dt) {
-    const cp = camera.position;
+    const cp = camera.position, p_time = performance.now() / 1000;
     for (const p of this.list) {
       if (!p.alive) continue; p.t += dt; p.age += dt;
       if (p.ttl && p.age > p.ttl) { this.remove(p); continue; }
@@ -54,6 +54,21 @@ const Pickups = {
     // chests: skip drawing the far ones (they are a few pixels across beyond ~170 m)
     this.ct = (this.ct || 0) - dt;
     if (this.ct <= 0) { this.ct = 0.25; for (const c of W.chests) if (c.mesh && !c.falling) { const d2 = (c.x - cp.x) ** 2 + (c.z - cp.z) ** 2; c.mesh.visible = d2 < 170 * 170; } }
+    // chests wobble, sparkle and spin a star until someone opens them; then the lid springs up
+    for (const c of W.chests) {
+      const m = c.mesh; if (!m || !m.visible || c.falling) continue; const u = m.userData, s0 = u.s0 || 1;
+      if (c.opened) {
+        if (u.openT == null || u.openT >= 1) continue;
+        u.openT = Math.min(1, u.openT + dt / 0.5); const q = u.openT - 1, e = 1 + 2.70158 * q * q * q + 1.70158 * q * q;
+        u.lid.rotation.x = -1.9 * e; m.position.y = c.y + Math.sin(u.openT * Math.PI) * 0.22; m.scale.setScalar(s0 * (1 + Math.sin(u.openT * Math.PI) * 0.12));
+        continue;
+      }
+      const d2 = (c.x - cp.x) ** 2 + (c.z - cp.z) ** 2; if (d2 > 75 * 75) continue;
+      const t = p_time + c.x * 0.7, sq = Math.sin(t * 3.2);
+      m.scale.set(s0 * (1 - sq * 0.03), s0 * (1 + sq * 0.045), s0 * (1 - sq * 0.03));
+      if (u.star) { u.star.rotation.y = t * 2.2; u.star.position.y = 1.3 + Math.sin(t * 2.4) * 0.09; u.star.scale.setScalar(0.85 + Math.sin(t * 5) * 0.15); u.lock.rotation.y = t * 1.5; }
+      if (d2 < 35 * 35 && Math.random() < dt * 1.4) FX.burst(c.x + rnd(-0.6, 0.6), c.y + 0.5 + Math.random() * 0.9, c.z + rnd(-0.6, 0.6), c.kind === 'exotic' ? 0x9ffff5 : 0xfff0a0, 1, 0.5, 0.6, 0.06, 1);
+    }
   },
 };
 
@@ -105,6 +120,11 @@ function chestLoot(kind) {
   if (Math.random() < 0.6) o.push({ kind: 'mats', mat: 'wood', count: 30 });
   return o;
 }
+// the opening moment: the lid springs up, the glow switches off and confetti flies
+function chestPop(c) {
+  const u = c.mesh.userData; u.openT = 0; u.lock.visible = false; if (u.star) u.star.visible = false; if (u.beam) u.beam.visible = false;
+  if (player && Math.hypot(c.x - player.pos.x, c.z - player.pos.z) < 90) for (const col of [0xff5fa2, 0x58f0ff, 0x9bff4a, 0xffe14a]) FX.burst(c.x, c.y + 0.9, c.z, col, 7, 4.5, 0.9, 0.09, -3);
+}
 function openChest(c, a) {
   if (c.opened) return;
   if (Net.guest && !Net.applying) {   // the host opens it, so everyone sees the same loot
@@ -113,7 +133,7 @@ function openChest(c, a) {
     return;
   }
   c.opened = true; c.claim = null; if (!Net.applying) a.chests++;
-  c.mesh.userData.lid.rotation.x = -1.9; c.mesh.userData.lock.visible = false;
+  chestPop(c);
   if (Net.hosting) Net.emit({ k: 'chest', x: c.x, z: c.z, by: a.id });
   if (Net.guest) { if (Math.hypot(c.x - player.pos.x, c.z - player.pos.z) < 110) { FX.burst(c.x, c.y + 0.8, c.z, c.kind === 'exotic' ? 0x2fe0d0 : 0xffd84a, 16, 3, 0.8, 0.12, -1); if (Sfx.vol(c.x, c.y, c.z) > 0.3) Sfx.chest(); } return; }
   const items = chestLoot(c.kind);
