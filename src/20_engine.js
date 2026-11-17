@@ -3,6 +3,14 @@
 // =====================================================================
 let renderer, scene, camera, sun, hemi, sky, stars, waterMesh, stormMesh, SOFT_GL = false;
 // a message bar for when the 3D view cannot draw, so a black screen always says why
+// The browser can hand the page a graphics context that is already switched off: Chrome does this for a
+// site after the graphics card crashed there. Everything then 'works' but nothing is drawn, so say so.
+const GL_BLOCKED = 'Your browser has switched off 3D graphics for this website, so the game cannot draw. This usually happens after the graphics card hiccups once. To fix it: close every Chrome window (or restart the computer), open the game again, and reload. If it is still blank, open chrome://settings/system and turn on "Use graphics acceleration when available".';
+function checkGL() {
+  let lost = false; try { lost = !renderer || renderer.getContext().isContextLost(); } catch (e) { lost = true; }
+  if (lost) { showProblem(GL_BLOCKED); const el = document.getElementById('problemBar'); if (el) el.dataset.gl = '1'; }
+  return !lost;
+}
 function showProblem(msg) {
   let el = document.getElementById('problemBar');
   if (!el) { el = document.createElement('div'); el.id = 'problemBar'; el.style.cssText = 'position:fixed;left:16px;bottom:16px;z-index:99;max-width:min(560px,calc(100vw - 32px));background:#3a0f1c;border:1px solid #ff6a7a;color:#fff;font:600 14px/1.4 system-ui,sans-serif;padding:12px 14px;border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,.5)'; document.body.appendChild(el); }
@@ -50,7 +58,8 @@ function initEngine() {
   // no graphics acceleration (software drawing): fewer pixels and no shadows, or every frame takes seconds
   try { const gl = renderer.getContext(), dbg = gl.getExtension('WEBGL_debug_renderer_info'), name = dbg ? String(gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL)) : ''; SOFT_GL = /swiftshader|llvmpipe|software|basic render/i.test(name) && !window.__testGL; } catch (e) { /* unknown: assume a real GPU */ }
   if (SOFT_GL) renderer.setPixelRatio(0.6);
-  canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); showProblem('The graphics card stopped drawing the game. Reload the page to get it back.'); });
+  canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); checkGL(); });
+  canvas.addEventListener('webglcontextrestored', () => { const el = document.getElementById('problemBar'); if (el && el.dataset.gl) el.remove(); });
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
   scene = new THREE.Scene();
   camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.1, 1700);

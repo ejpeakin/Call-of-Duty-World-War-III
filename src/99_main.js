@@ -23,13 +23,19 @@ function boot() {
   $('shadowChk').checked = !!Profile.d.shadows; $('shadowChk').addEventListener('change', e => { Profile.d.shadows = e.target.checked; sun.castShadow = e.target.checked; Profile.save(); });
   $('game').addEventListener('click', () => { if (Match.state === 'play' && !Match.paused && !Input.locked) Input.requestLock(); });
   requestAnimationFrame(frame);
+  checkGL(); setInterval(checkGL, 3000);
 }
 let frameErrs = 0, firstFrame = false;
 function frame(now) {
   requestAnimationFrame(frame);
   try {
     step(now);
-    if (!firstFrame) { firstFrame = true; const el = $('stageWait'); if (el) el.remove(); }
+    if (!firstFrame && checkGL()) {
+      // make sure the picture really reached the screen: an opaque pixel in the middle of the frame
+      let ok = true; try { const gl = renderer.getContext(), px = new Uint8Array(4); gl.readPixels(gl.drawingBufferWidth >> 1, gl.drawingBufferHeight >> 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); ok = px[3] > 0 || gl.drawingBufferWidth === 0; } catch (e) { /* cannot tell */ }
+      if (ok) { firstFrame = true; const el = $('stageWait'); if (el) el.remove(); }
+      else if (++frameErrs > 30) { firstFrame = true; showProblem(GL_BLOCKED); }
+    }
   } catch (e) {
     console.error(e); lastFrame = performance.now();
     if (++frameErrs <= 3 || frameErrs % 300 === 0) showProblem('Something went wrong drawing the game (' + (e && e.message ? e.message : e) + '). Try reloading the page. If it keeps happening, send a screenshot of this message.');
@@ -91,4 +97,4 @@ function step(now) {
   renderer.render(scene, camera);
 }
 try { boot(); }
-catch (e) { console.error(e); document.body.insertAdjacentHTML('beforeend', '<div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;background:#0e0a1f;color:#fff;font:16px system-ui">FortDay needs WebGL to run. Your browser reported: ' + esc(e.message) + '</div>'); }
+catch (e) { console.error(e); document.body.insertAdjacentHTML('beforeend', '<div style="position:fixed;inset:0;z-index:100;display:flex;flex-direction:column;gap:14px;align-items:center;justify-content:center;padding:24px;text-align:center;background:#0e0a1f;color:#fff;font:16px/1.5 system-ui"><b style="font-size:20px">FortDay cannot use 3D graphics in this browser right now.</b><span style="max-width:620px">' + esc(GL_BLOCKED) + '</span><small style="opacity:.6">Browser message: ' + esc(e.message) + '</small></div>'); }
