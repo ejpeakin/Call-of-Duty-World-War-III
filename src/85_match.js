@@ -42,16 +42,16 @@ const Storm = {
   update(dt) {
     if (this.state === 'wait') {
       this.t -= dt;
-      if (this.t <= 0) { const P = PHASES[this.phase]; this.state = 'shrink'; this.t = this.dur = P.shrink; this.dmg = P.dmg; HUD.banner('The storm is closing in', P.dmg + ' damage per second outside the eye', 3); Sfx.storm(); }
+      if (this.t <= 0 && !Net.guest) { const P = PHASES[this.phase]; this.state = 'shrink'; this.t = this.dur = P.shrink; this.dmg = P.dmg; HUD.banner('The storm is closing in', P.dmg + ' damage per second outside the eye', 3); Sfx.storm(); }
     } else if (this.state === 'shrink') {
       this.t -= dt; const k = 1 - Math.max(0, this.t) / this.dur;
       this.cx = lerp(this.fx, this.tx, k); this.cz = lerp(this.fz, this.tz, k); this.r = lerp(this.fr, this.tr, k);
-      if (this.t <= 0) { this.cx = this.tx; this.cz = this.tz; this.r = this.tr; this.nextPhase(); }
+      if (this.t <= 0 && !Net.guest) { this.cx = this.tx; this.cz = this.tz; this.r = this.tr; this.nextPhase(); }
     }
     this.tick -= dt;
     if (this.tick <= 0) {
       this.tick = 1;
-      if (this.state !== 'idle') for (const a of actors) if (a.alive && !a.npc && a.state !== 'bus' && a.invuln <= 0 && this.outside(a.pos.x, a.pos.z)) damageActor(a, this.dmg, null, { raw: true, storm: true });
+      if (this.state !== 'idle' && !Net.guest) for (const a of actors) if (a.alive && !a.npc && a.state !== 'bus' && a.invuln <= 0 && this.outside(a.pos.x, a.pos.z)) damageActor(a, this.dmg, null, { raw: true, storm: true });
     }
     stormMesh.visible = this.state !== 'idle' && this.r < STORM_START - 20;
     stormMesh.scale.set(Math.max(0.5, this.r), 760, Math.max(0.5, this.r)); stormMesh.position.set(this.cx, 120, this.cz);
@@ -120,8 +120,8 @@ const Bus = {
     this.mesh.rotation.set(0, Math.atan2(this.dir.x, this.dir.z), Math.sin(this.t * 0.9) * 0.04);
     for (const p of this.mesh.userData.props) p.rotation.z += dt * 30;
     if (this.t > this.dur && this.active) {
-      for (const a of actors) if (a.state === 'bus') busJump(a);
-      this.active = false; this.mesh.visible = false; Storm.start();
+      for (const a of actors) if (a.state === 'bus' && !a.remote) busJump(a);
+      this.active = false; this.mesh.visible = false; if (!Net.guest) Storm.start();
       HUD.banner('The storm is forming', 'Find gear, then head for the safe zone', 3);
     }
   },
@@ -204,14 +204,19 @@ const Match = {
     }, 40);
   },
   setup() {
+    Net.building = true;
     genWorld(this.theme);
     $('ldFill').style.width = '80%';
     actors.length = 0; nextId = 1; ElimFX.clear(); CharPool.clear(); BotRig.hideAll(); Trails.clear();
+    if (Net.guest) Net.guestSetup(); else {
+    Net.humans.clear();
     player = newActor({ name: 'You', isPlayer: true, team: 0 });
     actors.push(player);
     const N = this.mode === 'rumble' ? 32 : 100;
     for (let i = 1; i < N; i++) {
       const team = this.mode === 'solo' ? i : this.mode === 'squads' ? Math.floor(i / 4) : (i < 16 ? 0 : 1);
+      const hm = Net.hosting ? Net.slotMember(i, this.mode) : null;
+      if (hm) { const h = newActor({ name: hm.name, team, ri: i - 1, look: Net.lookFromEq(hm.eq), remote: true, human: hm.id }); BotRig.setLook(h.ri, h.look); actors.push(h); Net.humans.set(hm.id, h); continue; }   // a friend takes this spot
       const b = newActor({ name: botName(), team, ri: i - 1, look: randomLook() });
       initBotAI(b, clamp(rnd(0.15, 0.85) + (this.ranked ? 0.18 : 0), 0, 1));
       if (this.mode === 'squads' && team === 0) b.leader = player;
@@ -239,12 +244,15 @@ const Match = {
         a.ai.jumpAt = a.leader ? Bus.dur - 0.5 : Bus.timeNear(tx, tz) - Math.random() * 2.5;
       }
     }
-    LiveEvent.init(this.mode); Creatures.spawn();
+    }
+    this.time = this.time || 0; this.firstLander = null; this.sharkKills = 0; if (Net.guest) { this.score = [0, 0]; this.ending = false; this.spectate = null; this.paused = false; this.result = null; this.deathShown = false; this.hasWinner = false; }
+    LiveEvent.init(this.mode); if (Net.inMatch) LiveEvent.state = 'off'; else Creatures.spawn();
     if (PlayerRig) scene.remove(PlayerRig.root);
     PlayerRig = makeRig(Profile.d.eq); scene.add(PlayerRig.root);
     sun.castShadow = !!Profile.d.shadows;
     this.recount();
-    this.state = 'play';
+    this.state = 'play'; Net.building = false;
+    if (Net.hosting) Net.hostStart(); else if (Net.guest) Net.flush();
     $('loading').hidden = true; HUD.startMatch();
     Input.requestLock();
     if (this.mode !== 'rumble') HUD.banner('Welcome aboard the Sky Coach', Input.pad.on ? 'Press A to jump out' : IS_TOUCH ? 'Tap JUMP to leave the bus' : 'Press SPACE to jump out', 4);
@@ -289,14 +297,14 @@ const Match = {
       if (src && src !== t && src.team !== t.team) this.score[src.team]++; else this.score[1 - t.team]++;
       t.respawnT = 5;
       if (t === player) HUD.banner('Eliminated', 'Respawning in 5 seconds', 3);
-      if (!this.ending && (this.score[0] >= 40 || this.score[1] >= 40)) this.finish(this.score[0] >= 40 ? 0 : 1);
+      if (!this.ending && !Net.guest && (this.score[0] >= 40 || this.score[1] >= 40)) this.finish(this.score[0] >= 40 ? 0 : 1);
       return;
     }
     this.recount();
     if (t === player) this.spectate = src && src.alive ? src : null;
     if (!this.deathShown && !this.teamAlive(player.team)) { player.placement = this.teamsAlive + 1; this.deathShown = true; this.showDeath(src, o); }
     else if (t === player) HUD.banner('You are out', 'Your squad fights on. Spectating a teammate.', 3);
-    if (this.teamsAlive <= 1 && !this.ending) { const w = actors.find(a => a.alive && !a.npc); this.finish(w ? w.team : -2); }
+    if (this.teamsAlive <= 1 && !this.ending && !Net.guest) { const w = actors.find(a => a.alive && !a.npc); this.finish(w ? w.team : -2); }
   },
   showDeath(src, o = {}) {
     if (document.pointerLockElement) document.exitPointerLock();
@@ -307,6 +315,7 @@ const Match = {
   },
   finish(winTeam) {
     this.ending = true; this.endT = 3.2; this.hasWinner = true;
+    if (Net.hosting) Net.emit({ k: 'finish', w: winTeam });
     const win = winTeam === player.team;
     if (this.mode !== 'rumble') { if (win) player.placement = 1; }
     this.result = { win, winTeam };
@@ -325,10 +334,11 @@ const Match = {
     this.time += dt;
     if (Bus.active) Bus.update(dt);
     Storm.update(dt); LiveEvent.update(dt);
-    if (this.mode === 'rumble' && !this.ending) for (const a of actors) if (!a.alive && !a.npc && a.respawnT > 0) { a.respawnT -= dt; if (a.respawnT <= 0) this.respawn(a, false); }
+    if (this.mode === 'rumble' && !this.ending) for (const a of actors) if (!a.alive && !a.npc && !a.remote && a.respawnT > 0) { a.respawnT -= dt; if (a.respawnT <= 0) this.respawn(a, false); }
     if (this.ending) { this.endT -= dt; if (this.endT <= 0) { this.ending = false; this.showResults(); } }
   },
   showResults() {
+    if (Net.hosting && !this.hasWinner) Net.emit({ k: 'end' });   // the host runs the match, so it ends for everyone
     this.state = 'results';
     if (document.pointerLockElement) document.exitPointerLock();
     const r = this.result || { win: false }, p = player, d = Profile.d;
@@ -366,6 +376,7 @@ const Match = {
     $('death').hidden = true; $('results').hidden = false;
   },
   toLobby() {
+    if (Net.inMatch) { if (Net.isHost) { if (!this.hasWinner) Net.emit({ k: 'end' }); } else if (this.state === 'play') Net.send('h', { k: 'bye' }); Net.inMatch = false; Net.queue.length = 0; }
     this.state = 'lobby'; $('results').hidden = true; $('death').hidden = true; $('pause').hidden = true; $('hud').hidden = true; $('bigmap').hidden = true; $('clickHint').hidden = true;
     if (document.pointerLockElement) document.exitPointerLock();
     if (Bus.mesh) Bus.mesh.visible = false; stormMesh.visible = false; Build.hideGhost();

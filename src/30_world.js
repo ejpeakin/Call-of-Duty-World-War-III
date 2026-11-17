@@ -713,7 +713,8 @@ function genWorld(key) {
     if (eb.count) W.group.add(eb.mesh(MAT.glow, false));
   }
   { const b = new Batch(), eb = new Batch(); buildPathMesh(eb); buildLandmarks(RN, b, eb); if (b.count) W.group.add(b.mesh(MAT.batch, true)); if (eb.count) W.group.add(eb.mesh(MAT.glow, false)); }
-  scatterForest(RN); scatterBoulders(RN); placeCars(); GroundCover.build(); Nature.buildSky(RN);
+  scatterForest(RN); scatterBoulders(RN); if (!Net.inMatch) placeCars();   // cars are not shared between players yet
+  GroundCover.build(); Nature.buildSky(RN);
   // exotic crates near three plazas
   const ps = W.pois.slice().sort(() => R() - 0.5).slice(0, 3);
   for (const p of ps) { const a = R() * TAU; addChest('exotic', p.x + Math.cos(a) * 11, p.h + 0.3, p.z + Math.sin(a) * 11, a, null); }

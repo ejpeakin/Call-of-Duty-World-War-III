@@ -23,22 +23,29 @@ function boot() {
   $('game').addEventListener('click', () => { if (Match.state === 'play' && !Match.paused && !Input.locked) Input.requestLock(); });
   requestAnimationFrame(frame);
 }
-function frame(now) {
-  requestAnimationFrame(frame);
+function frame(now) { requestAnimationFrame(frame); step(now); }
+// The host's browser runs the shared match, and browsers stop drawing hidden tabs.
+// So while the host's tab is in the background, keep the match moving from a timer.
+setInterval(() => {
+  if (!document.hidden || !Net.hosting || Match.state !== 'play') return;
+  let n = Math.min(24, Math.floor((performance.now() - lastFrame) / 50));
+  while (n-- > 0) step(lastFrame + 50);
+}, 250);
+function step(now) {
   let dt = Math.min(0.05, Math.max(0.0005, (now - lastFrame) / 1000)); lastFrame = now;
   Input.pollPad();
   if (Match.state !== 'play' || Match.paused || !$('death').hidden || !$('results').hidden || !$('ticket').hidden) Input.padMenu(dt);
   if (Match.state === 'lobby' || Match.state === 'loading') { Lobby.render(dt); return; }
-  if (Match.paused) { renderer.render(scene, camera); return; }
+  if (Match.paused && !Net.inMatch) { renderer.render(scene, camera); return; }   // a shared match keeps running while you are in the menu
   gameTime += dt;
   if (Match.state === 'play') {
-    updatePlayer(dt);
-    for (let i = 0; i < actors.length; i++) { const a = actors[i]; if (a.ai && a.alive) updateBot(a, dt); }
-    for (let i = 0; i < actors.length; i++) { const a = actors[i]; actorTick(a, dt); physicsActor(a, dt); }
+    if (Match.paused) { if (player) { player.input.f = player.input.r = 0; player.input.fire = player.input.jump = false; } Input.pressed.clear(); Input.mdx = Input.mdy = 0; } else updatePlayer(dt);
+    for (let i = 0; i < actors.length; i++) { const a = actors[i]; if (a.ai && a.alive && !a.remote) updateBot(a, dt); }
+    for (let i = 0; i < actors.length; i++) { const a = actors[i]; if (a.remote) Net.tickRemote(a, dt); else { actorTick(a, dt); physicsActor(a, dt); } }
     Vehicles.update(dt);
     Creatures.update(dt);
     Rockets.update(dt);
-    Match.update(dt);
+    Match.update(dt); Net.update(dt);
     Interact.find();
   }
   Pickups.update(dt); Build.update(dt); FX.update(dt);

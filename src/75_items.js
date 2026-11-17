@@ -22,13 +22,21 @@ function pickupMesh(it) {
 }
 
 const Pickups = {
-  list: [],
-  clear() { for (const p of this.list) if (p.mesh && p.mesh.parent) p.mesh.parent.remove(p.mesh); this.list = []; },
+  list: [], byId: new Map(), nid: 0,
+  clear() { for (const p of this.list) if (p.mesh && p.mesh.parent) p.mesh.parent.remove(p.mesh); this.list = []; this.byId.clear(); this.nid = 0; },
   spawn(item, x, y, z, o = {}) {
+    // in a shared match the host owns the loot on the ground: guests ask for a drop instead of making one
+    if (Net.guest && !Net.applying) { if (!Net.building) Net.emit({ k: 'drop', item, x, y, z, pop: o.pop ? [o.pop.x, o.pop.y + 1, o.pop.z] : 0 }); return { item, x, y, z, alive: false }; }
     const p = { item, x, y, z, alive: true, mesh: null, path: o.path ? o.path.slice() : null, claim: null, t: Math.random() * 6, fails: 0, age: 0, ttl: o.ttl || 0, pop: o.pop ? { x: o.pop.x, y: o.pop.y + 1, z: o.pop.z } : null };
-    this.list.push(p); return p;
+    p.id = o.id || ++this.nid; this.byId.set(p.id, p);
+    this.list.push(p);
+    if (Net.hosting && !Net.building) Net.emit({ k: 'pk+', id: p.id, item, x, y, z, pop: p.pop ? [p.pop.x, p.pop.y, p.pop.z] : 0, ttl: p.ttl });
+    return p;
   },
-  remove(p) { p.alive = false; if (p.mesh) { if (p.mesh.parent) p.mesh.parent.remove(p.mesh); p.mesh = null; } },
+  remove(p) {
+    if (p.alive && p.id && Net.inMatch && !Net.applying) Net.emit({ k: Net.isHost ? 'pk-' : 'take', id: p.id });
+    if (p.id) this.byId.delete(p.id);
+    p.alive = false; if (p.mesh) { if (p.mesh.parent) p.mesh.parent.remove(p.mesh); p.mesh = null; } },
   update(dt) {
     const cp = camera.position;
     for (const p of this.list) {
@@ -98,8 +106,16 @@ function chestLoot(kind) {
   return o;
 }
 function openChest(c, a) {
-  if (c.opened) return; c.opened = true; c.claim = null; a.chests++;
+  if (c.opened) return;
+  if (Net.guest && !Net.applying) {   // the host opens it, so everyone sees the same loot
+    if (c.asked > Match.time) return; c.asked = Match.time + 1.5; a.chests++; Net.emit({ k: 'chest', x: c.x, z: c.z });
+    if (a === player && !Profile.ticket() && (Math.random() < TICKET_CHANCE || window.__forceTicket)) Ticket.found(c);
+    return;
+  }
+  c.opened = true; c.claim = null; if (!Net.applying) a.chests++;
   c.mesh.userData.lid.rotation.x = -1.9; c.mesh.userData.lock.visible = false;
+  if (Net.hosting) Net.emit({ k: 'chest', x: c.x, z: c.z, by: a.id });
+  if (Net.guest) { if (Math.hypot(c.x - player.pos.x, c.z - player.pos.z) < 110) { FX.burst(c.x, c.y + 0.8, c.z, c.kind === 'exotic' ? 0x2fe0d0 : 0xffd84a, 16, 3, 0.8, 0.12, -1); if (Sfx.vol(c.x, c.y, c.z) > 0.3) Sfx.chest(); } return; }
   const items = chestLoot(c.kind);
   const near = player && Math.hypot(c.x - player.pos.x, c.z - player.pos.z) < 110;
   if (a === player || !a.ai) {

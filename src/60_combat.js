@@ -127,14 +127,15 @@ function fireWeapon(a) {
     const dd = _v1.set(tx - mz.x, ty - mz.y, tz - mz.z).normalize();
     Rockets.spawn(a, mz, dd, st);
   } else {
-    const n = st.pellets || 1;
+    const n = st.pellets || 1, hits = [], tcol = it.rarity >= 5 ? RARITY[it.rarity].hex : 0xfff1a8, r1 = v => Math.round(v * 10) / 10;
     for (let i = 0; i < n; i++) {
       const d = coneDir(AIM.d, spread, _v2);
       const ox = AIM.o.x + AIM.d.x * AIM.t0, oy = AIM.o.y + AIM.d.y * AIM.t0, oz = AIM.o.z + AIM.d.z * AIM.t0;
       const h = raycast(ox, oy, oz, d.x, d.y, d.z, st.range, a, true);
-      if (i < 3 || i % 3 === 0) FX.tracer(mz.x, mz.y, mz.z, h.x, h.y, h.z, it.rarity >= 5 ? RARITY[it.rarity].hex : 0xfff1a8);
+      if (i < 3 || i % 3 === 0) { FX.tracer(mz.x, mz.y, mz.z, h.x, h.y, h.z, tcol); if (hits.length < 4) hits.push([r1(h.x), r1(h.y), r1(h.z)]); }
       applyHit(a, st, h, d, n);
     }
+    if (Net.inMatch && !a.remote) { muzzlePos(a, _v3); Net.emit({ k: 'shot', id: a.id, m: [r1(_v3.x), r1(_v3.y), r1(_v3.z)], h: hits, ty: st.type, c: tcol }, a.pos, NET_RANGE); }
   }
   Sfx.shot(st.type, a.pos.x, a.pos.y, a.pos.z);
   FX.burst(mz.x, mz.y, mz.z, 0xffd27a, 2, 1.5, 0.06, 0.12, 0);
@@ -188,6 +189,14 @@ function damageActor(t, dmg, src, o = {}) {
   if (!t.alive || t.invuln > 0 || Match.state !== 'play') return 0;
   if (src && src !== t && src.team === t.team) return 0;
   dmg = Math.max(1, Math.round(dmg));
+  if (Net.inMatch && t.remote && !Net.applying) {   // someone else's character: their own game decides what the hit does
+    if (src && src.remote) return 0;
+    const ev = { k: 'dmg', id: t.id, dmg, src: src ? src.id : 0, o: Net.slim(o) };
+    if (!Net.isHost) Net.send('h', ev); else if (t.human) Net.send(t.human, ev); else return 0;
+    if (src) src.dmgDealt += dmg;
+    if (src === player) { HUD.hitmark(o.head); Sfx.hit(o.head); HUD.dmgNum(o.x !== undefined ? o.x : t.pos.x, o.y !== undefined ? o.y + 0.4 : t.pos.y + 2.2, o.z !== undefined ? o.z : t.pos.z, dmg, o.head ? 'head' : t.shield > 0 ? 'shield' : 'hp'); }
+    return dmg;
+  }
   let rem = dmg, shieldHit = false;
   if (!o.raw) {
     if (t.over > 0) { const u = Math.min(t.over, rem); t.over -= u; rem -= u; shieldHit = true; }
@@ -209,7 +218,12 @@ function eliminate(t, src, o) {
   if (t.vehicle) Vehicles.exit(t, true);
   // the elimination drone takes the body (it stays visible until the flash); too far away to see: it just vanishes
   if (!ElimFX.start(t)) { if (t.ri >= 0) BotRig.hide(t.ri); FX.burst(t.pos.x, t.pos.y + 1.2, t.pos.z, 0x6fd0ff, 16, 4, 0.7, 0.14, -2); }
-  dropLoot(t);
+  if (!Net.inMatch) dropLoot(t);
+  else if (!Net.applying) {   // this game owns the character: tell the others, and get its loot onto the ground
+    const ev = { k: 'elim', id: t.id, src: src ? src.id : 0, o: Net.slim(o) };
+    if (Net.guest) ev.items = lootOf(t); else dropLoot(t);
+    Net.emit(ev);
+  }
   if (src && src !== t) src.kills++;
   let msg; const was = t === player ? 'were' : 'was';
   if (src && src !== t) msg = `<b>${esc(src.name)}</b> eliminated <b>${esc(t.name)}</b>${o.w ? ' · ' + esc(o.w) : ''}`;
@@ -222,45 +236,52 @@ function eliminate(t, src, o) {
   Match.onElim(t, src, o);
 }
 function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
-function dropLoot(t) {
+function dropLoot(t) { scatterLoot(lootOf(t), t.pos); }
+// everything an actor is carrying, taken off them
+function lootOf(t) {
   const items = [];
   for (let i = 1; i < 6; i++) if (t.inv[i]) items.push(t.inv[i]);
   if (t.isPlayer) { for (const k in t.ammo) if (t.ammo[k] > 0) items.push({ kind: 'ammo', ammo: k, count: t.ammo[k] }); }
   else for (let i = 1; i < 6; i++) if (t.inv[i] && t.inv[i].kind === 'weapon') items.push(ammoFor(t.inv[i].wid, 1.5));
   for (const m of MAT_ORDER) if (t.mats[m] > 0) items.push({ kind: 'mats', mat: m, count: t.mats[m] });
   if (t.boss) { items.push({ kind: 'heal', hid: 'shield', count: 2 }, { kind: 'heal', hid: 'medkit', count: 2 }); }
+  t.inv = [{ kind: 'pick' }, null, null, null, null, null]; t.slot = 0;
+  for (const m of MAT_ORDER) t.mats[m] = 0;
+  return items;
+}
+function scatterLoot(items, pos) {
   const n = items.length;
   items.forEach((it, i) => {
     const a = i / n * TAU + Math.random() * 0.3, r = 1.3 + (n > 6 ? 0.9 : 0.3) + (i % 2) * 0.5;
-    const x = t.pos.x + Math.cos(a) * r, z = t.pos.z + Math.sin(a) * r;
-    Pickups.spawn(it, x, groundAt(x, z, t.pos.y + 0.6), z, { pop: t.pos, ttl: Match.mode === 'rumble' ? 75 : 0 });
+    const x = pos.x + Math.cos(a) * r, z = pos.z + Math.sin(a) * r;
+    Pickups.spawn(it, x, groundAt(x, z, pos.y + 0.6), z, { pop: pos, ttl: Match.mode === 'rumble' ? 75 : 0 });
   });
-  t.inv = [{ kind: 'pick' }, null, null, null, null, null]; t.slot = 0;
-  for (const m of MAT_ORDER) t.mats[m] = 0;
 }
 
 // ---------------------------------------------------------------- rockets
 const Rockets = {
   list: [],
   clear() { for (const r of this.list) scene.remove(r.m); this.list = []; },
-  spawn(owner, o, d, st) {
+  spawn(owner, o, d, st, vis) {   // vis: another player's rocket, shown here but harmless (their game deals the damage)
     const m = new THREE.Mesh(GEO.rocket, lam(0x56625a)); m.position.copy(o); m.lookAt(_v4.copy(o).add(d)); scene.add(m);
-    this.list.push({ m, owner, x: o.x, y: o.y, z: o.z, dx: d.x, dy: d.y, dz: d.z, sp: st.proj, life: 4.5, st });
+    this.list.push({ m, owner, x: o.x, y: o.y, z: o.z, dx: d.x, dy: d.y, dz: d.z, sp: st.proj, life: 4.5, st, vis: !!vis });
+    if (Net.inMatch && !vis && !owner.remote) { const w = owner.inv[owner.slot]; if (w && w.kind === 'weapon') Net.emit({ k: 'rk', id: owner.id, o: [o.x, o.y, o.z], d: [d.x, d.y, d.z], wid: w.wid, r: w.rarity }, owner.pos, NET_RANGE); }
   },
   update(dt) {
     for (let i = this.list.length - 1; i >= 0; i--) {
       const r = this.list[i]; r.life -= dt; const step = r.sp * dt;
       const h = raycast(r.x, r.y, r.z, r.dx, r.dy, r.dz, step, r.owner, true);
-      if (h.type || r.life <= 0) { explode(h.type ? h.x : r.x, h.type ? h.y : r.y, h.type ? h.z : r.z, r.owner, r.st); scene.remove(r.m); this.list.splice(i, 1); continue; }
+      if (h.type || r.life <= 0) { explode(h.type ? h.x : r.x, h.type ? h.y : r.y, h.type ? h.z : r.z, r.owner, r.st, r.vis); scene.remove(r.m); this.list.splice(i, 1); continue; }
       r.x += r.dx * step; r.y += r.dy * step; r.z += r.dz * step; r.m.position.set(r.x, r.y, r.z);
       FX.burst(r.x - r.dx, r.y - r.dy, r.z - r.dz, 0xcfcfcf, 1, 0.5, 0.5, 0.25, -1);
     }
   },
 };
-function explode(x, y, z, owner, st) {
+function explode(x, y, z, owner, st, fxOnly) {
   FX.flash(x, y, z, st.splash * 1.1, 0xffa040, 0.5); FX.burst(x, y, z, 0xffa040, 26, 10, 0.8, 0.25, 6); FX.burst(x, y, z, 0x444444, 14, 5, 1.2, 0.35, -1);
   Sfx.boom(x, y, z);
   if (player && player.alive) { const d = Math.hypot(player.pos.x - x, player.pos.z - z); if (d < 40) Cam.shake = Math.max(Cam.shake, (1 - d / 40) * 0.6); }
+  if (fxOnly) return;
   for (const a of actors) {
     if (!a.alive || a.state === 'bus') continue;
     if (owner && a !== owner && a.team === owner.team) continue;
@@ -305,6 +326,7 @@ function swingPick(a) {
 function destroyHarv(hv) {
   for (const m of hv.meshes) { m.setMatrixAt(hv.idx, ZERO_M); m.instanceMatrix.needsUpdate = true; }
   Grid.remove(hv.col); hv.dead = true;
+  if (Net.inMatch && !Net.applying) Net.emit({ k: 'hv', x: Math.round(hv.x * 10) / 10, z: Math.round(hv.z * 10) / 10 });
   FX.burst(hv.x, hv.y + 2, hv.z, MATS[hv.mat].color, 16, 6, 0.8, 0.2);
 }
 

@@ -60,10 +60,12 @@ const Build = {
     if (a === player || Sfx.vol(p.x, p.y, p.z) > 0.25) Sfx.build();
     if (this.pieces.length > 520) { const old = this.pieces.find(q => q.owner !== player); if (old) this.remove(old, false); }
     if (a === player) HUD.dirty = true;
+    if (Net.inMatch && !Net.applying && !a.remote) Net.emit({ k: 'bp', t: { type: t.type, gx: t.gx, gy: t.gy, gz: t.gz, dir: t.dir, key: t.key }, mat: p.mat });
     return true;
   },
   damage(p, dmg, src) {
     if (p.dead) return; p.hp -= dmg;
+    if (Net.inMatch && !Net.applying) Net.emit({ k: 'bd', key: p.key, dmg: Math.round(dmg) });
     if (src === player) HUD.dmgNum(p.x, p.y + 1, p.z, Math.round(dmg), 'build');
     if (p.hp <= 0) this.remove(p, true);
   },

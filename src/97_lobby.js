@@ -87,9 +87,12 @@ const Lobby = {
     $('shopGrid').addEventListener('click', e => { const b = e.target.closest('[data-id]'); if (!b) return; this.shopSel = { cat: b.dataset.cat, id: b.dataset.id }; $('shopMsg').textContent = ''; this.refresh(); $('tab-shop').scrollTo({ top: 0, behavior: 'smooth' }); });
     $('shopFilters').addEventListener('click', e => { const b = e.target.closest('[data-f]'); if (!b) return; this.shopFilter = b.dataset.f; this.refresh(); });
     $('readyBtn').addEventListener('click', () => {
+      if (Net.state === 'room' && !Net.isHost) return;
       Sfx.init(); Sfx.horn();
-      Match.start({ mode: Profile.d.mode, build: Profile.d.mode === 'rumble' ? Profile.d.build : Profile.d.build, ranked: Profile.d.ranked && Profile.d.mode !== 'rumble', theme: Profile.d.theme });
+      Net.inMatch = Net.state === 'room';
+      Match.start({ mode: Profile.d.mode, build: Profile.d.mode === 'rumble' ? Profile.d.build : Profile.d.build, ranked: Profile.d.ranked && Profile.d.mode !== 'rumble' && !Net.inMatch, theme: Profile.d.theme });
     });
+    Net.initUI();
   },
   buy(cat, id) {
     const it = cosById(cat, id), d = Profile.d, msg = $('shopMsg'), price = itemPrice(it); Sfx.init();
@@ -158,6 +161,7 @@ const Lobby = {
   },
   refresh() {
     const d = Profile.d;
+    Net.render();
     $('coinLbl').textContent = d.coins.toLocaleString();
     [...$('tabs').children].forEach(b => b.classList.toggle('on', b.dataset.tab === this.tab));
     for (const t of ['play', 'locker', 'pass', 'career', 'shop']) $('tab-' + t).hidden = t !== this.tab;

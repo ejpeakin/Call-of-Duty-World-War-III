@@ -370,6 +370,22 @@ button:focus-visible{outline:2px solid var(--sun-2);outline-offset:2px}
   #teamList{display:none}
   #buildbar{bottom:calc(360px + var(--sb))}
 }
+.mp{display:flex;flex-direction:column;gap:8px}
+.mp-row{display:flex;gap:8px}
+.mp-row input{flex:1;min-width:0;background:rgba(5,14,36,.6);border:1px solid rgba(150,195,255,.25);border-radius:8px;color:var(--ink);font:600 15px var(--f-body);padding:9px 11px}
+.mp-row input{-webkit-user-select:text;user-select:text}
+.mp-row input:focus{outline:2px solid var(--sun-2);outline-offset:1px}
+#mpCode{text-transform:uppercase;letter-spacing:.25em;max-width:120px;text-align:center}
+.mp-row button{background:rgba(63,149,255,.22);border:1px solid rgba(150,195,255,.4);border-radius:8px;color:var(--ink);font:700 14px var(--f-body);padding:9px 14px;cursor:pointer;white-space:nowrap}
+.mp-row button:hover{background:rgba(63,149,255,.38)}
+.mp-code{font:600 14px var(--f-body);color:var(--mute)}
+.mp-code b{font:800 30px var(--f-head, var(--f-body));letter-spacing:.2em;color:var(--sun-2);margin-left:8px;vertical-align:middle}
+.mp-list{display:flex;flex-wrap:wrap;gap:6px}
+.mp-list span{background:rgba(255,255,255,.08);border-radius:999px;padding:4px 11px;font:600 13px var(--f-body)}
+.mp-list span.me{background:rgba(63,149,255,.3)}
+.mp-list i{font-style:normal;opacity:.65;font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+.mp-err{color:#ff8a7a;font:600 13px var(--f-body)}
+#readyBtn:disabled{opacity:.55;cursor:default;filter:saturate(.4)}
 .padfocus{outline:3px solid #ffd23a!important;outline-offset:2px;box-shadow:0 0 0 6px rgba(255,210,58,.25)!important}
 .padkeys{display:none}
 body.pad .padkeys{display:grid}
@@ -404,6 +420,8 @@ body.pad{cursor:none}
 
   <div class="side">
     <section class="panel" id="tab-play">
+      <h3>Play with friends</h3>
+      <div class="mp" id="mpBox"></div>
       <h3>Mode</h3>
       <div class="opt-grid" id="modeGrid">
         <button class="opt" data-mode="solo"><b>Battle Royale · Solo</b><span>100 players, one survivor. Bus drop, loot, storm.</span></button>
@@ -1859,7 +1877,8 @@ function genWorld(key) {
     if (eb.count) W.group.add(eb.mesh(MAT.glow, false));
   }
   { const b = new Batch(), eb = new Batch(); buildPathMesh(eb); buildLandmarks(RN, b, eb); if (b.count) W.group.add(b.mesh(MAT.batch, true)); if (eb.count) W.group.add(eb.mesh(MAT.glow, false)); }
-  scatterForest(RN); scatterBoulders(RN); placeCars(); GroundCover.build(); Nature.buildSky(RN);
+  scatterForest(RN); scatterBoulders(RN); if (!Net.inMatch) placeCars();   // cars are not shared between players yet
+  GroundCover.build(); Nature.buildSky(RN);
   // exotic crates near three plazas
   const ps = W.pois.slice().sort(() => R() - 0.5).slice(0, 3);
   for (const p of ps) { const a = R() * TAU; addChest('exotic', p.x + Math.cos(a) * 11, p.h + 0.3, p.z + Math.sin(a) * 11, a, null); }
@@ -3822,14 +3841,15 @@ function fireWeapon(a) {
     const dd = _v1.set(tx - mz.x, ty - mz.y, tz - mz.z).normalize();
     Rockets.spawn(a, mz, dd, st);
   } else {
-    const n = st.pellets || 1;
+    const n = st.pellets || 1, hits = [], tcol = it.rarity >= 5 ? RARITY[it.rarity].hex : 0xfff1a8, r1 = v => Math.round(v * 10) / 10;
     for (let i = 0; i < n; i++) {
       const d = coneDir(AIM.d, spread, _v2);
       const ox = AIM.o.x + AIM.d.x * AIM.t0, oy = AIM.o.y + AIM.d.y * AIM.t0, oz = AIM.o.z + AIM.d.z * AIM.t0;
       const h = raycast(ox, oy, oz, d.x, d.y, d.z, st.range, a, true);
-      if (i < 3 || i % 3 === 0) FX.tracer(mz.x, mz.y, mz.z, h.x, h.y, h.z, it.rarity >= 5 ? RARITY[it.rarity].hex : 0xfff1a8);
+      if (i < 3 || i % 3 === 0) { FX.tracer(mz.x, mz.y, mz.z, h.x, h.y, h.z, tcol); if (hits.length < 4) hits.push([r1(h.x), r1(h.y), r1(h.z)]); }
       applyHit(a, st, h, d, n);
     }
+    if (Net.inMatch && !a.remote) { muzzlePos(a, _v3); Net.emit({ k: 'shot', id: a.id, m: [r1(_v3.x), r1(_v3.y), r1(_v3.z)], h: hits, ty: st.type, c: tcol }, a.pos, NET_RANGE); }
   }
   Sfx.shot(st.type, a.pos.x, a.pos.y, a.pos.z);
   FX.burst(mz.x, mz.y, mz.z, 0xffd27a, 2, 1.5, 0.06, 0.12, 0);
@@ -3883,6 +3903,14 @@ function damageActor(t, dmg, src, o = {}) {
   if (!t.alive || t.invuln > 0 || Match.state !== 'play') return 0;
   if (src && src !== t && src.team === t.team) return 0;
   dmg = Math.max(1, Math.round(dmg));
+  if (Net.inMatch && t.remote && !Net.applying) {   // someone else's character: their own game decides what the hit does
+    if (src && src.remote) return 0;
+    const ev = { k: 'dmg', id: t.id, dmg, src: src ? src.id : 0, o: Net.slim(o) };
+    if (!Net.isHost) Net.send('h', ev); else if (t.human) Net.send(t.human, ev); else return 0;
+    if (src) src.dmgDealt += dmg;
+    if (src === player) { HUD.hitmark(o.head); Sfx.hit(o.head); HUD.dmgNum(o.x !== undefined ? o.x : t.pos.x, o.y !== undefined ? o.y + 0.4 : t.pos.y + 2.2, o.z !== undefined ? o.z : t.pos.z, dmg, o.head ? 'head' : t.shield > 0 ? 'shield' : 'hp'); }
+    return dmg;
+  }
   let rem = dmg, shieldHit = false;
   if (!o.raw) {
     if (t.over > 0) { const u = Math.min(t.over, rem); t.over -= u; rem -= u; shieldHit = true; }
@@ -3904,7 +3932,12 @@ function eliminate(t, src, o) {
   if (t.vehicle) Vehicles.exit(t, true);
   // the elimination drone takes the body (it stays visible until the flash); too far away to see: it just vanishes
   if (!ElimFX.start(t)) { if (t.ri >= 0) BotRig.hide(t.ri); FX.burst(t.pos.x, t.pos.y + 1.2, t.pos.z, 0x6fd0ff, 16, 4, 0.7, 0.14, -2); }
-  dropLoot(t);
+  if (!Net.inMatch) dropLoot(t);
+  else if (!Net.applying) {   // this game owns the character: tell the others, and get its loot onto the ground
+    const ev = { k: 'elim', id: t.id, src: src ? src.id : 0, o: Net.slim(o) };
+    if (Net.guest) ev.items = lootOf(t); else dropLoot(t);
+    Net.emit(ev);
+  }
   if (src && src !== t) src.kills++;
   let msg; const was = t === player ? 'were' : 'was';
   if (src && src !== t) msg = `<b>${esc(src.name)}</b> eliminated <b>${esc(t.name)}</b>${o.w ? ' · ' + esc(o.w) : ''}`;
@@ -3917,45 +3950,52 @@ function eliminate(t, src, o) {
   Match.onElim(t, src, o);
 }
 function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
-function dropLoot(t) {
+function dropLoot(t) { scatterLoot(lootOf(t), t.pos); }
+// everything an actor is carrying, taken off them
+function lootOf(t) {
   const items = [];
   for (let i = 1; i < 6; i++) if (t.inv[i]) items.push(t.inv[i]);
   if (t.isPlayer) { for (const k in t.ammo) if (t.ammo[k] > 0) items.push({ kind: 'ammo', ammo: k, count: t.ammo[k] }); }
   else for (let i = 1; i < 6; i++) if (t.inv[i] && t.inv[i].kind === 'weapon') items.push(ammoFor(t.inv[i].wid, 1.5));
   for (const m of MAT_ORDER) if (t.mats[m] > 0) items.push({ kind: 'mats', mat: m, count: t.mats[m] });
   if (t.boss) { items.push({ kind: 'heal', hid: 'shield', count: 2 }, { kind: 'heal', hid: 'medkit', count: 2 }); }
+  t.inv = [{ kind: 'pick' }, null, null, null, null, null]; t.slot = 0;
+  for (const m of MAT_ORDER) t.mats[m] = 0;
+  return items;
+}
+function scatterLoot(items, pos) {
   const n = items.length;
   items.forEach((it, i) => {
     const a = i / n * TAU + Math.random() * 0.3, r = 1.3 + (n > 6 ? 0.9 : 0.3) + (i % 2) * 0.5;
-    const x = t.pos.x + Math.cos(a) * r, z = t.pos.z + Math.sin(a) * r;
-    Pickups.spawn(it, x, groundAt(x, z, t.pos.y + 0.6), z, { pop: t.pos, ttl: Match.mode === 'rumble' ? 75 : 0 });
+    const x = pos.x + Math.cos(a) * r, z = pos.z + Math.sin(a) * r;
+    Pickups.spawn(it, x, groundAt(x, z, pos.y + 0.6), z, { pop: pos, ttl: Match.mode === 'rumble' ? 75 : 0 });
   });
-  t.inv = [{ kind: 'pick' }, null, null, null, null, null]; t.slot = 0;
-  for (const m of MAT_ORDER) t.mats[m] = 0;
 }
 
 // ---------------------------------------------------------------- rockets
 const Rockets = {
   list: [],
   clear() { for (const r of this.list) scene.remove(r.m); this.list = []; },
-  spawn(owner, o, d, st) {
+  spawn(owner, o, d, st, vis) {   // vis: another player's rocket, shown here but harmless (their game deals the damage)
     const m = new THREE.Mesh(GEO.rocket, lam(0x56625a)); m.position.copy(o); m.lookAt(_v4.copy(o).add(d)); scene.add(m);
-    this.list.push({ m, owner, x: o.x, y: o.y, z: o.z, dx: d.x, dy: d.y, dz: d.z, sp: st.proj, life: 4.5, st });
+    this.list.push({ m, owner, x: o.x, y: o.y, z: o.z, dx: d.x, dy: d.y, dz: d.z, sp: st.proj, life: 4.5, st, vis: !!vis });
+    if (Net.inMatch && !vis && !owner.remote) { const w = owner.inv[owner.slot]; if (w && w.kind === 'weapon') Net.emit({ k: 'rk', id: owner.id, o: [o.x, o.y, o.z], d: [d.x, d.y, d.z], wid: w.wid, r: w.rarity }, owner.pos, NET_RANGE); }
   },
   update(dt) {
     for (let i = this.list.length - 1; i >= 0; i--) {
       const r = this.list[i]; r.life -= dt; const step = r.sp * dt;
       const h = raycast(r.x, r.y, r.z, r.dx, r.dy, r.dz, step, r.owner, true);
-      if (h.type || r.life <= 0) { explode(h.type ? h.x : r.x, h.type ? h.y : r.y, h.type ? h.z : r.z, r.owner, r.st); scene.remove(r.m); this.list.splice(i, 1); continue; }
+      if (h.type || r.life <= 0) { explode(h.type ? h.x : r.x, h.type ? h.y : r.y, h.type ? h.z : r.z, r.owner, r.st, r.vis); scene.remove(r.m); this.list.splice(i, 1); continue; }
       r.x += r.dx * step; r.y += r.dy * step; r.z += r.dz * step; r.m.position.set(r.x, r.y, r.z);
       FX.burst(r.x - r.dx, r.y - r.dy, r.z - r.dz, 0xcfcfcf, 1, 0.5, 0.5, 0.25, -1);
     }
   },
 };
-function explode(x, y, z, owner, st) {
+function explode(x, y, z, owner, st, fxOnly) {
   FX.flash(x, y, z, st.splash * 1.1, 0xffa040, 0.5); FX.burst(x, y, z, 0xffa040, 26, 10, 0.8, 0.25, 6); FX.burst(x, y, z, 0x444444, 14, 5, 1.2, 0.35, -1);
   Sfx.boom(x, y, z);
   if (player && player.alive) { const d = Math.hypot(player.pos.x - x, player.pos.z - z); if (d < 40) Cam.shake = Math.max(Cam.shake, (1 - d / 40) * 0.6); }
+  if (fxOnly) return;
   for (const a of actors) {
     if (!a.alive || a.state === 'bus') continue;
     if (owner && a !== owner && a.team === owner.team) continue;
@@ -4000,6 +4040,7 @@ function swingPick(a) {
 function destroyHarv(hv) {
   for (const m of hv.meshes) { m.setMatrixAt(hv.idx, ZERO_M); m.instanceMatrix.needsUpdate = true; }
   Grid.remove(hv.col); hv.dead = true;
+  if (Net.inMatch && !Net.applying) Net.emit({ k: 'hv', x: Math.round(hv.x * 10) / 10, z: Math.round(hv.z * 10) / 10 });
   FX.burst(hv.x, hv.y + 2, hv.z, MATS[hv.mat].color, 16, 6, 0.8, 0.2);
 }
 
@@ -4112,10 +4153,12 @@ const Build = {
     if (a === player || Sfx.vol(p.x, p.y, p.z) > 0.25) Sfx.build();
     if (this.pieces.length > 520) { const old = this.pieces.find(q => q.owner !== player); if (old) this.remove(old, false); }
     if (a === player) HUD.dirty = true;
+    if (Net.inMatch && !Net.applying && !a.remote) Net.emit({ k: 'bp', t: { type: t.type, gx: t.gx, gy: t.gy, gz: t.gz, dir: t.dir, key: t.key }, mat: p.mat });
     return true;
   },
   damage(p, dmg, src) {
     if (p.dead) return; p.hp -= dmg;
+    if (Net.inMatch && !Net.applying) Net.emit({ k: 'bd', key: p.key, dmg: Math.round(dmg) });
     if (src === player) HUD.dmgNum(p.x, p.y + 1, p.z, Math.round(dmg), 'build');
     if (p.hp <= 0) this.remove(p, true);
   },
@@ -4165,13 +4208,21 @@ function pickupMesh(it) {
 }
 
 const Pickups = {
-  list: [],
-  clear() { for (const p of this.list) if (p.mesh && p.mesh.parent) p.mesh.parent.remove(p.mesh); this.list = []; },
+  list: [], byId: new Map(), nid: 0,
+  clear() { for (const p of this.list) if (p.mesh && p.mesh.parent) p.mesh.parent.remove(p.mesh); this.list = []; this.byId.clear(); this.nid = 0; },
   spawn(item, x, y, z, o = {}) {
+    // in a shared match the host owns the loot on the ground: guests ask for a drop instead of making one
+    if (Net.guest && !Net.applying) { if (!Net.building) Net.emit({ k: 'drop', item, x, y, z, pop: o.pop ? [o.pop.x, o.pop.y + 1, o.pop.z] : 0 }); return { item, x, y, z, alive: false }; }
     const p = { item, x, y, z, alive: true, mesh: null, path: o.path ? o.path.slice() : null, claim: null, t: Math.random() * 6, fails: 0, age: 0, ttl: o.ttl || 0, pop: o.pop ? { x: o.pop.x, y: o.pop.y + 1, z: o.pop.z } : null };
-    this.list.push(p); return p;
+    p.id = o.id || ++this.nid; this.byId.set(p.id, p);
+    this.list.push(p);
+    if (Net.hosting && !Net.building) Net.emit({ k: 'pk+', id: p.id, item, x, y, z, pop: p.pop ? [p.pop.x, p.pop.y, p.pop.z] : 0, ttl: p.ttl });
+    return p;
   },
-  remove(p) { p.alive = false; if (p.mesh) { if (p.mesh.parent) p.mesh.parent.remove(p.mesh); p.mesh = null; } },
+  remove(p) {
+    if (p.alive && p.id && Net.inMatch && !Net.applying) Net.emit({ k: Net.isHost ? 'pk-' : 'take', id: p.id });
+    if (p.id) this.byId.delete(p.id);
+    p.alive = false; if (p.mesh) { if (p.mesh.parent) p.mesh.parent.remove(p.mesh); p.mesh = null; } },
   update(dt) {
     const cp = camera.position;
     for (const p of this.list) {
@@ -4241,8 +4292,16 @@ function chestLoot(kind) {
   return o;
 }
 function openChest(c, a) {
-  if (c.opened) return; c.opened = true; c.claim = null; a.chests++;
+  if (c.opened) return;
+  if (Net.guest && !Net.applying) {   // the host opens it, so everyone sees the same loot
+    if (c.asked > Match.time) return; c.asked = Match.time + 1.5; a.chests++; Net.emit({ k: 'chest', x: c.x, z: c.z });
+    if (a === player && !Profile.ticket() && (Math.random() < TICKET_CHANCE || window.__forceTicket)) Ticket.found(c);
+    return;
+  }
+  c.opened = true; c.claim = null; if (!Net.applying) a.chests++;
   c.mesh.userData.lid.rotation.x = -1.9; c.mesh.userData.lock.visible = false;
+  if (Net.hosting) Net.emit({ k: 'chest', x: c.x, z: c.z, by: a.id });
+  if (Net.guest) { if (Math.hypot(c.x - player.pos.x, c.z - player.pos.z) < 110) { FX.burst(c.x, c.y + 0.8, c.z, c.kind === 'exotic' ? 0x2fe0d0 : 0xffd84a, 16, 3, 0.8, 0.12, -1); if (Sfx.vol(c.x, c.y, c.z) > 0.3) Sfx.chest(); } return; }
   const items = chestLoot(c.kind);
   const near = player && Math.hypot(c.x - player.pos.x, c.z - player.pos.z) < 110;
   if (a === player || !a.ai) {
@@ -5738,16 +5797,16 @@ const Storm = {
   update(dt) {
     if (this.state === 'wait') {
       this.t -= dt;
-      if (this.t <= 0) { const P = PHASES[this.phase]; this.state = 'shrink'; this.t = this.dur = P.shrink; this.dmg = P.dmg; HUD.banner('The storm is closing in', P.dmg + ' damage per second outside the eye', 3); Sfx.storm(); }
+      if (this.t <= 0 && !Net.guest) { const P = PHASES[this.phase]; this.state = 'shrink'; this.t = this.dur = P.shrink; this.dmg = P.dmg; HUD.banner('The storm is closing in', P.dmg + ' damage per second outside the eye', 3); Sfx.storm(); }
     } else if (this.state === 'shrink') {
       this.t -= dt; const k = 1 - Math.max(0, this.t) / this.dur;
       this.cx = lerp(this.fx, this.tx, k); this.cz = lerp(this.fz, this.tz, k); this.r = lerp(this.fr, this.tr, k);
-      if (this.t <= 0) { this.cx = this.tx; this.cz = this.tz; this.r = this.tr; this.nextPhase(); }
+      if (this.t <= 0 && !Net.guest) { this.cx = this.tx; this.cz = this.tz; this.r = this.tr; this.nextPhase(); }
     }
     this.tick -= dt;
     if (this.tick <= 0) {
       this.tick = 1;
-      if (this.state !== 'idle') for (const a of actors) if (a.alive && !a.npc && a.state !== 'bus' && a.invuln <= 0 && this.outside(a.pos.x, a.pos.z)) damageActor(a, this.dmg, null, { raw: true, storm: true });
+      if (this.state !== 'idle' && !Net.guest) for (const a of actors) if (a.alive && !a.npc && a.state !== 'bus' && a.invuln <= 0 && this.outside(a.pos.x, a.pos.z)) damageActor(a, this.dmg, null, { raw: true, storm: true });
     }
     stormMesh.visible = this.state !== 'idle' && this.r < STORM_START - 20;
     stormMesh.scale.set(Math.max(0.5, this.r), 760, Math.max(0.5, this.r)); stormMesh.position.set(this.cx, 120, this.cz);
@@ -5816,8 +5875,8 @@ const Bus = {
     this.mesh.rotation.set(0, Math.atan2(this.dir.x, this.dir.z), Math.sin(this.t * 0.9) * 0.04);
     for (const p of this.mesh.userData.props) p.rotation.z += dt * 30;
     if (this.t > this.dur && this.active) {
-      for (const a of actors) if (a.state === 'bus') busJump(a);
-      this.active = false; this.mesh.visible = false; Storm.start();
+      for (const a of actors) if (a.state === 'bus' && !a.remote) busJump(a);
+      this.active = false; this.mesh.visible = false; if (!Net.guest) Storm.start();
       HUD.banner('The storm is forming', 'Find gear, then head for the safe zone', 3);
     }
   },
@@ -5900,14 +5959,19 @@ const Match = {
     }, 40);
   },
   setup() {
+    Net.building = true;
     genWorld(this.theme);
     $('ldFill').style.width = '80%';
     actors.length = 0; nextId = 1; ElimFX.clear(); CharPool.clear(); BotRig.hideAll(); Trails.clear();
+    if (Net.guest) Net.guestSetup(); else {
+    Net.humans.clear();
     player = newActor({ name: 'You', isPlayer: true, team: 0 });
     actors.push(player);
     const N = this.mode === 'rumble' ? 32 : 100;
     for (let i = 1; i < N; i++) {
       const team = this.mode === 'solo' ? i : this.mode === 'squads' ? Math.floor(i / 4) : (i < 16 ? 0 : 1);
+      const hm = Net.hosting ? Net.slotMember(i, this.mode) : null;
+      if (hm) { const h = newActor({ name: hm.name, team, ri: i - 1, look: Net.lookFromEq(hm.eq), remote: true, human: hm.id }); BotRig.setLook(h.ri, h.look); actors.push(h); Net.humans.set(hm.id, h); continue; }   // a friend takes this spot
       const b = newActor({ name: botName(), team, ri: i - 1, look: randomLook() });
       initBotAI(b, clamp(rnd(0.15, 0.85) + (this.ranked ? 0.18 : 0), 0, 1));
       if (this.mode === 'squads' && team === 0) b.leader = player;
@@ -5935,12 +5999,15 @@ const Match = {
         a.ai.jumpAt = a.leader ? Bus.dur - 0.5 : Bus.timeNear(tx, tz) - Math.random() * 2.5;
       }
     }
-    LiveEvent.init(this.mode); Creatures.spawn();
+    }
+    this.time = this.time || 0; this.firstLander = null; this.sharkKills = 0; if (Net.guest) { this.score = [0, 0]; this.ending = false; this.spectate = null; this.paused = false; this.result = null; this.deathShown = false; this.hasWinner = false; }
+    LiveEvent.init(this.mode); if (Net.inMatch) LiveEvent.state = 'off'; else Creatures.spawn();
     if (PlayerRig) scene.remove(PlayerRig.root);
     PlayerRig = makeRig(Profile.d.eq); scene.add(PlayerRig.root);
     sun.castShadow = !!Profile.d.shadows;
     this.recount();
-    this.state = 'play';
+    this.state = 'play'; Net.building = false;
+    if (Net.hosting) Net.hostStart(); else if (Net.guest) Net.flush();
     $('loading').hidden = true; HUD.startMatch();
     Input.requestLock();
     if (this.mode !== 'rumble') HUD.banner('Welcome aboard the Sky Coach', Input.pad.on ? 'Press A to jump out' : IS_TOUCH ? 'Tap JUMP to leave the bus' : 'Press SPACE to jump out', 4);
@@ -5985,14 +6052,14 @@ const Match = {
       if (src && src !== t && src.team !== t.team) this.score[src.team]++; else this.score[1 - t.team]++;
       t.respawnT = 5;
       if (t === player) HUD.banner('Eliminated', 'Respawning in 5 seconds', 3);
-      if (!this.ending && (this.score[0] >= 40 || this.score[1] >= 40)) this.finish(this.score[0] >= 40 ? 0 : 1);
+      if (!this.ending && !Net.guest && (this.score[0] >= 40 || this.score[1] >= 40)) this.finish(this.score[0] >= 40 ? 0 : 1);
       return;
     }
     this.recount();
     if (t === player) this.spectate = src && src.alive ? src : null;
     if (!this.deathShown && !this.teamAlive(player.team)) { player.placement = this.teamsAlive + 1; this.deathShown = true; this.showDeath(src, o); }
     else if (t === player) HUD.banner('You are out', 'Your squad fights on. Spectating a teammate.', 3);
-    if (this.teamsAlive <= 1 && !this.ending) { const w = actors.find(a => a.alive && !a.npc); this.finish(w ? w.team : -2); }
+    if (this.teamsAlive <= 1 && !this.ending && !Net.guest) { const w = actors.find(a => a.alive && !a.npc); this.finish(w ? w.team : -2); }
   },
   showDeath(src, o = {}) {
     if (document.pointerLockElement) document.exitPointerLock();
@@ -6003,6 +6070,7 @@ const Match = {
   },
   finish(winTeam) {
     this.ending = true; this.endT = 3.2; this.hasWinner = true;
+    if (Net.hosting) Net.emit({ k: 'finish', w: winTeam });
     const win = winTeam === player.team;
     if (this.mode !== 'rumble') { if (win) player.placement = 1; }
     this.result = { win, winTeam };
@@ -6021,10 +6089,11 @@ const Match = {
     this.time += dt;
     if (Bus.active) Bus.update(dt);
     Storm.update(dt); LiveEvent.update(dt);
-    if (this.mode === 'rumble' && !this.ending) for (const a of actors) if (!a.alive && !a.npc && a.respawnT > 0) { a.respawnT -= dt; if (a.respawnT <= 0) this.respawn(a, false); }
+    if (this.mode === 'rumble' && !this.ending) for (const a of actors) if (!a.alive && !a.npc && !a.remote && a.respawnT > 0) { a.respawnT -= dt; if (a.respawnT <= 0) this.respawn(a, false); }
     if (this.ending) { this.endT -= dt; if (this.endT <= 0) { this.ending = false; this.showResults(); } }
   },
   showResults() {
+    if (Net.hosting && !this.hasWinner) Net.emit({ k: 'end' });   // the host runs the match, so it ends for everyone
     this.state = 'results';
     if (document.pointerLockElement) document.exitPointerLock();
     const r = this.result || { win: false }, p = player, d = Profile.d;
@@ -6062,6 +6131,7 @@ const Match = {
     $('death').hidden = true; $('results').hidden = false;
   },
   toLobby() {
+    if (Net.inMatch) { if (Net.isHost) { if (!this.hasWinner) Net.emit({ k: 'end' }); } else if (this.state === 'play') Net.send('h', { k: 'bye' }); Net.inMatch = false; Net.queue.length = 0; }
     this.state = 'lobby'; $('results').hidden = true; $('death').hidden = true; $('pause').hidden = true; $('hud').hidden = true; $('bigmap').hidden = true; $('clickHint').hidden = true;
     if (document.pointerLockElement) document.exitPointerLock();
     if (Bus.mesh) Bus.mesh.visible = false; stormMesh.visible = false; Build.hideGhost();
@@ -6232,6 +6302,283 @@ const ElimFX = {
   },
 };
 const _efM = new THREE.Matrix4(), _efQ = new THREE.Quaternion(), _efE = new THREE.Euler(), _efP = new THREE.Vector3(), _efS = new THREE.Vector3();
+
+// =====================================================================
+//  Net: play with friends by room code (website version)
+//  The host's browser runs the bots, storm and loot. Every player runs their own character and reports it.
+//  The server only passes messages along.
+// =====================================================================
+const NET_RANGE = 350;
+const Net = {
+  ws: null, state: 'off', code: '', me: 0, hostId: 0, members: [], err: '', sig: '',
+  inMatch: false, applying: false, building: false, startData: null,
+  ids: new Map(), humans: new Map(), queue: [], stT: 0, snN: 0,
+  supported: /^https?:$/.test(location.protocol) && !/claude|anthropic/.test(location.hostname),
+  get isHost() { return this.me === this.hostId; },
+  get hosting() { return this.inMatch && this.me === this.hostId; },
+  get guest() { return this.inMatch && this.me !== this.hostId; },
+
+  // ---------------------------------------------------------------- connection + rooms
+  connect(then) {
+    if (this.ws && this.ws.readyState === 1) { then(); return; }
+    if (!this.supported) { this.fail('Multiplayer works on the website version of FortDay.'); return; }
+    this.state = 'connecting'; this.err = ''; Lobby.refresh();
+    let ws; try { ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws'); } catch (e) { this.fail('Could not reach the multiplayer server.'); return; }
+    this.ws = ws; let opened = false;
+    ws.onopen = () => { opened = true; then(); };
+    ws.onmessage = e => { let m; try { m = JSON.parse(e.data); } catch (x) { return; } try { this.onServer(m); } catch (x) { console.error(x); } };
+    ws.onclose = () => { if (this.ws !== ws) return; this.ws = null; this.dropRoom(!opened ? 'Could not reach the multiplayer server. Try again in a moment.' : this.state === 'room' ? 'Lost the connection to the room.' : ''); };
+    ws.onerror = () => {};
+  },
+  fail(msg) { this.state = 'off'; this.err = msg; Lobby.refresh(); },
+  dropRoom(msg) {
+    const was = this.inMatch; this.state = 'off'; this.code = ''; this.members = []; this.err = msg || '';
+    if (was && (Match.state === 'play' || Match.state === 'results' || Match.state === 'loading')) Match.toLobby();
+    this.inMatch = false; Lobby.refresh();
+  },
+  raw(o) { if (this.ws && this.ws.readyState === 1) this.ws.send(JSON.stringify(o)); },
+  send(to, d) { this.raw({ t: 'x', to, d }); },
+  me_() { return { name: (Profile.d.name || 'Player').slice(0, 16), eq: Profile.d.eq }; },
+  create() { this.connect(() => this.raw(Object.assign({ t: 'create' }, this.me_()))); },
+  join(code) { code = String(code || '').toUpperCase().replace(/[^A-Z]/g, ''); if (code.length !== 4) { this.err = 'Room codes are 4 letters.'; Lobby.refresh(); return; } this.connect(() => this.raw(Object.assign({ t: 'join', code }, this.me_()))); },
+  leaveRoom() { this.raw({ t: 'leave' }); this.dropRoom(''); },
+  tellProfile() { if (this.state === 'room') this.raw(Object.assign({ t: 'me' }, this.me_())); },
+  onServer(m) {
+    if (m.t === 'room') { this.me = m.you; this.code = m.code; this.hostId = m.host; this.members = m.members; this.state = 'room'; this.err = ''; Lobby.refresh(); }
+    else if (m.t === 'left') { if (this.hosting) this.dropHuman(m.id); }
+    else if (m.t === 'closed') this.dropRoom('The host left, so the room closed.');
+    else if (m.t === 'error') { this.err = m.msg || 'Something went wrong.'; if (this.state !== 'room') this.state = 'off'; Lobby.refresh(); }
+    else if (m.t === 'x' && m.d && typeof m.d === 'object') this.onMsg(m.from, m.d);
+  },
+
+  // ---------------------------------------------------------------- lobby panel
+  render() {
+    const box = $('mpBox'); if (!box) return;
+    const sig = [this.state, this.code, this.hostId, this.me, this.err, this.members.map(m => m.id + m.name).join(',')].join('|');
+    const eqSig = JSON.stringify(Profile.d.eq) + (Profile.d.name || '');
+    if (this.state === 'room' && this.eqSig && eqSig !== this.eqSig) this.tellProfile();   // changed outfit in the Locker while in a room
+    this.eqSig = eqSig;
+    const rb = $('readyBtn'), waiting = this.state === 'room' && !this.isHost;
+    rb.disabled = waiting; rb.textContent = waiting ? 'WAITING FOR HOST' : this.state === 'room' ? 'START MATCH · ' + this.members.length + (this.members.length === 1 ? ' PLAYER' : ' PLAYERS') : 'READY UP';
+    if (sig === this.sig) return; this.sig = sig;
+    const err = this.err ? `<div class="mp-err">${esc(this.err)}</div>` : '';
+    if (!this.supported) { box.innerHTML = '<div class="hint">Multiplayer works on the website version of FortDay. This copy plays against bots.</div>'; return; }
+    if (this.state === 'connecting') { box.innerHTML = '<div class="hint">Connecting…</div>'; return; }
+    if (this.state === 'room') {
+      box.innerHTML = `<div class="mp-code">Room code <b>${esc(this.code)}</b></div>`
+        + `<div class="mp-list">${this.members.map(m => `<span class="${m.id === this.me ? 'me' : ''}">${esc(m.name)}${m.id === this.hostId ? ' <i>host</i>' : ''}${m.id === this.me ? ' <i>you</i>' : ''}</span>`).join('')}</div>`
+        + `<div class="hint">${this.isHost ? 'Share the code. Pick the mode and island below, then press START MATCH. Bots fill the other spots.' : 'The host picks the mode and island and starts the match.'}</div>`
+        + `<div class="mp-row"><button data-mp="leave">Leave room</button></div>` + err;
+      return;
+    }
+    box.innerHTML = `<div class="mp-row"><input id="mpName" maxlength="16" placeholder="Your name" value="${esc(Profile.d.name || '')}"><button data-mp="create">Create room</button></div>`
+      + `<div class="mp-row"><input id="mpCode" maxlength="4" placeholder="CODE" autocapitalize="characters" autocomplete="off"><button data-mp="join">Join room</button></div>`
+      + `<div class="hint">Create a room and share its 4-letter code. Friends open this same site and join with it (up to 8 players).</div>` + err;
+  },
+  initUI() {
+    const box = $('mpBox'); if (!box) return;
+    box.addEventListener('click', e => {
+      const b = e.target.closest('[data-mp]'); if (!b) return; Sfx.init();
+      const nm = $('mpName'); if (nm) { Profile.d.name = nm.value.trim().slice(0, 16); Profile.save(); }
+      if (b.dataset.mp === 'create') this.create(); else if (b.dataset.mp === 'join') this.join($('mpCode').value); else this.leaveRoom();
+    });
+    box.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'mpCode') this.join(e.target.value); });
+    this.render();
+  },
+
+  // ---------------------------------------------------------------- match start
+  lookFromEq(eq) {
+    eq = eq || {}; const o = cosById('outfit', eq.outfit) || COS.outfit[0], bp = cosById('backpack', eq.backpack), gl = cosById('glider', eq.glider);
+    return { outfit: o.id, body: eq.body === 'man' ? 'man' : 'woman', shirt: o.shirt, pants: o.pants, skin: o.skin, sleeve: o.sleeve, hat: o.hair != null ? o.hair : o.hatC, pack: bp && bp.c ? bp.c : 0x444444, glider: gl && gl.c ? gl.c : 0x3aa8ff, gun: 0x444444 };
+  },
+  // which room member (if any) takes actor slot i instead of a bot
+  slotMember(i, mode) {
+    const g = this.members.filter(m => m.id !== this.me);
+    for (let j = 0; j < g.length; j++) { const slot = mode === 'rumble' ? (j % 2 === 0 ? 16 + j / 2 : 1 + (j - 1) / 2) : j + 1; if (slot === i) return g[j]; }
+    return null;
+  },
+  stormState() { const s = Storm; return { cx: s.cx, cz: s.cz, r: s.r, fx: s.fx, fz: s.fz, fr: s.fr, tx: s.tx, tz: s.tz, tr: s.tr, phase: s.phase, state: s.state, t: s.t, dur: s.dur, dmg: s.dmg, hasNext: s.hasNext }; },
+  hostStart() {
+    const r1 = v => Math.round(v * 10) / 10;
+    this.ids.clear(); for (const a of actors) this.ids.set(a.id, a);
+    const roster = actors.map(a => [a.id, a === player ? (Profile.d.name || 'Host').slice(0, 16) : a.name, a.team, (a.npc ? 1 : 0) | (a.boss ? 2 : 0), a.scale, a.maxHp, a === player ? this.lookFromEq(Profile.d.eq) : a.look, a.state, r1(a.pos.x), r1(a.pos.y), r1(a.pos.z)]);
+    const pk = Pickups.list.filter(p => p.alive).map(p => [p.id, p.item, r1(p.x), r1(p.y), r1(p.z)]);
+    const base = { k: 'start', cfg: { theme: Match.theme, mode: Match.mode, build: Match.build }, roster, pk, storm: this.stormState(), time: Match.time,
+      bus: { x: Bus.start.x, y: Bus.start.y, z: Bus.start.z, dx: Bus.dir.x, dz: Bus.dir.z, dur: Bus.dur, t: Bus.t, on: Bus.active } };
+    for (const [cid, a] of this.humans) this.send(cid, Object.assign({ you: a.id }, base));
+  },
+  guestSetup() {
+    const d = this.startData, M = Match; this.ids.clear(); this.humans.clear(); let ri = 0, maxId = 0;
+    for (const [id, name, team, fl, scale, maxHp, look, st, x, y, z] of d.roster) {
+      nextId = id; const mine = id === d.you;
+      const a = newActor({ name: mine ? 'You' : String(name).slice(0, 24), team, npc: !!(fl & 1), boss: !!(fl & 2), scale: +scale || 1, hp: maxHp, maxHp, look: look || {}, state: st === 'ground' || st === 'sky' ? st : 'bus' });
+      a.pos.set(x, y, z);
+      if (mine) { a.isPlayer = true; player = a; }
+      else { a.remote = true; a.ri = ri++; BotRig.setLook(a.ri, a.look); a.net = { x, y, z, yaw: 0, pitch: 0, vx: 0, vy: 0, vz: 0, t: 0, fresh: true, ic: 0 }; }
+      actors.push(a); this.ids.set(id, a); maxId = Math.max(maxId, id);
+    }
+    nextId = maxId + 1;
+    if (!player) throw new Error('the host did not include you in this match');
+    if (!M.build) { player.overMax = 50; player.over = 50; }
+    Storm.init(M.mode); Object.assign(Storm, d.storm);
+    Pickups.clear(); this.applying = true;
+    try { for (const p of d.pk) if (this.okItem(p[1])) Pickups.spawn(p[1], p[2], p[3], p[4], { id: p[0] }); } finally { this.applying = false; }
+    if (M.mode === 'rumble' || !d.bus.on) { Bus.active = false; if (Bus.mesh) Bus.mesh.visible = false; if (M.mode === 'rumble') M.respawn(player, true); else { player.state = 'bus'; Bus.init(); Bus.t = Bus.dur + 1; } }
+    else { Bus.init(); Bus.start.set(d.bus.x, d.bus.y, d.bus.z); Bus.dir.set(d.bus.dx, 0, d.bus.dz); Bus.dur = d.bus.dur; Bus.t = d.bus.t; Bus.update(0); }
+    M.time = d.time || 0;
+  },
+
+  // ---------------------------------------------------------------- per-frame traffic
+  enc(a) {
+    const it = a.inv[a.slot], S = { bus: 0, sky: 1, glide: 2, ground: 3 };
+    const code = (S[a.state] || 0) | (a.alive ? 4 : 0) | (a.onGround ? 8 : 0) | (a.inWater ? 16 : 0) | (a.input.ads ? 32 : 0) | (a.pickAnim > 0.2 ? 64 : 0) | (a.useT > 0 ? 128 : 0) | (a.reloadT > 0 ? 256 : 0) | (a.mantleT > 0 ? 512 : 0) | (Math.round(clamp(a.dive || 0, 0, 1) * 3) << 10);
+    return [a.id, Math.round(a.pos.x * 10), Math.round(a.pos.y * 10), Math.round(a.pos.z * 10), Math.round(a.yaw * 100), Math.round(a.pitch * 100), code,
+      !it || it.kind === 'pick' ? 0 : it.kind === 'weapon' ? 'w' + it.wid + ':' + it.rarity : 'h' + it.hid, Math.ceil(a.hp), Math.ceil(a.shield), a.emote || 0];
+  },
+  dec(a, s) {
+    const n = a.net || (a.net = { x: 0, y: 0, z: 0, yaw: 0, pitch: 0, vx: 0, vy: 0, vz: 0, t: 0, fresh: true, ic: 0 });
+    const x = s[1] / 10, y = s[2] / 10, z = s[3] / 10, now = performance.now() / 1000, gap = now - n.t;
+    if (![x, y, z, s[4], s[5]].every(Number.isFinite)) return;
+    const c = s[6] | 0, st = ['bus', 'sky', 'glide', 'ground'][c & 3], alive = !!(c & 4), jump = st !== a.state;
+    if (!n.fresh && !jump && gap > 0.02 && gap < 0.6) { n.vx = (x - n.x) / gap; n.vy = (y - n.y) / gap; n.vz = (z - n.z) / gap; } else n.vx = n.vy = n.vz = 0;
+    n.x = x; n.y = y; n.z = z; n.yaw = s[4] / 100; n.pitch = clamp(s[5] / 100, -1.5, 1.5); n.t = now;
+    if (n.fresh || jump || Math.hypot(a.pos.x - x, a.pos.y - y, a.pos.z - z) > 25) { a.pos.set(x, y, z); a.yaw = n.yaw; n.fresh = false; }
+    a.state = st; a.onGround = !!(c & 8); a.inWater = !!(c & 16); a.input.ads = !!(c & 32);
+    if ((c & 64) && a.pickAnim <= 0) a.pickAnim = 0.32;
+    a.useT = c & 128 ? 1 : 0; a.reloadT = c & 256 ? 1 : 0; a.mantleT = c & 512 ? 0.2 : 0; a.dive = ((c >> 10) & 3) / 3;
+    const ic = s[7] || 0;
+    if (ic !== n.ic) {
+      n.ic = ic;
+      if (!ic || typeof ic !== 'string') a.slot = 0;
+      else if (ic[0] === 'w') { const [wid, rar] = ic.slice(1).split(':'); if (WEAPONS[wid]) { a.inv[1] = makeWeapon(wid, clamp(+rar | 0, 0, 6)); a.slot = 1; } else a.slot = 0; }
+      else if (HEALS[ic.slice(1)]) { a.inv[1] = { kind: 'heal', hid: ic.slice(1), count: 1 }; a.slot = 1; } else a.slot = 0;
+    }
+    a.hp = clamp(+s[8] || 0, 0, a.maxHp); a.shield = clamp(+s[9] || 0, 0, 100);
+    const em = typeof s[10] === 'string' ? s[10].slice(0, 16) : null; if (em !== a.emote) { a.emote = em; a.emoteT = 0; }
+    if (alive && !a.alive) { a.alive = true; a.respawnT = 0; a._dissolveAt = 0; Match.recount(); }
+    else if (!alive && a.alive && gap < 5 && !a.human) { a.alive = false; Match.recount(); }   // missed the elimination itself: just mark it
+  },
+  // other players' characters glide toward where they were last reported, slightly ahead
+  tickRemote(a, dt) {
+    const n = a.net; if (a.pickAnim > 0) a.pickAnim -= dt; if (a.emote) a.emoteT += dt; if (a.invuln > 0) a.invuln -= dt;
+    if (!n || !a.alive || a.state === 'bus') return;
+    const age = performance.now() / 1000 - n.t, k = 1 - Math.exp(-dt * 12), lead = Math.min(age, 0.22);
+    if (age > 0.5) n.vx = n.vy = n.vz = 0;
+    a.pos.x += (n.x + n.vx * lead - a.pos.x) * k; a.pos.y += (n.y + n.vy * lead - a.pos.y) * k; a.pos.z += (n.z + n.vz * lead - a.pos.z) * k;
+    a.yaw += angDiff(a.yaw, n.yaw) * k; a.pitch += (n.pitch - a.pitch) * k;
+    a.vel.set(n.vx, n.vy, n.vz); a.aliveTime += dt;
+    if (a.onGround) a.walkPhase += Math.hypot(n.vx, n.vz) * dt * 1.7;
+    const fx = Math.sin(a.yaw), fz = Math.cos(a.yaw); a.input.f = clamp((n.vx * fx + n.vz * fz) / 6, -1, 1); a.input.r = clamp((-n.vx * fz + n.vz * fx) / 6, -1, 1);
+  },
+  update(dt) {
+    if (!this.inMatch || !player || Match.state !== 'play') return;
+    this.stT -= dt; if (this.stT > 0) return;
+    if (!this.isHost) { this.stT = 0.066; this.send('h', { k: 'st', s: this.enc(player) }); return; }
+    this.stT = 0.1; this.snN++;
+    const all = []; for (const a of actors) if ((a.alive || a.human) && (a.state !== 'bus' || a.human)) all.push([a, this.enc(a)]);
+    const extra = { t: Math.round(Match.time * 100) / 100, bt: Bus.active ? Math.round(Bus.t * 100) / 100 : -1, sc: Match.score };
+    if (this.snN % 5 === 0) extra.sm = this.stormState();
+    for (const [cid, me] of this.humans) {
+      const arr = []; for (const [a, s] of all) { if (a === me) continue; const dx = a.pos.x - me.pos.x, dz = a.pos.z - me.pos.z; if (a.human || a === player || dx * dx + dz * dz < NET_RANGE * NET_RANGE) arr.push(s); }
+      this.send(cid, Object.assign({ k: 'snap', a: arr }, extra));
+    }
+  },
+  applyStorm(s) {
+    const ph = Storm.phase, st = Storm.state;
+    for (const k of ['cx', 'cz', 'r', 'fx', 'fz', 'fr', 'tx', 'tz', 'tr', 'phase', 't', 'dur', 'dmg']) if (Number.isFinite(s[k])) Storm[k] = s[k];
+    if (['idle', 'wait', 'shrink', 'done'].includes(s.state)) Storm.state = s.state; Storm.hasNext = !!s.hasNext;
+    if (Storm.state === st && Storm.phase === ph) return;
+    if (Storm.state === 'wait' && Storm.phase > 0) HUD.banner('New safe zone marked', 'Check your map · storm moves in ' + fmtTime(Storm.t), 3);
+    else if (Storm.state === 'shrink' && st !== 'shrink' && !Storm.rumble) { HUD.banner('The storm is closing in', Storm.dmg + ' damage per second outside the eye', 3); Sfx.storm(); }
+  },
+
+  // ---------------------------------------------------------------- events
+  // something happened here that the others need to know about
+  emit(ev, pos, range) { if (!this.inMatch) return; if (this.isHost) this.toGuests(ev, 0, pos, range); else this.send('h', ev); },
+  toGuests(ev, except, pos, range) {
+    for (const [cid, a] of this.humans) {
+      if (cid === except) continue;
+      if (pos && Math.hypot(a.pos.x - pos.x, a.pos.z - pos.z) > range) continue;
+      this.send(cid, ev);
+    }
+  },
+  slim(o) { o = o || {}; const r = {}; for (const k of ['head', 'raw', 'storm', 'fall', 'shark']) if (o[k]) r[k] = 1; for (const k of ['x', 'y', 'z']) if (Number.isFinite(o[k])) r[k] = Math.round(o[k] * 10) / 10; if (o.w) r.w = String(o.w).slice(0, 30); return r; },
+  okItem(it) {
+    if (!it || typeof it !== 'object') return false;
+    if (it.kind === 'weapon') return !!WEAPONS[it.wid] && Number.isFinite(it.rarity) && it.rarity >= 0 && it.rarity <= 6 && Number.isFinite(it.mag);
+    if (it.kind === 'heal') return !!HEALS[it.hid] && it.count > 0 && it.count <= 20;
+    if (it.kind === 'ammo') return !!AMMO[it.ammo] && it.count > 0 && it.count <= 999;
+    if (it.kind === 'mats') return !!MATS[it.mat] && it.count > 0 && it.count <= 999;
+    return false;
+  },
+  chestNear(x, z) { let best = null, bd = 9; for (const c of W.chests) { const d = (c.x - x) ** 2 + (c.z - z) ** 2; if (d < bd) { bd = d; best = c; } } return best; },
+  dropHuman(cid) {
+    const a = this.humans.get(cid); if (!a) return; this.humans.delete(cid);
+    if (a.alive && Match.state === 'play') { this.applying = true; try { eliminate(a, null, {}); } finally { this.applying = false; } this.toGuests({ k: 'elim', id: a.id, src: 0, o: {} }); }
+    a.human = 0; a.remote = true;
+  },
+  onMsg(from, d) {
+    if (d.k === 'start') {
+      if (from !== this.hostId || this.isHost) return;
+      if (Match.state !== 'lobby') { this.inMatch = false; Match.toLobby(); }
+      this.startData = d; this.inMatch = true; Sfx.init();
+      Match.start({ mode: ['solo', 'squads', 'rumble'].includes(d.cfg.mode) ? d.cfg.mode : 'solo', build: !!d.cfg.build, ranked: false, theme: THEMES[d.cfg.theme] ? d.cfg.theme : 'greenvale' });
+      return;
+    }
+    if (!this.inMatch || Match.state === 'lobby') return;
+    if (Match.state === 'loading') { if (!this.isHost && from === this.hostId && d.k !== 'snap' && this.queue.length < 4000) this.queue.push(d); return; }   // still building the island: catch up after
+    if (this.isHost) {
+      const me = this.humans.get(from); if (!me) return;
+      if (d.k === 'st') { if (Array.isArray(d.s)) { d.s[0] = me.id; this.dec(me, d.s); } }
+      else if (d.k === 'dmg') { const t = this.ids.get(d.id); if (!t || !t.alive) return; d.src = me.id; if (t.human) this.send(t.human, d); else if (!t.remote) damageActor(t, clamp(+d.dmg || 0, 0, 400), me, d.o || {}); }
+      else if (d.k === 'take') { const p = Pickups.byId.get(d.id); if (p && p.alive) Pickups.remove(p); }
+      else if (d.k === 'drop') { if (this.okItem(d.item) && Number.isFinite(d.x + d.y + d.z)) Pickups.spawn(d.item, d.x, d.y, d.z, { pop: Array.isArray(d.pop) ? { x: d.pop[0], y: d.pop[1] - 1, z: d.pop[2] } : null, ttl: Match.mode === 'rumble' ? 75 : 0 }); }
+      else if (d.k === 'chest') { const c = this.chestNear(d.x, d.z); if (c && !c.opened && !c.falling) openChest(c, me); }
+      else if (d.k === 'elim') {
+        if (!me.alive) return; const pos = me.pos.clone();
+        this.applying = true; try { eliminate(me, this.ids.get(d.src) || null, d.o || {}); } finally { this.applying = false; }
+        if (Array.isArray(d.items)) scatterLoot(d.items.filter(it => this.okItem(it)).slice(0, 16), pos);
+        this.toGuests({ k: 'elim', id: me.id, src: d.src, o: d.o || {} }, from);
+      }
+      else if (d.k === 'bye') this.dropHuman(from);
+      else if (['bp', 'bd', 'hv', 'shot', 'rk'].includes(d.k)) { d.id = me.id; this.applyWorld(d); this.toGuests(d, from, d.k === 'shot' || d.k === 'rk' ? me.pos : null, NET_RANGE); }
+      return;
+    }
+    if (from !== this.hostId) return;
+    if (d.k === 'snap') {
+      if (Number.isFinite(d.t) && Math.abs(Match.time - d.t) > 0.3) Match.time = d.t;
+      if (d.bt >= 0) { if (Bus.active && Math.abs(Bus.t - d.bt) > 0.4) Bus.t = d.bt; } else if (Bus.active) Bus.t = Bus.dur + 1;
+      if (Array.isArray(d.sc)) Match.score = [d.sc[0] | 0, d.sc[1] | 0];
+      if (Array.isArray(d.a)) for (const s of d.a) { const a = this.ids.get(s[0]); if (a && a !== player) this.dec(a, s); }
+      if (d.sm) this.applyStorm(d.sm);
+    }
+    else if (d.k === 'dmg') { if (player && player.alive) damageActor(player, clamp(+d.dmg || 0, 0, 400), this.ids.get(d.src) || null, d.o || {}); }
+    else if (d.k === 'end') { if (Match.state === 'play') { HUD.toast('The host ended the match'); Match.showResults(); } }
+    else this.applyWorld(d);
+  },
+  flush() { const q = this.queue.splice(0); for (const d of q) { try { this.onMsg(this.hostId, d); } catch (e) { console.error(e); } } },
+  // replay something another player (or the host's world) did
+  applyWorld(d) {
+    this.applying = true;
+    try {
+      const A = id => this.ids.get(id) || null, V = a => Array.isArray(a) && a.length >= 3 && a.every(Number.isFinite);
+      if (d.k === 'elim') { const t = A(d.id); if (t && t.alive && t !== player) eliminate(t, A(d.src), d.o || {}); }
+      else if (d.k === 'bp') { const t = d.t; if (t && ['wall', 'floor', 'ramp'].includes(t.type) && [t.gx, t.gy, t.gz, t.dir].every(Number.isInteger) && typeof t.key === 'string' && t.key.length < 40) Build.place({ mats: { wood: 99, brick: 99, metal: 99 }, mat: MATS[d.mat] ? d.mat : 'wood', remote: true }, { type: t.type, gx: t.gx, gy: t.gy, gz: t.gz, dir: t.dir, key: t.key }); }
+      else if (d.k === 'bd') { const p = Build.map.get(d.key); if (p) Build.damage(p, clamp(+d.dmg || 0, 0, 2000), null); }
+      else if (d.k === 'hv') { let best = null, bd = 4; for (const hv of W.harv) { if (hv.dead || hv.vehicle) continue; const q = (hv.x - d.x) ** 2 + (hv.z - d.z) ** 2; if (q < bd) { bd = q; best = hv; } } if (best) destroyHarv(best); }
+      else if (d.k === 'shot') {
+        if (!V(d.m) || !Array.isArray(d.h)) return; const a = A(d.id), col = Number.isFinite(d.c) ? d.c : 0xfff1a8;
+        for (const h of d.h.slice(0, 4)) if (V(h)) FX.tracer(d.m[0], d.m[1], d.m[2], h[0], h[1], h[2], col);
+        Sfx.shot(String(d.ty || 'ar'), d.m[0], d.m[1], d.m[2]); FX.burst(d.m[0], d.m[1], d.m[2], 0xffd27a, 2, 1.5, 0.06, 0.12, 0); if (a) a.lastShotT = Match.time;
+      }
+      else if (d.k === 'rk') { const a = A(d.id); if (a && V(d.o) && V(d.d) && WEAPONS[d.wid]) { const st = wstat(makeWeapon(d.wid, clamp(d.r | 0, 0, 6))); if (st.proj) Rockets.spawn(a, new THREE.Vector3(d.o[0], d.o[1], d.o[2]), new THREE.Vector3(d.d[0], d.d[1], d.d[2]).normalize(), st, true); } }
+      else if (d.k === 'pk+') { if (this.okItem(d.item) && Number.isFinite(d.x + d.y + d.z)) Pickups.spawn(d.item, d.x, d.y, d.z, { id: d.id, pop: V(d.pop) ? { x: d.pop[0], y: d.pop[1] - 1, z: d.pop[2] } : null, ttl: +d.ttl || 0 }); }
+      else if (d.k === 'pk-') { const p = Pickups.byId.get(d.id); if (p) Pickups.remove(p); }
+      else if (d.k === 'chest') { const c = this.chestNear(d.x, d.z); if (c && !c.opened) openChest(c, A(d.by) || player); }
+      else if (d.k === 'finish') { if (!Match.ending && Match.state === 'play') Match.finish(d.w | 0); }
+    } finally { this.applying = false; }
+  },
+};
 
 // =====================================================================
 //  Input (keyboard, mouse, touch), camera, player control
@@ -6919,9 +7266,12 @@ const Lobby = {
     $('shopGrid').addEventListener('click', e => { const b = e.target.closest('[data-id]'); if (!b) return; this.shopSel = { cat: b.dataset.cat, id: b.dataset.id }; $('shopMsg').textContent = ''; this.refresh(); $('tab-shop').scrollTo({ top: 0, behavior: 'smooth' }); });
     $('shopFilters').addEventListener('click', e => { const b = e.target.closest('[data-f]'); if (!b) return; this.shopFilter = b.dataset.f; this.refresh(); });
     $('readyBtn').addEventListener('click', () => {
+      if (Net.state === 'room' && !Net.isHost) return;
       Sfx.init(); Sfx.horn();
-      Match.start({ mode: Profile.d.mode, build: Profile.d.mode === 'rumble' ? Profile.d.build : Profile.d.build, ranked: Profile.d.ranked && Profile.d.mode !== 'rumble', theme: Profile.d.theme });
+      Net.inMatch = Net.state === 'room';
+      Match.start({ mode: Profile.d.mode, build: Profile.d.mode === 'rumble' ? Profile.d.build : Profile.d.build, ranked: Profile.d.ranked && Profile.d.mode !== 'rumble' && !Net.inMatch, theme: Profile.d.theme });
     });
+    Net.initUI();
   },
   buy(cat, id) {
     const it = cosById(cat, id), d = Profile.d, msg = $('shopMsg'), price = itemPrice(it); Sfx.init();
@@ -6990,6 +7340,7 @@ const Lobby = {
   },
   refresh() {
     const d = Profile.d;
+    Net.render();
     $('coinLbl').textContent = d.coins.toLocaleString();
     [...$('tabs').children].forEach(b => b.classList.toggle('on', b.dataset.tab === this.tab));
     for (const t of ['play', 'locker', 'pass', 'career', 'shop']) $('tab-' + t).hidden = t !== this.tab;
@@ -7068,22 +7419,29 @@ function boot() {
   $('game').addEventListener('click', () => { if (Match.state === 'play' && !Match.paused && !Input.locked) Input.requestLock(); });
   requestAnimationFrame(frame);
 }
-function frame(now) {
-  requestAnimationFrame(frame);
+function frame(now) { requestAnimationFrame(frame); step(now); }
+// The host's browser runs the shared match, and browsers stop drawing hidden tabs.
+// So while the host's tab is in the background, keep the match moving from a timer.
+setInterval(() => {
+  if (!document.hidden || !Net.hosting || Match.state !== 'play') return;
+  let n = Math.min(24, Math.floor((performance.now() - lastFrame) / 50));
+  while (n-- > 0) step(lastFrame + 50);
+}, 250);
+function step(now) {
   let dt = Math.min(0.05, Math.max(0.0005, (now - lastFrame) / 1000)); lastFrame = now;
   Input.pollPad();
   if (Match.state !== 'play' || Match.paused || !$('death').hidden || !$('results').hidden || !$('ticket').hidden) Input.padMenu(dt);
   if (Match.state === 'lobby' || Match.state === 'loading') { Lobby.render(dt); return; }
-  if (Match.paused) { renderer.render(scene, camera); return; }
+  if (Match.paused && !Net.inMatch) { renderer.render(scene, camera); return; }   // a shared match keeps running while you are in the menu
   gameTime += dt;
   if (Match.state === 'play') {
-    updatePlayer(dt);
-    for (let i = 0; i < actors.length; i++) { const a = actors[i]; if (a.ai && a.alive) updateBot(a, dt); }
-    for (let i = 0; i < actors.length; i++) { const a = actors[i]; actorTick(a, dt); physicsActor(a, dt); }
+    if (Match.paused) { if (player) { player.input.f = player.input.r = 0; player.input.fire = player.input.jump = false; } Input.pressed.clear(); Input.mdx = Input.mdy = 0; } else updatePlayer(dt);
+    for (let i = 0; i < actors.length; i++) { const a = actors[i]; if (a.ai && a.alive && !a.remote) updateBot(a, dt); }
+    for (let i = 0; i < actors.length; i++) { const a = actors[i]; if (a.remote) Net.tickRemote(a, dt); else { actorTick(a, dt); physicsActor(a, dt); } }
     Vehicles.update(dt);
     Creatures.update(dt);
     Rockets.update(dt);
-    Match.update(dt);
+    Match.update(dt); Net.update(dt);
     Interact.find();
   }
   Pickups.update(dt); Build.update(dt); FX.update(dt);
