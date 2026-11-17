@@ -21,7 +21,7 @@ function boot() {
   $('rLobbyBtn').addEventListener('click', () => Match.toLobby());
   $('sensIn').value = Profile.d.sens; $('sensIn').addEventListener('input', e => { Profile.d.sens = +e.target.value; Profile.save(); });
   $('shadowChk').checked = !!Profile.d.shadows; $('shadowChk').addEventListener('change', e => { Profile.d.shadows = e.target.checked; sun.castShadow = e.target.checked; Profile.save(); });
-  $('game').addEventListener('click', () => { if (Match.state === 'play' && !Match.paused && !Input.locked) Input.requestLock(); });
+  $('fdView').addEventListener('click', () => { if (Match.state === 'play' && !Match.paused && !Input.locked) Input.requestLock(); });
   requestAnimationFrame(frame);
   checkGL(); setInterval(checkGL, 3000);
 }
@@ -32,7 +32,7 @@ const Diag = {
   log(m) { this.errs.push(String(m).slice(0, 140)); if (this.errs.length > 4) this.errs.shift(); },
   // who is hiding the 3D view: an attribute, an inline style, a style rule (and where it came from), or nodes the game did not add
   hider() {
-    const cv = $('game'), out = []; if (!cv) return 'no #game element';
+    const cv = $('fdView'), out = []; if (!cv) return 'no #fdView element';
     out.push('hidden attr ' + cv.hasAttribute('hidden') + ' · inline style "' + (cv.getAttribute('style') || '').slice(0, 120) + '"');
     for (const sh of document.styleSheets) {
       let rules; try { rules = sh.cssRules; } catch (e) { out.push('sheet (unreadable): ' + (sh.href || '?')); continue; }
@@ -50,7 +50,7 @@ const Diag = {
   changes: [],
   // what is actually on screen where the 3D view should be, and what colour the last frame was there
   screen() {
-    const cv = $('game'), r = cv.getBoundingClientRect(), cs = getComputedStyle(cv), x = Math.round(innerWidth * 0.3), y = Math.round(innerHeight * 0.5), el = document.elementFromPoint(x, y);
+    const cv = $('fdView'), r = cv.getBoundingClientRect(), cs = getComputedStyle(cv), x = Math.round(innerWidth * 0.3), y = Math.round(innerHeight * 0.5), el = document.elementFromPoint(x, y);
     let px = '?'; try { const gl = renderer.getContext(), p = new Uint8Array(4); renderer.render(Match.state === 'lobby' ? Lobby.scene : scene, Match.state === 'lobby' ? Lobby.cam : camera); gl.readPixels(Math.round(gl.drawingBufferWidth * 0.3), gl.drawingBufferHeight >> 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, p); px = [...p].join(','); } catch (e) { px = 'err'; }
     const attrs = (() => { try { const a = renderer.getContext().getContextAttributes(); return (a.alpha ? 'alpha ' : '') + (a.antialias ? 'aa ' : '') + (a.desynchronized ? 'desync ' : '') + (a.powerPreference || ''); } catch (e) { return '?'; } })();
     return (cs.display === 'none' || r.width < 2 ? this.hider() + '\n' : '') + 'canvas ' + Math.round(r.width) + 'x' + Math.round(r.height) + ' at ' + Math.round(r.left) + ',' + Math.round(r.top) + ' · ' + cs.display + '/' + cs.visibility + '/op ' + cs.opacity + ' · on top: ' + (el ? el.tagName.toLowerCase() + (el.id ? '#' + el.id : '') + (el.className && typeof el.className === 'string' ? '.' + el.className.split(' ')[0] : '') : 'none') + '\nframe pixel ' + px + ' · ' + attrs + ' · ua ' + navigator.userAgent.replace(/^Mozilla\/5\.0 /, '').slice(0, 90);
@@ -72,8 +72,8 @@ const Diag = {
   },
 };
 const GAME_IDS = new Set([...document.querySelectorAll('body > [id]')].map(e => e.id).concat(['problemBar', 'stageWait', 'diagPanel']));
-{ const cv = document.getElementById('game'), t0 = performance.now(); if (cv && window.MutationObserver) new MutationObserver(ms => { for (const m of ms) Diag.changes.push(m.attributeName + '=' + String(cv.getAttribute(m.attributeName)).slice(0, 50) + ' at ' + Math.round(performance.now() - t0) + 'ms'); if (Diag.changes.length > 8) Diag.changes.length = 8; }).observe(cv, { attributes: true, attributeFilter: ['style', 'hidden', 'class'] }); }
-setTimeout(() => { const cv = document.getElementById('game'); if (cv && getComputedStyle(cv).display === 'none') { Diag.on = true; showProblem('The 3D view is being hidden on this page, so you cannot see the game. The green box above shows what is hiding it: please send a screenshot of this whole page.'); } }, 6000);
+{ const cv = document.getElementById('fdView'), t0 = performance.now(); if (cv && window.MutationObserver) new MutationObserver(ms => { for (const m of ms) Diag.changes.push(m.attributeName + '=' + String(cv.getAttribute(m.attributeName)).slice(0, 50) + ' at ' + Math.round(performance.now() - t0) + 'ms'); if (Diag.changes.length > 8) Diag.changes.length = 8; }).observe(cv, { attributes: true, attributeFilter: ['style', 'hidden', 'class'] }); }
+setTimeout(() => { const cv = document.getElementById('fdView'); if (cv && getComputedStyle(cv).display === 'none') { Diag.on = true; showProblem('The 3D view is being hidden on this page, so you cannot see the game. The green box above shows what is hiding it: please send a screenshot of this whole page.'); } }, 6000);
 addEventListener('error', e => Diag.log(e.message || e)); addEventListener('unhandledrejection', e => Diag.log('promise: ' + (e.reason && e.reason.message || e.reason)));
 function frame(now) {
   requestAnimationFrame(frame);

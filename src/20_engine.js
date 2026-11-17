@@ -51,7 +51,7 @@ function makeTex(kind) {
 }
 
 function initEngine() {
-  const canvas = $('game');
+  const canvas = $('fdView');
   renderer = new THREE.WebGLRenderer({ canvas, antialias: !IS_TOUCH, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, IS_TOUCH ? 1.25 : 1.5));
   renderer.setSize(innerWidth, innerHeight);

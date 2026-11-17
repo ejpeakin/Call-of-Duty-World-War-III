@@ -45,7 +45,7 @@ const Input = {
     pd.hit.length = 0;   // a press that closed a menu must not also act in the game this frame
   },
   init() {
-    const cv = $('game');
+    const cv = $('fdView');
     addEventListener('keydown', e => {
       this.padOff();
       if (Match.state !== 'play') return;
@@ -78,7 +78,7 @@ const Input = {
   },
   requestLock() {
     if (IS_TOUCH || this.touch.on || this.pad.on) return;
-    const cv = $('game');
+    const cv = $('fdView');
     try { const p = cv.requestPointerLock(); if (p && p.catch) p.catch(() => { this.free = true; }); } catch (e) { this.free = true; }
     setTimeout(() => { if (!this.locked && Match.state === 'play' && !Match.paused && !this.free) $('clickHint').hidden = false; }, 400);
   },
@@ -87,7 +87,7 @@ const Input = {
     const enable = () => { if (t.on) return; t.on = true; ui.hidden = false; };
     if (IS_TOUCH) enable();
     addEventListener('touchstart', () => { if (Match.state === 'play') enable(); }, { passive: true });
-    const cv = $('game');
+    const cv = $('fdView');
     cv.addEventListener('touchstart', e => {
       for (const tc of e.changedTouches) {
         if (tc.clientX < innerWidth * 0.42 && t.stickId === null) { t.stickId = tc.identifier; t.sx = tc.clientX; t.sy = tc.clientY; stick.style.display = 'block'; stick.style.left = t.sx + 'px'; stick.style.top = t.sy + 'px'; }
