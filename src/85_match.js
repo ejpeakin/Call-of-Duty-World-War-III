@@ -246,6 +246,7 @@ const Match = {
     }
     }
     this.time = this.time || 0; this.firstLander = null; this.sharkKills = 0; if (Net.guest) { this.score = [0, 0]; this.ending = false; this.spectate = null; this.paused = false; this.result = null; this.deathShown = false; this.hasWinner = false; }
+    if (this.mode !== 'rumble') player.shield = 50;   // everyone drops in with half a shield
     LiveEvent.init(this.mode); if (Net.inMatch) LiveEvent.state = 'off'; else Creatures.spawn();
     if (PlayerRig) scene.remove(PlayerRig.root);
     PlayerRig = makeRig(Profile.d.eq); scene.add(PlayerRig.root);

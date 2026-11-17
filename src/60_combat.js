@@ -145,7 +145,7 @@ function applyHit(a, st, h, d, pellets) {
   if (h.type === 'actor') {
     const t = h.obj; let dmg = st.dmg;
     if (h.t > st.range * 0.5) dmg *= lerp(1, 0.7, (h.t - st.range * 0.5) / (st.range * 0.5));
-    if (h.head) dmg *= st.head;
+    if (h.head && !(a.ai && !t.ai)) dmg *= st.head;   // bots do not get headshot bonuses on real players
     damageActor(t, dmg, a, { head: h.head, x: h.x, y: h.y, z: h.z, w: WEAPONS[a.inv[a.slot].wid].name });
     if (st.slow) t.slowT = st.slow;
     if (st.knock) { t.vel.x += d.x * st.knock / pellets * 1.2; t.vel.z += d.z * st.knock / pellets * 1.2; t.vel.y = Math.max(t.vel.y, 7); t.onGround = false; }
@@ -185,9 +185,11 @@ function switchSlot(a, s) {
 }
 
 // ---------------------------------------------------------------- damage + eliminations
+const BOT_DMG_TO_PLAYERS = 0.55;
 function damageActor(t, dmg, src, o = {}) {
   if (!t.alive || t.invuln > 0 || Match.state !== 'play') return 0;
   if (src && src !== t && src.team === t.team) return 0;
+  if (src && src.ai && !t.ai && !o.raw) dmg *= src.boss ? 0.8 : BOT_DMG_TO_PLAYERS;   // bots hit real players softer, so fights last longer
   dmg = Math.max(1, Math.round(dmg));
   if (Net.inMatch && t.remote && !Net.applying) {   // someone else's character: their own game decides what the hit does
     if (src && src.remote) return 0;
