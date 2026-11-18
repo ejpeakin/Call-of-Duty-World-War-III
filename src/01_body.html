@@ -22,11 +22,11 @@
   <header class="lb-top">
     <div class="logo">FORT<span>DAY</span></div>
     <nav class="tabs" id="tabs">
-      <button data-tab="play" class="on">Play</button>
-      <button data-tab="locker">Locker</button>
-      <button data-tab="pass">Pass</button>
-      <button data-tab="career">Career</button>
-      <button data-tab="shop" class="shop-tab">Shop</button>
+      <button data-tab="play" title="Pick a mode and start a match" class="on">Play</button>
+      <button data-tab="locker" title="Change your skin, back bling, glider and more">Locker</button>
+      <button data-tab="pass" title="Season levels and the rewards you unlock">Pass</button>
+      <button data-tab="career" title="Your stats and rank">Career</button>
+      <button data-tab="shop" class="shop-tab" title="Buy skins and items with FortBux">Shop</button>
     </nav>
     <div class="lb-tier"><span id="tierLbl" class="num">Tier 1</span><div class="mini-bar"><i id="tierFill"></i></div></div>
     <div class="lb-coins" title="FortBux"><i class="coin"></i><span id="coinLbl" class="num">0</span></div>
@@ -35,29 +35,47 @@
 
   <div class="side">
     <section class="panel" id="tab-play">
-      <button class="tut-card" id="tutBtn" type="button"><b>Tutorial</b><span>Learn to move, build, loot and fight in a few minutes</span></button>
-      <h3>Play with friends</h3>
-      <div class="mp" id="mpBox"></div>
-      <h3>Mode</h3>
-      <div class="opt-grid" id="modeGrid">
-        <button class="opt" data-mode="solo"><b>Battle Royale · Solo</b><span>100 players, one survivor. Bus drop, loot, storm.</span></button>
-        <button class="opt" data-mode="duos"><b>Battle Royale · Duos</b><span>50 teams of 2. You and a partner, a friend from your room or a bot.</span></button>
-        <button class="opt" data-mode="squads"><b>Battle Royale · Squads</b><span>25 squads of 4. You lead three bot teammates.</span></button>
-        <button class="opt" data-mode="rumble"><b>Storm Rumble</b><span>16 vs 16 with respawns. First team to 40 eliminations.</span></button>
+      <div class="welcome" id="welcome" hidden>
+        <b>Welcome to FortDay!</b>
+        <ol>
+          <li>New here? Take the quick <b>Tutorial</b> just below.</li>
+          <li>Pick a <b>mode</b>, a <b>combat style</b> and an <b>island</b>.</li>
+          <li>Press <b>PLAY</b>. Be the last one standing to win.</li>
+        </ol>
       </div>
-      <h3>Combat style</h3>
+      <button class="tut-card" id="tutBtn" type="button"><span class="tut-badge" id="tutBadge" hidden>Recommended for new players</span><b>Tutorial</b><span>Learn to move, build, loot and fight in a few minutes</span></button>
+      <h3 class="step"><i>1</i>Pick a mode</h3>
+      <div class="opt-grid" id="modeGrid">
+        <button class="opt" data-mode="solo"><em>100 players</em><b>Battle Royale · Solo</b><span>Everyone for themselves. Drop from the bus, grab loot, stay out of the storm, be the last one left.</span></button>
+        <button class="opt" data-mode="duos"><em>Teams of 2</em><b>Battle Royale · Duos</b><span>Team up with a friend from your room, or a bot partner.</span></button>
+        <button class="opt" data-mode="squads"><em>Teams of 4</em><b>Battle Royale · Squads</b><span>You lead three bot teammates who fight alongside you.</span></button>
+        <button class="opt" data-mode="rumble"><em>16 vs 16</em><b>Storm Rumble</b><span>You come back after every elimination. First team to 40 wins.</span><i class="tag">Good for practice</i></button>
+      </div>
+      <h3 class="step"><i>2</i>Combat style</h3>
       <div class="seg" id="buildSeg">
-        <button data-build="1">Build</button>
-        <button data-build="0">No-Build</button>
+        <button data-build="1"><b>Build</b><span>Walls, ramps and floors</span></button>
+        <button data-build="0"><b>No-Build</b><span>Easier to learn</span></button>
       </div>
       <div class="hint" id="buildHint"></div>
-      <h3>Island</h3>
+      <h3 class="step"><i>3</i>Island</h3>
       <div class="isl-grid" id="islGrid"></div>
       <div class="hint" id="islNote"></div>
-      <label class="check"><input type="checkbox" id="rankedChk"> Ranked queue <span class="hint">(tougher bots, earns rank points)</span></label>
-      <div class="hint" id="kbHint"></div>
-      <div class="hint">Controller: plug one in and press any button. <kbd>RT</kbd> fire · <kbd>LT</kbd> aim · <kbd>A</kbd> jump · <kbd>X</kbd> use / reload · <kbd>Y</kbd> harvesting tool · <kbd>LB</kbd> <kbd>RB</kbd> slots · <kbd>B</kbd> build · <kbd>L3</kbd> sprint</div>
-      <div class="hint">Car model: <a href="https://sketchfab.com/3d-models/goodbye-and-good-riddance-nissan-car-fbx-ba71611bcba3445db89287411ca85c87" target="_blank" rel="noopener" style="color:inherit">“Goodbye And Good Riddance Nissan Car FBX”</a> by PixelGTT, licensed <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener" style="color:inherit">CC BY 4.0</a>. Badges removed and paint recolored.</div>
+      <label class="check"><input type="checkbox" id="rankedChk"><span><b>Ranked</b> <span class="hint">Optional. Tougher bots, and you win or lose rank points.</span></span></label>
+      <h3>Play with friends <span class="h-opt">optional</span></h3>
+      <div class="mp" id="mpBox"></div>
+      <details class="ctl" id="ctlBox">
+        <summary>Controls</summary>
+        <div class="ctl-grid" id="kbHint"></div>
+        <div class="hint">Change any key in <b>Settings</b> (top right).</div>
+        <h4>Controller</h4>
+        <div class="ctl-grid">
+          <span>Shoot</span><span><kbd>RT</kbd></span><span>Aim</span><span><kbd>LT</kbd></span><span>Jump</span><span><kbd>A</kbd></span>
+          <span>Pick up / reload</span><span><kbd>X</kbd></span><span>Harvesting tool</span><span><kbd>Y</kbd></span><span>Switch slots</span><span><kbd>LB</kbd> <kbd>RB</kbd></span>
+          <span>Build</span><span><kbd>B</kbd></span><span>Sprint</span><span><kbd>L3</kbd></span>
+        </div>
+        <div class="hint">Plug a controller in and press any button.</div>
+      </details>
+      <div class="hint credit">Car model: <a href="https://sketchfab.com/3d-models/goodbye-and-good-riddance-nissan-car-fbx-ba71611bcba3445db89287411ca85c87" target="_blank" rel="noopener" style="color:inherit">“Goodbye And Good Riddance Nissan Car FBX”</a> by PixelGTT, licensed <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener" style="color:inherit">CC BY 4.0</a>. Badges removed and paint recolored.</div>
     </section>
 
     <section class="panel shop" id="tab-locker" hidden>
@@ -133,7 +151,7 @@
     </section>
   </div>
 
-  <div class="lb-foot"><button id="readyBtn">READY UP</button></div>
+  <div class="lb-foot"><button id="readyBtn" title="Start a match (Enter)"><span class="rb-main">PLAY</span></button></div>
   <div id="buildTag"></div>
 </div>
 

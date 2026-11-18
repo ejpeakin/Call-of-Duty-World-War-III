@@ -191,7 +191,8 @@ const Net = {
     if (this.state === 'room' && this.eqSig && eqSig !== this.eqSig) this.tellProfile();   // changed outfit in the Locker while in a room
     this.eqSig = eqSig;
     const rb = $('readyBtn'), waiting = this.state === 'room' && !this.isHost;
-    rb.disabled = waiting; rb.textContent = waiting ? 'WAITING FOR HOST' : this.state === 'room' ? 'START MATCH · ' + this.members.length + (this.members.length === 1 ? ' PLAYER' : ' PLAYERS') : 'READY UP';
+    rb.disabled = waiting; { const main = waiting ? 'WAITING FOR HOST' : this.state === 'room' ? 'START MATCH · ' + this.members.length + (this.members.length === 1 ? ' PLAYER' : ' PLAYERS') : 'PLAY', sub = waiting ? 'The host picks the mode and starts the match' : typeof Lobby !== 'undefined' ? Lobby.summary() : '', key = main + '|' + sub;
+      if (rb.dataset.k !== key) { rb.dataset.k = key; rb.innerHTML = '<span class="rb-main">' + esc(main) + '</span><span class="rb-sub">' + esc(sub) + '</span>'; } }
     if (sig === this.sig) return; this.sig = sig;
     const err = this.err ? `<div class="mp-err">${esc(this.err)}</div>` : '';
     if (!this.supported) { box.innerHTML = '<div class="hint">Multiplayer works on the website version of FortDay. This copy plays against bots.</div>'; return; }

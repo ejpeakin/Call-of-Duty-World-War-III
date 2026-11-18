@@ -60,12 +60,24 @@ const Lobby = {
     Opening.cam(this.cam, dt);
     renderer.render(this.scene, this.cam);
   },
+  // what PLAY will start, in plain words (shown on the button)
+  summary() {
+    const d = Profile.d, m = { solo: 'Solo', duos: 'Duos', squads: 'Squads', rumble: 'Storm Rumble' }[d.mode] || 'Solo', th = THEMES[MapRotation.current()];
+    return [m, d.build ? 'Build' : 'No-Build', th ? th.name : '', d.ranked && d.mode !== 'rumble' && Net.state !== 'room' ? 'Ranked' : ''].filter(Boolean).join(' · ');
+  },
   bindUI() {
+    // Enter starts the match from the lobby (not while typing, or while a menu or the opening is up)
+    addEventListener('keydown', e => {
+      if (e.key !== 'Enter' || e.repeat || Match.state !== 'lobby' || $('lobby').classList.contains('intro')) return;
+      const t = e.target; if (t && t.closest && t.closest('input, textarea, select, button, a, summary')) return;
+      if (!$('settings').hidden || !$('tutAsk').hidden || $('readyBtn').disabled) return;
+      e.preventDefault(); $('readyBtn').click();
+    });
     $('tabs').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; this.tab = b.dataset.tab; this.refresh(); });
     $('modeGrid').addEventListener('click', e => { const b = e.target.closest('[data-mode]'); if (!b) return; Profile.d.mode = b.dataset.mode; Profile.save(); this.refresh(); });
     $('buildSeg').addEventListener('click', e => { const b = e.target.closest('[data-build]'); if (!b) return; Profile.d.build = b.dataset.build === '1'; Profile.save(); this.refresh(); });
     $('islGrid').addEventListener('click', e => { const b = e.target.closest('[data-isl]'); if (!b) return; if (b.dataset.isl !== MapRotation.current()) { Sfx.init(); $('islNote').textContent = THEMES[b.dataset.isl].name + ' is locked. Only ' + THEMES[MapRotation.current()].name + ' is open right now.'; return; } Profile.d.theme = b.dataset.isl; Profile.save(); this.refresh(); });
-    $('rankedChk').addEventListener('change', e => { Profile.d.ranked = e.target.checked; Profile.save(); });
+    $('rankedChk').addEventListener('change', e => { Profile.d.ranked = e.target.checked; Profile.save(); this.refresh(); });
     $('catRow').addEventListener('click', e => { const b = e.target.closest('[data-cat]'); if (!b) return; this.cat = b.dataset.cat; this.refresh(); });
     $('itemGrid').addEventListener('click', e => {
       const b = e.target.closest('[data-id]'); if (!b) return; const item = cosById(this.cat, b.dataset.id);
@@ -175,7 +187,12 @@ const Lobby = {
   refresh() {
     const d = Profile.d;
     Net.render(); $('buildTag').textContent = 'build ' + BUILD_ID;
-    { const k = a => '<kbd>' + esc(Keys.of(a)) + '</kbd>'; $('kbHint').innerHTML = k('forward') + k('left') + k('back') + k('right') + ' move · ' + k('fire') + ' fire · ' + k('ads') + ' aim (or ' + k('scope') + ' to toggle the scope) · ' + k('jump') + ' jump · ' + k('sprint') + ' sprint · ' + k('use') + ' pick up / open · ' + k('reload') + ' reload · ' + k('wall') + k('ramp') + k('floor') + k('cone') + ' build · ' + k('material') + ' material · ' + k('emote') + ' emote · ' + k('map') + ' map · ' + k('inventory') + ' move items between slots. Change any of these in Settings.'; }
+    { const k = a => '<kbd>' + esc(Keys.of(a)) + '</kbd>';
+      const rows = [['Move', k('forward') + k('left') + k('back') + k('right')], ['Shoot', k('fire')], ['Aim', k('ads') + ' hold, or ' + k('scope') + ' to toggle'], ['Jump', k('jump')], ['Sprint', k('sprint')], ['Pick up / open', k('use')], ['Reload', k('reload')],
+        ['Build', k('wall') + ' wall ' + k('ramp') + ' ramp ' + k('floor') + ' floor ' + k('cone') + ' cone'], ['Building material', k('material')], ['Map', k('map')], ['Move items', k('inventory')], ['Emote', k('emote')]];
+      const kh = rows.map(([n, v]) => '<span>' + n + '</span><span>' + v + '</span>').join(''); if ($('kbHint').innerHTML !== kh) $('kbHint').innerHTML = kh; }
+    { const fresh = !d.matches && !d.tutDone, newish = !d.tutDone && (d.matches || 0) < 3;
+      $('welcome').hidden = !fresh; $('tutBadge').hidden = !newish; $('tutBtn').classList.toggle('new', newish); $('tutBtn').classList.toggle('small', !newish); }
     $('coinLbl').textContent = d.coins.toLocaleString();
     [...$('tabs').children].forEach(b => b.classList.toggle('on', b.dataset.tab === this.tab));
     for (const t of ['play', 'locker', 'pass', 'career', 'shop']) $('tab-' + t).hidden = t !== this.tab;
