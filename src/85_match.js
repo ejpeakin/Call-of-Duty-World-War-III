@@ -205,7 +205,7 @@ const Match = {
   },
   setup() {
     Net.building = true;
-    genWorld(this.theme);
+    genWorld(this.theme); Reboot.setup(this.mode);
     $('ldFill').style.width = '80%';
     actors.length = 0; nextId = 1; ElimFX.clear(); CharPool.clear(); BotRig.hideAll(); Trails.clear();
     if (Net.guest) Net.guestSetup(); else {
@@ -292,6 +292,21 @@ const Match = {
     if (a === player) HUD.dirty = true;
     void z;
   },
+  // back from a Comeback Tower: launched up out of the tower on a glider, with a pistol
+  reboot(a, i, by) {
+    const tw = Reboot.towers[i]; if (!tw || a.alive || this.state !== 'play' || this.ending || !this.teamAlive(a.team)) return;
+    a.alive = true; a.hp = 100; a.shield = 0; a.stamina = 100; a.exhausted = false; a.crawl = false; a.over = a.overMax; a.invuln = 3;
+    a.state = 'glide'; a.vel.set(0, 0, 0); a.pos.set(tw.x + rnd(-2, 2), tw.y + 48, tw.z + rnd(-2, 2));
+    a.respawnT = 0; a.useT = 0; a.reloadT = 0; a._dissolveAt = 0; a._dieT = null; a.channel = null; a.emote = null; a.placement = 0; a.tags = []; a.rebootT = 0;
+    a.inv = [{ kind: 'pick' }, makeWeapon('pistol', 0), null, null, null, null]; a.slot = 1;
+    if (a.ammo) a.ammo.light = Math.max(a.ammo.light || 0, 60);
+    if (this.build) a.mats = { wood: 100, brick: 0, metal: 0 };
+    if (a.ai) { a.ai.target = null; a.ai.mode = 'roam'; a.ai.drop.set(tw.x, 0, tw.z); a.ai.deployH = GLIDER_AUTO; a.ai.loot = null; a.ai.rescue = null; }
+    if (camera.position.distanceToSquared(_v4.set(tw.x, tw.y, tw.z)) < 200 * 200) for (let k = 0; k < 6; k++) FX.burst(tw.x, tw.y + 4 + k * 7, tw.z, 0x3ff0d0, 6, 2, 0.8, 0.14, -1);
+    this.recount();
+    if (a === player) { this.spectate = null; Reboot.mine = null; HUD.banner('You are back!', (by || 'Your teammate') + ' brought you back at a Comeback Tower', 3.5); HUD.dirty = true; Sfx.chest(); }
+    HUD.feed('<b>' + esc(by || 'A teammate') + '</b> brought back <b>' + esc(a === player ? 'you' : a.name) + '</b>', a === player || (player && a.team === player.team));
+  },
   teamCount() { return this.mode === 'squads' ? 25 : this.mode === 'duos' ? 50 : 100; },
   recount() { const s = new Set(); let n = 0; for (const a of actors) if (a.alive && !a.npc) { n++; s.add(a.team); } this.aliveCount = n; this.teamsAlive = s.size; },
   teamAlive(t) { return actors.some(a => a.alive && !a.npc && a.team === t); },
@@ -308,7 +323,7 @@ const Match = {
     this.recount();
     if (t === player) this.spectate = src && src.alive ? src : null;
     if (!this.deathShown && !this.teamAlive(player.team)) { player.placement = this.teamsAlive + 1; this.deathShown = true; this.showDeath(src, o); }
-    else if (t === player) HUD.banner('You are out', 'Your squad fights on. Spectating a teammate.', 3);
+    else if (t === player) HUD.banner('You are out', Reboot.on ? 'Your teammate can bring you back: they need your Rescue Tag and a Comeback Tower.' : 'Your squad fights on. Spectating a teammate.', 3.5);
     if (this.teamsAlive <= 1 && !this.ending && !Net.guest) { const w = actors.find(a => a.alive && !a.npc); this.finish(w ? w.team : -2); }
   },
   showDeath(src, o = {}) {

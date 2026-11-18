@@ -116,6 +116,7 @@ function updateBot(a, dt) {
     case 'fight': botFight(a, dt); break;
     case 'zone': { const z = Storm.safe(); const p = ai.zonePt || (ai.zonePt = zonePoint(0.45)); if (moveTo(a, p, dt, true) || Math.hypot(a.pos.x - z.x, a.pos.z - z.z) < z.r * 0.55) { ai.zonePt = null; ai.mode = 'roam'; } break; }
     case 'loot': botLoot(a, dt); break;
+    case 'rescue': Reboot.botStep(a, dt); break;
     case 'heal': botHeal(a); break;
     case 'investigate': if (!ai.investigate || moveTo(a, ai.investigate, dt, true)) { ai.investigate = null; ai.mode = 'roam'; } break;
     case 'follow': { const l = a.leader; const d = Math.hypot(l.pos.x - a.pos.x, l.pos.z - a.pos.z); if (d > 9) moveTo(a, l.pos, dt, d > 16); else lookAround(a, dt); break; }
@@ -164,6 +165,7 @@ function botDecide(a) {
     }
   }
   if (needZone) { if (ai.mode !== 'zone') ai.zonePt = null; ai.mode = 'zone'; return; }
+  if (Reboot.botJob(a)) { ai.mode = 'rescue'; return; }   // a teammate is down: grab their tag, then a Comeback Tower
   if (((a.shield < 70 && hasHeal(a, 'sh') > 0) || (a.hp < 75 && hasHeal(a, 'hp') > 0)) && now - a.lastDmgT > 2.5 && ai.healCD <= 0) { ai.mode = 'heal'; return; }
   const c = invCount(a);
   if ((c.w < 2 || c.h < 1 || (c.w < 3 && Math.random() < 0.5)) && Storm.phase < 4) {

@@ -328,6 +328,8 @@ const Net = {
 
   // ---------------------------------------------------------------- events
   // something happened here that the others need to know about
+  // bring back a character another game controls: the host forwards it to that player's game
+  rebootRemote(t, tw, by) { const d = { k: 'rbt', id: t.id, tw, by }; if (this.isHost) { if (t.human) this.send(t.human, d); } else this.emit(d); },
   emit(ev, pos, range) { if (!this.inMatch) return; if (this.isHost) this.toGuests(ev, 0, pos, range); else this.send('h', ev); },
   toGuests(ev, except, pos, range) {
     for (const [cid, a] of this.humans) {
@@ -343,6 +345,7 @@ const Net = {
     if (it.kind === 'heal') return !!HEALS[it.hid] && it.count > 0 && it.count <= 20;
     if (it.kind === 'ammo') return !!AMMO[it.ammo] && it.count > 0 && it.count <= 999;
     if (it.kind === 'mats') return !!MATS[it.mat] && it.count > 0 && it.count <= 999;
+    if (it.kind === 'tag') return Number.isFinite(it.aid) && Number.isFinite(it.team) && typeof it.name === 'string' && it.name.length <= 24;
     return false;
   },
   chestNear(x, z) { let best = null, bd = 9; for (const c of W.chests) { const d = (c.x - x) ** 2 + (c.z - z) ** 2; if (d < bd) { bd = d; best = c; } } return best; },
@@ -374,6 +377,8 @@ const Net = {
         if (Array.isArray(d.items)) scatterLoot(d.items.filter(it => this.okItem(it)).slice(0, 16), pos);
         this.toGuests({ k: 'elim', id: me.id, src: d.src, o: d.o || {} }, from);
       }
+      else if (d.k === 'rbt') { const t = this.ids.get(d.id); if (!t || t.alive) return; if (t.human) this.send(t.human, d); else if (!t.remote) Match.reboot(t, d.tw | 0, String(d.by || me.name).slice(0, 24)); }
+      else if (d.k === 'rbc') { Reboot.cool(d.tw | 0); this.toGuests({ k: 'rbc', tw: d.tw | 0 }, from); }
       else if (d.k === 'bye') this.dropHuman(from);
       else if (['bp', 'bd', 'hv', 'shot', 'rk'].includes(d.k)) { d.id = me.id; this.applyWorld(d); this.toGuests(d, from, d.k === 'shot' || d.k === 'rk' ? me.pos : null, NET_RANGE); }
       return;
@@ -388,6 +393,8 @@ const Net = {
     }
     else if (d.k === 'dmg') { if (player && player.alive) damageActor(player, clamp(+d.dmg || 0, 0, 400), this.ids.get(d.src) || null, d.o || {}); }
     else if (d.k === 'end') { if (Match.state === 'play') { HUD.toast('The host ended the match'); Match.showResults(); } }
+    else if (d.k === 'rbt') { if (player && d.id === player.id && !player.alive) Match.reboot(player, d.tw | 0, String(d.by || '').slice(0, 24)); }
+    else if (d.k === 'rbc') Reboot.cool(d.tw | 0);
     else this.applyWorld(d);
   },
   flush() { const q = this.queue.splice(0); for (const d of q) { try { this.onMsg(this.hostId, d); } catch (e) { console.error(e); } } },

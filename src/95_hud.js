@@ -181,6 +181,7 @@ function drawMarkers(g, S, cx, cz, scale, big) {
     g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth = 2; g.setLineDash([8, 6]); g.beginPath(); g.moveTo(ax, ay); g.lineTo(bx, by); g.stroke(); g.setLineDash([]);
     const [px, py] = mapXY(Bus.pos.x, Bus.pos.z, cx, cz, scale, S); g.fillStyle = '#3a8bff'; g.beginPath(); g.arc(px, py, big ? 7 : 5, 0, TAU); g.fill();
   }
+  Reboot.drawMap(g, S, cx, cz, scale, big);
   for (const c of W.chests) if (c.kind === 'supply' && !c.opened) { const [x, y] = mapXY(c.x, c.z, cx, cz, scale, S); g.fillStyle = '#3aa8ff'; g.fillRect(x - 4, y - 4, 8, 8); g.strokeStyle = '#fff'; g.strokeRect(x - 4, y - 4, 8, 8); }
   if (big || scale > 0.5) {
     g.font = (big ? 'bold 13px ' : 'bold 10px ') + 'Rubik, system-ui, sans-serif'; g.textAlign = 'center';
@@ -260,38 +261,41 @@ const Icons = {
 // Every player from the room gets a marker with their name and distance; it slides to the screen edge when they are off screen.
 const Waypoints = {
   els: new Map(), v: new THREE.Vector3(),
-  update() {
-    const box = $('wps'); if (!box) return;
-    const cam = camera, show = Net.inMatch && player && Match.state === 'play';
-    const seen = new Set();
-    if (show) {
-      const W2 = innerWidth / 2, H2 = innerHeight / 2, m = 46;
-      for (const a of actors) {
-        if (!(a.friend || a.human) || a === player || !a.alive || a.state === 'bus') continue;
-        seen.add(a);
-        let el = this.els.get(a);
-        if (!el) { el = document.createElement('div'); el.className = 'wp'; el.innerHTML = '<i></i><b></b><span></span>'; box.appendChild(el); this.els.set(a, el); }
-        const mate = a.team === player.team && Match.mode !== 'solo';
-        el.classList.toggle('mate', mate);
-        const v = this.v.set(a.pos.x, a.pos.y + 2.5 * (a.scale || 1), a.pos.z), cz = v.clone().applyMatrix4(cam.matrixWorldInverse).z;
-        v.project(cam); let x = v.x, y = -v.y; const behind = cz > 0;
-        if (behind) { x = -x; y = -y; }
-        let off = behind || Math.abs(x) > 1 || Math.abs(y) > 1;
-        let px = W2 + x * W2, py = H2 + y * H2;
-        if (off) {   // pin to the edge in the friend's direction
-          const k = Math.min((W2 - m) / Math.max(1e-3, Math.abs(px - W2)), (H2 - m) / Math.max(1e-3, Math.abs(py - H2)));
-          if (behind) { px = clamp(W2 + x * W2 * 3, m, W2 * 2 - m); py = H2 * 2 - m - 70; }   // behind you: along the bottom, on the side they are on
-          else { px = W2 + (px - W2) * Math.min(1, k); py = H2 + (py - H2) * Math.min(1, k); }
-        }
-        const d = Math.round(a.pos.distanceTo(player.pos));
-        el.style.transform = 'translate(' + Math.round(px) + 'px,' + Math.round(py) + 'px)';
-        el.classList.toggle('off', off);
-        const nm = a.name + (a.crawl ? ' (down)' : ''); if (el._n !== nm) { el._n = nm; el.querySelector('b').textContent = nm; }
-        const ds = d + ' m'; if (el._d !== ds) { el._d = ds; el.querySelector('span').textContent = ds; }
-        el.style.opacity = d < 6 ? 0.35 : 1;
-      }
+  // one marker on screen; pinned to the edge (or the bottom, when behind you) if it is off-screen
+  pin(key, cls, x, y, z, name, seen) {
+    const box = $('wps'); seen.add(key);
+    let el = this.els.get(key);
+    if (!el) { el = document.createElement('div'); el.className = 'wp'; el.innerHTML = '<i></i><b></b><span></span>'; box.appendChild(el); this.els.set(key, el); }
+    if (el._c !== cls) { el._c = cls; el.className = 'wp ' + cls; }
+    const cam = camera, W2 = innerWidth / 2, H2 = innerHeight / 2, m = 46;
+    const v = this.v.set(x, y, z), cz = v.clone().applyMatrix4(cam.matrixWorldInverse).z;
+    v.project(cam); let px0 = v.x, py0 = -v.y; const behind = cz > 0;
+    if (behind) { px0 = -px0; py0 = -py0; }
+    const off = behind || Math.abs(px0) > 1 || Math.abs(py0) > 1;
+    let px = W2 + px0 * W2, py = H2 + py0 * H2;
+    if (off) {
+      const k = Math.min((W2 - m) / Math.max(1e-3, Math.abs(px - W2)), (H2 - m) / Math.max(1e-3, Math.abs(py - H2)));
+      if (behind) { px = clamp(W2 + px0 * W2 * 3, m, W2 * 2 - m); py = H2 * 2 - m - 70; }   // behind you: along the bottom, on the side it is on
+      else { px = W2 + (px - W2) * Math.min(1, k); py = H2 + (py - H2) * Math.min(1, k); }
     }
-    for (const [a, el] of this.els) if (!seen.has(a)) { el.remove(); this.els.delete(a); }
+    const d = Math.round(Math.hypot(x - player.pos.x, y - player.pos.y, z - player.pos.z));
+    el.style.transform = 'translate(' + Math.round(px) + 'px,' + Math.round(py) + 'px)';
+    el.classList.toggle('off', off);
+    if (el._n !== name) { el._n = name; el.querySelector('b').textContent = name; }
+    const ds = d + ' m'; if (el._d !== ds) { el._d = ds; el.querySelector('span').textContent = ds; }
+    el.style.opacity = d < 6 ? 0.35 : 1;
+  },
+  update() {
+    if (!$('wps')) return;
+    const seen = new Set();
+    if (player && Match.state === 'play') {
+      if (Net.inMatch) for (const a of actors) {   // friends from the room
+        if (!(a.friend || a.human) || a === player || !a.alive || a.state === 'bus') continue;
+        this.pin(a, a.team === player.team && Match.mode !== 'solo' ? 'mate' : '', a.pos.x, a.pos.y + 2.5 * (a.scale || 1), a.pos.z, a.name + (a.crawl ? ' (down)' : ''), seen);
+      }
+      for (const w of Reboot.points()) this.pin(w.key, w.cls, w.x, w.y, w.z, w.label, seen);   // Rescue Tags and Comeback Towers
+    }
+    for (const [k, el] of this.els) if (!seen.has(k)) { el.remove(); this.els.delete(k); }
   },
 };
 

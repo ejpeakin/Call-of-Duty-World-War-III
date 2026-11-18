@@ -391,7 +391,11 @@ function updatePlayer(dt) {
   P.clear(); Input.wheel = 0;
   if (a.channel) {
     const c = a.channel.obj; a.channel.t -= dt;
-    if (c.opened || Math.hypot(c.x - a.pos.x, c.z - a.pos.z) > 3.4) a.channel = null;
+    if (a.channel.tower) {   // bringing a teammate back at a Comeback Tower
+      if (c.cd > 0 || !a.tags || !a.tags.length || Math.hypot(c.x - a.pos.x, c.z - a.pos.z) > 4.2) a.channel = null;
+      else if (a.channel.t <= 0) { Reboot.complete(a, c); a.channel = null; }
+    }
+    else if (c.opened || Math.hypot(c.x - a.pos.x, c.z - a.pos.z) > 3.4) a.channel = null;
     else if (a.channel.t <= 0) { openChest(c, a); a.channel = null; }
   }
   void it;

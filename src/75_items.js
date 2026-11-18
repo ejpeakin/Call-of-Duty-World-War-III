@@ -7,13 +7,18 @@ function pickupModel(it) {
   if (it.kind === 'weapon') { key = 'w' + it.wid + it.rarity; build = () => { const g = gunModel(it, 0x2c2c33, true); g.scale.setScalar(1.25); return g; }; }
   else if (it.kind === 'heal') { key = 'h' + it.hid; build = () => { const g = heldModel(it.hid); g.scale.setScalar(1.7); return g; }; }
   else if (it.kind === 'ammo') { key = 'a' + it.ammo; build = () => { const g = new THREE.Group(); const m = new THREE.Mesh(GEO.unit, lam(AMMO[it.ammo].color)); m.scale.set(0.42, 0.26, 0.3); g.add(m); const s = new THREE.Mesh(GEO.unit, lam(0x2a2a30)); s.scale.set(0.44, 0.06, 0.32); s.position.y = 0.1; g.add(s); return g; }; }
+  else if (it.kind === 'tag') { key = 'tag'; build = () => {
+    const g = new THREE.Group(), card = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.06), new THREE.MeshBasicMaterial({ color: 0x3ff0d0 })); card.position.y = 0.25; g.add(card);
+    const band = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.12, 0.07), new THREE.MeshBasicMaterial({ color: 0x0b2a30 })); band.position.y = 0.42; g.add(band);
+    const dot = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.07, 14).rotateX(Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffffff })); dot.position.y = 0.14; g.add(dot);
+    g.scale.setScalar(1.3); return g; }; }
   else { key = 'm' + it.mat; build = () => { const g = new THREE.Group(); const m = new THREE.Mesh(GEO.unit, MAT[it.mat]); m.scale.set(0.6, 0.18, 0.4); g.add(m); const m2 = m.clone(); m2.position.set(0.1, 0.18, 0.05); m2.rotation.y = 0.4; g.add(m2); return g; }; }
   if (!_pkCache[key]) _pkCache[key] = build();
   return _pkCache[key].clone();
 }
 function pickupMesh(it) {
   const g = new THREE.Group(); g.add(pickupModel(it));
-  if (it.kind === 'weapon' || it.kind === 'heal') {
+  if (it.kind === 'weapon' || it.kind === 'heal' || it.kind === 'tag') {
     const r = itemRarity(it);
     const beam = new THREE.Mesh(GEO.beam, MAT.beam[r]); beam.position.y = -0.3; g.add(beam);
     const ring = new THREE.Mesh(GEO.ring, MAT.beam[r]); ring.position.y = -0.28; g.add(ring);
@@ -27,7 +32,7 @@ const Pickups = {
   spawn(item, x, y, z, o = {}) {
     // in a shared match the host owns the loot on the ground: guests ask for a drop instead of making one
     if (Net.guest && !Net.applying) { if (!Net.building) Net.emit({ k: 'drop', item, x, y, z, pop: o.pop ? [o.pop.x, o.pop.y + 1, o.pop.z] : 0 }); return { item, x, y, z, alive: false }; }
-    const p = { item, x, y, z, alive: true, mesh: null, path: o.path ? o.path.slice() : null, claim: null, t: Math.random() * 6, fails: 0, age: 0, ttl: o.ttl || 0, drop: !!(o.pop || o.drop), pop: o.pop ? { x: o.pop.x, y: o.pop.y + 1, z: o.pop.z } : null };
+    const p = { item, x, y, z, alive: true, mesh: null, path: o.path ? o.path.slice() : null, claim: null, t: Math.random() * 6, fails: 0, age: 0, ttl: o.ttl || (item.kind === 'tag' ? TAG_TTL : 0), drop: !!(o.pop || o.drop), pop: o.pop ? { x: o.pop.x, y: o.pop.y + 1, z: o.pop.z } : null };
     p.id = o.id || ++this.nid; this.byId.set(p.id, p);
     this.list.push(p);
     if (Net.hosting && !Net.building) Net.emit({ k: 'pk+', id: p.id, item, x, y, z, pop: p.pop ? [p.pop.x, p.pop.y, p.pop.z] : 0, ttl: p.ttl });
@@ -36,6 +41,7 @@ const Pickups = {
   remove(p) {
     if (p.alive && p.id && Net.inMatch && !Net.applying) Net.emit({ k: Net.isHost ? 'pk-' : 'take', id: p.id });
     if (p.id) this.byId.delete(p.id);
+    if (p.alive && p.item.kind === 'tag') Reboot.tagGone(p);
     p.alive = false; this.give(p); },
   // loot models are reused instead of rebuilt each time one comes into view (less garbage, fewer hitches)
   pool: new Map(),
@@ -60,8 +66,8 @@ const Pickups = {
     if (this.gc <= 0 && !Net.guest && Match.state === 'play') {
       this.gc = 2; const life = pf ? 90 : 150, cap = pf ? 380 : 560, people = actors.filter(a => !a.ai && a.alive);
       const watched = p => people.some(a => (a.pos.x - p.x) ** 2 + (a.pos.z - p.z) ** 2 < 45 * 45);
-      for (const p of this.list) if (p.alive && p.drop && p.age > life && !watched(p)) this.remove(p);
-      const alive = this.list.filter(p => p.alive);
+      for (const p of this.list) if (p.alive && p.drop && p.item.kind !== 'tag' && p.age > life && !watched(p)) this.remove(p);
+      const alive = this.list.filter(p => p.alive && p.item.kind !== 'tag');
       if (alive.length > cap) { alive.sort((a, b) => (b.drop - a.drop) || (b.age - a.age)); let n = alive.length - cap; for (const p of alive) { if (n <= 0) break; if (!watched(p)) { this.remove(p); n--; } } }
     }
     for (const p of this.list) {
@@ -175,6 +181,7 @@ function openChest(c, a) {
 }
 function playerTakePickup(p) {
   const it = p.item, a = player;
+  if (it.kind === 'tag') { Reboot.take(a, p); return; }
   if (it.kind === 'weapon') {
     const left = giveItem(a, it);
     if (left) {
@@ -205,10 +212,10 @@ const Interact = {
     const score = (x, y, z, r) => {
       const dx = x - a.pos.x, dz = z - a.pos.z, dy = y - a.pos.y; const d = Math.hypot(dx, dz);
       if (d > r || Math.abs(dy) > 2.2) return -1; const facing = d > 0.01 ? (dx * fx + dz * fz) / d : 1;
-      return d - facing * 1.2;
+      return d + (1 - facing) * 0.6;   // closer and in front ranks first; never negative (standing right on top of something counts)
     };
     for (const p of Pickups.list) {
-      if (!p.alive) continue;
+      if (!p.alive || (p.item.kind === 'tag' && p.item.team !== a.team)) continue;
       const dx = p.x - a.pos.x, dz = p.z - a.pos.z; if (dx * dx + dz * dz > 9) continue;
       if (p.item.kind === 'ammo' || p.item.kind === 'mats') {
         if (dx * dx + dz * dz < 2.6 && Math.abs(p.y - a.pos.y) < 2) { const it = p.item; const left = giveItem(a, it); if (!left) Pickups.remove(p); Sfx.pickup(); HUD.dirty = true; HUD.toast('+' + itemName(it)); }
@@ -217,9 +224,11 @@ const Interact = {
       const s = score(p.x, p.y, p.z, 2.6); if (s >= 0 && s < bs) { bs = s; best = { kind: 'pickup', obj: p }; }
     }
     for (const c of W.chests) { if (c.opened || c.falling) continue; const s = score(c.x, c.y, c.z, 2.8); if (s >= 0 && s < bs) { bs = s; best = { kind: 'chest', obj: c }; } }
+    if (Reboot.on && a.tags && a.tags.length) for (const tw of Reboot.towers) { const s = score(tw.x, tw.y + 0.4, tw.z, 3.8); if (s >= 0 && s < bs) { bs = s; best = { kind: 'tower', obj: tw }; } }
     for (const v of Vehicles.list) { if (v.wrecked || v.driver) continue; const s = score(v.x, v.y, v.z, 3.4 * CAR_K); if (s >= 0 && s + 0.8 < bs) { bs = s + 0.8; best = { kind: 'car', obj: v }; } }
     if (best) {
       if (best.kind === 'pickup') { const it = best.obj.item; const full = it.kind === 'weapon' && a.inv.slice(1).every(Boolean); best.label = (full ? 'Swap for ' : 'Pick up ') + itemName(it); best.color = RARITY[itemRarity(it)].css; }
+      else if (best.kind === 'tower') { const tw = best.obj; best.label = tw.cd > 0 ? 'Comeback Tower recharging \u00b7 ' + Math.ceil(tw.cd) + 's' : 'Bring back ' + a.tags.map(g => Reboot.nameOf(g)).join(' and '); best.color = tw.cd > 0 ? '#ff8a94' : '#3ff0d0'; }
       else if (best.kind === 'chest') { best.label = 'Open ' + { chest: 'Chest', ammo: 'Ammo Box', exotic: 'Exotic Crate', supply: 'Supply Drop' }[best.obj.kind]; best.color = best.obj.kind === 'exotic' ? RARITY[6].css : '#ffd84a'; }
       else { const ec = equippedCar(); best.label = ec && (best.obj.mesh.userData.kind || (best.obj.mesh.userData.premium ? 'midnight' : 'street')) !== ec ? 'Drive as ' + cosById('car', ec).name : 'Drive car'; best.color = ec ? '#ffe066' : '#9fd0ff'; }
     }
@@ -231,6 +240,7 @@ const Interact = {
     else if (b.kind === 'pickup') playerTakePickup(b.obj);
     else if (b.kind === 'chest') { player.channel = { t: b.obj.kind === 'ammo' ? 0.25 : 0.45, dur: b.obj.kind === 'ammo' ? 0.25 : 0.45, label: 'Opening', obj: b.obj }; }
     else if (b.kind === 'car') Vehicles.enter(player, b.obj);
+    else if (b.kind === 'tower' && b.obj.cd <= 0) player.channel = { t: REBOOT_TIME, dur: REBOOT_TIME, label: 'Bringing back ' + player.tags.map(g => Reboot.nameOf(g)).join(' and '), obj: b.obj, tower: true };
   },
 };
 

@@ -363,6 +363,9 @@ button:focus-visible{outline:2px solid var(--sun-2);outline-offset:2px}
 #wps{position:absolute;inset:0;pointer-events:none;overflow:hidden}
 .wp{position:absolute;left:0;top:0;display:flex;flex-direction:column;align-items:center;gap:1px;margin:-12px 0 0 -60px;width:120px;text-align:center;--wc:#ffb84a;transition:opacity .2s}
 .wp.mate{--wc:#5ff0a0}
+.wp.tag,.wp.tower{--wc:#3ff0d0}
+.wp.tower i{border-radius:50%;transform:none}
+#rbHint{position:absolute;left:50%;top:calc(28% + var(--st,0px));transform:translateX(-50%);max-width:min(560px,86vw);padding:8px 14px;border-radius:12px;background:rgba(6,34,42,.82);border:1px solid rgba(63,240,208,.6);color:#d9fff6;font:700 13.5px var(--f-body);text-align:center;line-height:1.35;box-shadow:0 0 18px rgba(63,240,208,.25);pointer-events:none}
 .wp i{width:14px;height:14px;background:var(--wc);transform:rotate(45deg);border:2px solid #0b1430;box-shadow:0 0 8px var(--wc)}
 .wp b{font:800 12px var(--f-body);color:#fff;text-shadow:0 1px 3px #000,0 0 2px #000;white-space:nowrap;margin-top:3px}
 .wp span{font:700 11px var(--f-body);color:var(--wc);text-shadow:0 1px 3px #000}
@@ -764,6 +767,7 @@ details.ctl .hint{margin-top:8px}
   <div id="hitmarker"></div>
   <div id="dmgDir"></div>
   <div id="prompt"></div>
+  <div id="rbHint" hidden></div>
   <div id="channel" hidden><div id="chLbl"></div><div class="cb"><i id="chFill"></i></div></div>
   <div id="specBar" hidden></div>
   <div id="buildbar"></div>
@@ -880,7 +884,7 @@ details.ctl .hint{margin-top:8px}
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js"></script>
 <script async src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>
-const BUILD_ID = '1118-1806';
+const BUILD_ID = '1118-2257';
 'use strict';
 // =====================================================================
 //  FORTDAY — core utilities, data tables, profile, audio
@@ -981,9 +985,10 @@ function itemName(it) {
   if (it.kind === 'ammo') return AMMO[it.ammo].name + ' ×' + it.count;
   if (it.kind === 'mats') return MATS[it.mat].name + ' ×' + it.count;
   if (it.kind === 'pick') return 'Harvesting Tool';
+  if (it.kind === 'tag') { const n = Reboot.nameOf(it); return n === 'you' ? 'Your Rescue Tag' : n + '\u2019s Rescue Tag'; }
   return '';
 }
-function itemRarity(it) { return it.kind === 'weapon' ? it.rarity : it.kind === 'heal' ? HEALS[it.hid].rarity : 0; }
+function itemRarity(it) { return it.kind === 'weapon' ? it.rarity : it.kind === 'heal' ? HEALS[it.hid].rarity : it.kind === 'tag' ? 6 : 0; }
 const _stat = {};
 function wstat(it) {
   const k = it.wid + it.rarity; let s = _stat[k]; if (s) return s;
@@ -4436,6 +4441,8 @@ function dropLoot(t) { scatterLoot(lootOf(t), t.pos); }
 // everything an actor is carrying, taken off them
 function lootOf(t) {
   const items = [];
+  const tag = Reboot.tagFor(t); if (tag) items.push(tag);   // Duos/Squads: a Rescue Tag for your team
+  if (t.tags && t.tags.length) { for (const g of t.tags) items.push({ kind: 'tag', aid: g.aid, team: g.team, name: g.name }); t.tags = []; }
   for (let i = 1; i < 6; i++) if (t.inv[i]) items.push(t.inv[i]);
   if (t.isPlayer) { for (const k in t.ammo) if (t.ammo[k] > 0) items.push({ kind: 'ammo', ammo: k, count: t.ammo[k] }); }
   else for (let i = 1; i < 6; i++) if (t.inv[i] && t.inv[i].kind === 'weapon') items.push(ammoFor(t.inv[i].wid, 1.5));
@@ -4717,13 +4724,18 @@ function pickupModel(it) {
   if (it.kind === 'weapon') { key = 'w' + it.wid + it.rarity; build = () => { const g = gunModel(it, 0x2c2c33, true); g.scale.setScalar(1.25); return g; }; }
   else if (it.kind === 'heal') { key = 'h' + it.hid; build = () => { const g = heldModel(it.hid); g.scale.setScalar(1.7); return g; }; }
   else if (it.kind === 'ammo') { key = 'a' + it.ammo; build = () => { const g = new THREE.Group(); const m = new THREE.Mesh(GEO.unit, lam(AMMO[it.ammo].color)); m.scale.set(0.42, 0.26, 0.3); g.add(m); const s = new THREE.Mesh(GEO.unit, lam(0x2a2a30)); s.scale.set(0.44, 0.06, 0.32); s.position.y = 0.1; g.add(s); return g; }; }
+  else if (it.kind === 'tag') { key = 'tag'; build = () => {
+    const g = new THREE.Group(), card = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.06), new THREE.MeshBasicMaterial({ color: 0x3ff0d0 })); card.position.y = 0.25; g.add(card);
+    const band = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.12, 0.07), new THREE.MeshBasicMaterial({ color: 0x0b2a30 })); band.position.y = 0.42; g.add(band);
+    const dot = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.07, 14).rotateX(Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffffff })); dot.position.y = 0.14; g.add(dot);
+    g.scale.setScalar(1.3); return g; }; }
   else { key = 'm' + it.mat; build = () => { const g = new THREE.Group(); const m = new THREE.Mesh(GEO.unit, MAT[it.mat]); m.scale.set(0.6, 0.18, 0.4); g.add(m); const m2 = m.clone(); m2.position.set(0.1, 0.18, 0.05); m2.rotation.y = 0.4; g.add(m2); return g; }; }
   if (!_pkCache[key]) _pkCache[key] = build();
   return _pkCache[key].clone();
 }
 function pickupMesh(it) {
   const g = new THREE.Group(); g.add(pickupModel(it));
-  if (it.kind === 'weapon' || it.kind === 'heal') {
+  if (it.kind === 'weapon' || it.kind === 'heal' || it.kind === 'tag') {
     const r = itemRarity(it);
     const beam = new THREE.Mesh(GEO.beam, MAT.beam[r]); beam.position.y = -0.3; g.add(beam);
     const ring = new THREE.Mesh(GEO.ring, MAT.beam[r]); ring.position.y = -0.28; g.add(ring);
@@ -4737,7 +4749,7 @@ const Pickups = {
   spawn(item, x, y, z, o = {}) {
     // in a shared match the host owns the loot on the ground: guests ask for a drop instead of making one
     if (Net.guest && !Net.applying) { if (!Net.building) Net.emit({ k: 'drop', item, x, y, z, pop: o.pop ? [o.pop.x, o.pop.y + 1, o.pop.z] : 0 }); return { item, x, y, z, alive: false }; }
-    const p = { item, x, y, z, alive: true, mesh: null, path: o.path ? o.path.slice() : null, claim: null, t: Math.random() * 6, fails: 0, age: 0, ttl: o.ttl || 0, drop: !!(o.pop || o.drop), pop: o.pop ? { x: o.pop.x, y: o.pop.y + 1, z: o.pop.z } : null };
+    const p = { item, x, y, z, alive: true, mesh: null, path: o.path ? o.path.slice() : null, claim: null, t: Math.random() * 6, fails: 0, age: 0, ttl: o.ttl || (item.kind === 'tag' ? TAG_TTL : 0), drop: !!(o.pop || o.drop), pop: o.pop ? { x: o.pop.x, y: o.pop.y + 1, z: o.pop.z } : null };
     p.id = o.id || ++this.nid; this.byId.set(p.id, p);
     this.list.push(p);
     if (Net.hosting && !Net.building) Net.emit({ k: 'pk+', id: p.id, item, x, y, z, pop: p.pop ? [p.pop.x, p.pop.y, p.pop.z] : 0, ttl: p.ttl });
@@ -4746,6 +4758,7 @@ const Pickups = {
   remove(p) {
     if (p.alive && p.id && Net.inMatch && !Net.applying) Net.emit({ k: Net.isHost ? 'pk-' : 'take', id: p.id });
     if (p.id) this.byId.delete(p.id);
+    if (p.alive && p.item.kind === 'tag') Reboot.tagGone(p);
     p.alive = false; this.give(p); },
   // loot models are reused instead of rebuilt each time one comes into view (less garbage, fewer hitches)
   pool: new Map(),
@@ -4770,8 +4783,8 @@ const Pickups = {
     if (this.gc <= 0 && !Net.guest && Match.state === 'play') {
       this.gc = 2; const life = pf ? 90 : 150, cap = pf ? 380 : 560, people = actors.filter(a => !a.ai && a.alive);
       const watched = p => people.some(a => (a.pos.x - p.x) ** 2 + (a.pos.z - p.z) ** 2 < 45 * 45);
-      for (const p of this.list) if (p.alive && p.drop && p.age > life && !watched(p)) this.remove(p);
-      const alive = this.list.filter(p => p.alive);
+      for (const p of this.list) if (p.alive && p.drop && p.item.kind !== 'tag' && p.age > life && !watched(p)) this.remove(p);
+      const alive = this.list.filter(p => p.alive && p.item.kind !== 'tag');
       if (alive.length > cap) { alive.sort((a, b) => (b.drop - a.drop) || (b.age - a.age)); let n = alive.length - cap; for (const p of alive) { if (n <= 0) break; if (!watched(p)) { this.remove(p); n--; } } }
     }
     for (const p of this.list) {
@@ -4885,6 +4898,7 @@ function openChest(c, a) {
 }
 function playerTakePickup(p) {
   const it = p.item, a = player;
+  if (it.kind === 'tag') { Reboot.take(a, p); return; }
   if (it.kind === 'weapon') {
     const left = giveItem(a, it);
     if (left) {
@@ -4915,10 +4929,10 @@ const Interact = {
     const score = (x, y, z, r) => {
       const dx = x - a.pos.x, dz = z - a.pos.z, dy = y - a.pos.y; const d = Math.hypot(dx, dz);
       if (d > r || Math.abs(dy) > 2.2) return -1; const facing = d > 0.01 ? (dx * fx + dz * fz) / d : 1;
-      return d - facing * 1.2;
+      return d + (1 - facing) * 0.6;   // closer and in front ranks first; never negative (standing right on top of something counts)
     };
     for (const p of Pickups.list) {
-      if (!p.alive) continue;
+      if (!p.alive || (p.item.kind === 'tag' && p.item.team !== a.team)) continue;
       const dx = p.x - a.pos.x, dz = p.z - a.pos.z; if (dx * dx + dz * dz > 9) continue;
       if (p.item.kind === 'ammo' || p.item.kind === 'mats') {
         if (dx * dx + dz * dz < 2.6 && Math.abs(p.y - a.pos.y) < 2) { const it = p.item; const left = giveItem(a, it); if (!left) Pickups.remove(p); Sfx.pickup(); HUD.dirty = true; HUD.toast('+' + itemName(it)); }
@@ -4927,9 +4941,11 @@ const Interact = {
       const s = score(p.x, p.y, p.z, 2.6); if (s >= 0 && s < bs) { bs = s; best = { kind: 'pickup', obj: p }; }
     }
     for (const c of W.chests) { if (c.opened || c.falling) continue; const s = score(c.x, c.y, c.z, 2.8); if (s >= 0 && s < bs) { bs = s; best = { kind: 'chest', obj: c }; } }
+    if (Reboot.on && a.tags && a.tags.length) for (const tw of Reboot.towers) { const s = score(tw.x, tw.y + 0.4, tw.z, 3.8); if (s >= 0 && s < bs) { bs = s; best = { kind: 'tower', obj: tw }; } }
     for (const v of Vehicles.list) { if (v.wrecked || v.driver) continue; const s = score(v.x, v.y, v.z, 3.4 * CAR_K); if (s >= 0 && s + 0.8 < bs) { bs = s + 0.8; best = { kind: 'car', obj: v }; } }
     if (best) {
       if (best.kind === 'pickup') { const it = best.obj.item; const full = it.kind === 'weapon' && a.inv.slice(1).every(Boolean); best.label = (full ? 'Swap for ' : 'Pick up ') + itemName(it); best.color = RARITY[itemRarity(it)].css; }
+      else if (best.kind === 'tower') { const tw = best.obj; best.label = tw.cd > 0 ? 'Comeback Tower recharging \u00b7 ' + Math.ceil(tw.cd) + 's' : 'Bring back ' + a.tags.map(g => Reboot.nameOf(g)).join(' and '); best.color = tw.cd > 0 ? '#ff8a94' : '#3ff0d0'; }
       else if (best.kind === 'chest') { best.label = 'Open ' + { chest: 'Chest', ammo: 'Ammo Box', exotic: 'Exotic Crate', supply: 'Supply Drop' }[best.obj.kind]; best.color = best.obj.kind === 'exotic' ? RARITY[6].css : '#ffd84a'; }
       else { const ec = equippedCar(); best.label = ec && (best.obj.mesh.userData.kind || (best.obj.mesh.userData.premium ? 'midnight' : 'street')) !== ec ? 'Drive as ' + cosById('car', ec).name : 'Drive car'; best.color = ec ? '#ffe066' : '#9fd0ff'; }
     }
@@ -4941,6 +4957,7 @@ const Interact = {
     else if (b.kind === 'pickup') playerTakePickup(b.obj);
     else if (b.kind === 'chest') { player.channel = { t: b.obj.kind === 'ammo' ? 0.25 : 0.45, dur: b.obj.kind === 'ammo' ? 0.25 : 0.45, label: 'Opening', obj: b.obj }; }
     else if (b.kind === 'car') Vehicles.enter(player, b.obj);
+    else if (b.kind === 'tower' && b.obj.cd <= 0) player.channel = { t: REBOOT_TIME, dur: REBOOT_TIME, label: 'Bringing back ' + player.tags.map(g => Reboot.nameOf(g)).join(' and '), obj: b.obj, tower: true };
   },
 };
 
@@ -6219,6 +6236,7 @@ function updateBot(a, dt) {
     case 'fight': botFight(a, dt); break;
     case 'zone': { const z = Storm.safe(); const p = ai.zonePt || (ai.zonePt = zonePoint(0.45)); if (moveTo(a, p, dt, true) || Math.hypot(a.pos.x - z.x, a.pos.z - z.z) < z.r * 0.55) { ai.zonePt = null; ai.mode = 'roam'; } break; }
     case 'loot': botLoot(a, dt); break;
+    case 'rescue': Reboot.botStep(a, dt); break;
     case 'heal': botHeal(a); break;
     case 'investigate': if (!ai.investigate || moveTo(a, ai.investigate, dt, true)) { ai.investigate = null; ai.mode = 'roam'; } break;
     case 'follow': { const l = a.leader; const d = Math.hypot(l.pos.x - a.pos.x, l.pos.z - a.pos.z); if (d > 9) moveTo(a, l.pos, dt, d > 16); else lookAround(a, dt); break; }
@@ -6267,6 +6285,7 @@ function botDecide(a) {
     }
   }
   if (needZone) { if (ai.mode !== 'zone') ai.zonePt = null; ai.mode = 'zone'; return; }
+  if (Reboot.botJob(a)) { ai.mode = 'rescue'; return; }   // a teammate is down: grab their tag, then a Comeback Tower
   if (((a.shield < 70 && hasHeal(a, 'sh') > 0) || (a.hp < 75 && hasHeal(a, 'hp') > 0)) && now - a.lastDmgT > 2.5 && ai.healCD <= 0) { ai.mode = 'heal'; return; }
   const c = invCount(a);
   if ((c.w < 2 || c.h < 1 || (c.w < 3 && Math.random() < 0.5)) && Storm.phase < 4) {
@@ -6364,6 +6383,173 @@ function botBuildCover(a, t) {
   if (type === 'ramp') a.input.f = 1;
   a.yaw = y0; a.pitch = p0;
 }
+
+// =====================================================================
+//  Rescue Tags + Comeback Towers (Duos and Squads)
+//  A fallen teammate drops a glowing Rescue Tag. A teammate who grabs it within 90 seconds can carry
+//  it to any Comeback Tower and bring them back: they launch out of the tower on a glider with a
+//  pistol. Each tower then recharges for a minute. Bot teammates do this for you too.
+// =====================================================================
+const TAG_TTL = 90, REBOOT_TIME = 4, TOWER_CD = 60;
+const Reboot = {
+  on: false, towers: [], mine: null, mineT: 0, gt: 0, hintK: '',
+  // towers sit just outside the first dozen towns; positions come from the island's seed, so every
+  // player in a shared match gets the same ones
+  setup(mode) {
+    this.on = mode === 'duos' || mode === 'squads'; this.towers = []; this.mine = null; this.hintK = '';
+    if (!this.on || !W.theme) return;
+    const R = mulberry32(W.theme.seed * 31 + 17), L = [];
+    for (const p of W.pois.slice(0, 12)) {
+      for (let k = 0; k < 18; k++) {
+        const a = R() * TAU, d = p.r + 6 + R() * 10, x = p.x + Math.cos(a) * d, z = p.z + Math.sin(a) * d, h = groundH(x, z);
+        if (h < W.waterY + 0.8 || Math.abs(x) > W.half - 20 || Math.abs(z) > W.half - 20) continue;
+        if ([[2, 0], [-2, 0], [0, 2], [0, -2]].some(([ox, oz]) => Math.abs(groundH(x + ox, z + oz) - h) > 1.2)) continue;
+        Grid.query(x - 2.6, z - 2.6, x + 2.6, z + 2.6, L); if (L.some(c => !c.dead && c.maxY > h + 0.4 && c.minY < h + 3)) continue;
+        this.towers.push(this.makeTower(x, h, z, this.towers.length)); break;
+      }
+    }
+  },
+  makeTower(x, y, z, i) {
+    const g = new THREE.Group(); g.position.set(x, y, z); g.userData.tower = true;
+    const metal = lam(0x2b3242), dark = lam(0x161b26);
+    const glow = new THREE.MeshBasicMaterial({ color: 0x3ff0d0 }), soft = new THREE.MeshBasicMaterial({ color: 0x3ff0d0, transparent: true, opacity: 0.16, depthWrite: false, side: THREE.DoubleSide });
+    const add = (geo, mat, px, py, pz, shadow = true) => { const m = new THREE.Mesh(geo, mat); m.position.set(px, py, pz); m.castShadow = shadow; m.receiveShadow = true; g.add(m); return m; };
+    add(new THREE.CylinderGeometry(2.3, 2.6, 0.35, 16), dark, 0, 0.17, 0);                                          // pad
+    const pad = add(new THREE.TorusGeometry(1.75, 0.07, 6, 32), glow, 0, 0.37, 0, false); pad.rotation.x = Math.PI / 2;  // glowing rim on the pad
+    add(new THREE.CylinderGeometry(0.2, 0.32, 6.2, 8), metal, 0, 3.4, 0);                                             // mast
+    for (let k = 0; k < 3; k++) { const a = k / 3 * TAU, s = add(new THREE.BoxGeometry(0.16, 3.4, 0.16), metal, Math.cos(a) * 0.75, 1.7, Math.sin(a) * 0.75); s.rotation.set(-Math.sin(a) * 0.22, 0, Math.cos(a) * 0.22); }
+    const ring = add(new THREE.TorusGeometry(1.0, 0.1, 8, 28), glow, 0, 6.3, 0, false); ring.rotation.x = Math.PI / 2;
+    const orb = add(new THREE.SphereGeometry(0.42, 16, 12), glow, 0, 7.0, 0, false);
+    const beam = add(new THREE.CylinderGeometry(0.55, 0.55, 46, 12, 1, true), soft, 0, 30, 0, false);               // tall light so you can spot it
+    W.group.add(g);
+    Grid.add({ minX: x - 0.35, maxX: x + 0.35, minZ: z - 0.35, maxZ: z + 0.35, minY: y, maxY: y + 7.4, kind: 'static', mat: 'metal' });
+    return { i, x, y, z, mesh: g, ring, orb, beam, glow, soft, cd: 0, _r: true };
+  },
+  actor(id) { return actors.find(a => a.id === id) || null; },
+  nameOf(tag) { const a = this.actor(tag.aid); return a ? (a === player ? 'you' : a.name) : tag.name; },
+  // the Rescue Tag a fallen character leaves for their team (or null): only when someone on the team is
+  // still standing, and only on teams with a real player (bot-only teams don't use tags)
+  tagFor(t) {
+    if (!this.on || t.npc || Match.state !== 'play' || Match.mode === 'tutorial') return null;
+    const team = actors.filter(a => a.team === t.team && !a.npc);
+    if (!team.some(a => a !== t && a.alive)) return null;
+    if (!team.some(a => a.isPlayer || a.human || a.friend)) return null;
+    return { kind: 'tag', aid: t.id, team: t.team, name: String(t === player ? (Profile.d.name || 'Teammate') : t.name).slice(0, 24) };
+  },
+  take(a, p) {   // a teammate grabs a tag off the ground
+    const it = p.item; if (!p.alive || it.kind !== 'tag' || it.team !== a.team) return false;
+    Pickups.remove(p); (a.tags || (a.tags = [])).push({ aid: it.aid, team: it.team, name: it.name });
+    if (a === player) { Sfx.pickup(); HUD.toast('Got ' + this.nameOf(it) + '’s Rescue Tag. Take it to a Comeback Tower!'); HUD.dirty = true; }
+    return true;
+  },
+  tagGone(p) {   // remember what happened to your own tag (for the hint while you are out)
+    if (!player || p.item.aid !== player.id || player.alive) return;
+    this.mine = p.ttl && p.age >= p.ttl - 1.5 ? 'expired' : 'carried'; this.mineT = 0;
+  },
+  nearest(x, z, ready) { let b = null, bd = 1e9; for (const t of this.towers) { if (ready && t.cd > 0) continue; const d = Math.hypot(t.x - x, t.z - z); if (d < bd) { bd = d; b = t; } } return b; },
+  // finish at a tower: everyone whose tag you carry comes back
+  complete(a, tw) {
+    if (!tw || tw.cd > 0 || !a.tags || !a.tags.length) return false;
+    const by = a === player ? (Profile.d.name || 'Your teammate') : a.name;
+    for (const tg of a.tags.splice(0)) {
+      const t = this.actor(tg.aid); if (!t || t.alive) continue;
+      if (!t.remote) Match.reboot(t, tw.i, a === player && t !== player ? 'You' : by);
+      else Net.rebootRemote(t, tw.i, by);
+    }
+    this.cool(tw.i); if (Net.inMatch && !Net.applying) Net.emit({ k: 'rbc', tw: tw.i });
+    if (a === player) HUD.dirty = true;
+    return true;
+  },
+  cool(i) {
+    const tw = this.towers[i]; if (!tw) return; tw.cd = TOWER_CD;
+    if (camera.position.distanceToSquared(_v4.set(tw.x, tw.y, tw.z)) < 160 * 160) { FX.burst(tw.x, tw.y + 7, tw.z, 0x3ff0d0, 24, 6, 0.9, 0.16, -3); FX.flash(tw.x, tw.y + 7, tw.z, 3, 0x3ff0d0, 0.6); }
+    if (Sfx.vol(tw.x, tw.y, tw.z) > 0.15) Sfx.chest();
+  },
+  update(dt) {
+    if (!this.on) return;
+    for (const tw of this.towers) {
+      if (tw.cd > 0) tw.cd = Math.max(0, tw.cd - dt);
+      const ready = tw.cd <= 0;
+      if (tw._r !== ready) { tw._r = ready; const c = ready ? 0x3ff0d0 : 0xff4d5e; tw.glow.color.setHex(c); tw.soft.color.setHex(c); tw.beam.visible = ready; }
+      if (tw.mesh.visible) { tw.ring.rotation.z += dt * (ready ? 1.6 : 0.3); tw.orb.position.y = 7.0 + Math.sin(gameTime * 2 + tw.i) * 0.12; }
+    }
+    // a tag is useless once its whole team is out (the host or a solo game decides)
+    this.gt -= dt;
+    if (this.gt <= 0) { this.gt = 1; if (!Net.guest) for (const p of Pickups.list) if (p.alive && p.item.kind === 'tag' && !Match.teamAlive(p.item.team)) Pickups.remove(p); }
+    this.mineT += dt;
+    this.hint();
+  },
+  // one line under the top of the screen: what to do next
+  hint() {
+    const el = $('rbHint'); if (!el) return; let t = '';
+    if (player && Match.state === 'play' && !Match.ending) {
+      if (!player.alive && Match.teamAlive(player.team)) {
+        const p = Pickups.list.find(q => q.alive && q.item.kind === 'tag' && q.item.aid === player.id);
+        const carrier = actors.find(a => a.alive && a.tags && a.tags.some(g => g.aid === player.id));
+        if (carrier && carrier.rebootT > 0) t = carrier.name + ' is bringing you back…';
+        else if (carrier) t = carrier.name + ' has your Rescue Tag! Hang on…';
+        else if (p) t = 'Your Rescue Tag is where you fell · ' + Math.max(0, Math.ceil(p.ttl - p.age)) + 's. A teammate can take it to a Comeback Tower to bring you back.';
+        else if (this.mine === 'carried') t = 'A teammate has your Rescue Tag! Hang on…';
+        else if (this.mine === 'expired' && this.mineT < 8) t = 'Your Rescue Tag ran out. Keep cheering on your team!';
+      } else if (player.alive && player.tags && player.tags.length) {
+        const tw = this.nearest(player.pos.x, player.pos.z, true), who = player.tags.map(g => this.nameOf(g)).join(' and ');
+        t = 'Carrying ' + who + '’s Rescue Tag · ' + (tw ? 'Comeback Tower ' + Math.round(Math.hypot(tw.x - player.pos.x, tw.z - player.pos.z)) + ' m' : 'every Comeback Tower is recharging');
+      } else if (player.alive) {
+        const p = Pickups.list.find(q => q.alive && q.item.kind === 'tag' && q.item.team === player.team && q.item.aid !== player.id);
+        if (p) t = this.nameOf(p.item) + ' dropped a Rescue Tag · ' + Math.max(0, Math.ceil(p.ttl - p.age)) + 's left · ' + Math.round(Math.hypot(p.x - player.pos.x, p.z - player.pos.z)) + ' m. Grab it!';
+      }
+    }
+    if (t !== this.hintK) { this.hintK = t; el.textContent = t; el.hidden = !t; }
+  },
+  // on-screen markers: your teammates' tags, and the nearest ready tower while you carry one
+  points() {
+    const out = []; if (!this.on || !player || !player.alive || Match.state !== 'play') return out;
+    for (const p of Pickups.list) if (p.alive && p.item.kind === 'tag' && p.item.team === player.team && p.item.aid !== player.id) out.push({ key: 'tag' + p.id, x: p.x, y: p.y + 1.6, z: p.z, label: this.nameOf(p.item) + '’s tag', cls: 'tag' });
+    if (player.tags && player.tags.length) { const tw = this.nearest(player.pos.x, player.pos.z, true); if (tw) out.push({ key: 'tw' + tw.i, x: tw.x, y: tw.y + 8, z: tw.z, label: 'Comeback Tower', cls: 'tower' }); }
+    return out;
+  },
+  drawMap(g, S, cx, cz, scale, big) {
+    if (!this.on) return;
+    for (const tw of this.towers) {
+      const [x, y] = mapXY(tw.x, tw.z, cx, cz, scale, S); if (x < -10 || y < -10 || x > S + 10 || y > S + 10) continue;
+      const r = big ? 7 : 5; g.fillStyle = tw.cd > 0 ? '#ff4d5e' : '#3ff0d0'; g.strokeStyle = '#06222a'; g.lineWidth = 1.5;
+      g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill(); g.stroke();
+      g.fillStyle = '#06222a'; g.fillRect(x - r * 0.55, y - 1, r * 1.1, 2); g.fillRect(x - 1, y - r * 0.55, 2, r * 1.1);
+    }
+    const pulse = 0.6 + 0.4 * Math.sin(performance.now() / 180);
+    for (const p of Pickups.list) {
+      if (!p.alive || p.item.kind !== 'tag' || !player || p.item.team !== player.team) continue;
+      const [x, y] = mapXY(p.x, p.z, cx, cz, scale, S), r = (big ? 7 : 5) * (0.8 + 0.3 * pulse);
+      g.fillStyle = 'rgba(63,240,208,' + pulse + ')'; g.strokeStyle = '#fff'; g.lineWidth = 1.5;
+      g.beginPath(); g.moveTo(x, y - r); g.lineTo(x + r, y); g.lineTo(x, y + r); g.lineTo(x - r, y); g.closePath(); g.fill(); g.stroke();
+    }
+  },
+  // bot teammates: grab a tag on the ground, then carry it to the nearest ready tower and bring them back
+  botJob(a) {
+    if (!this.on) return false;
+    const ai = a.ai, j = ai.rescue;
+    if (a.tags && a.tags.length) {
+      if (!j || j.kind !== 'tower' || j.tw.cd > 0) { const tw = this.nearest(a.pos.x, a.pos.z, true); if (!tw) return false; ai.rescue = { kind: 'tower', tw }; }
+      return true;
+    }
+    if (j && j.kind === 'tag' && j.p.alive) return true;
+    let best = null, bd = 280;
+    for (const p of Pickups.list) { if (!p.alive || p.item.kind !== 'tag' || p.item.team !== a.team) continue; const d = Math.hypot(p.x - a.pos.x, p.z - a.pos.z); if (d < bd) { bd = d; best = p; } }
+    ai.rescue = best ? { kind: 'tag', p: best } : null; return !!best;
+  },
+  botStep(a, dt) {
+    const ai = a.ai, j = ai.rescue; if (!j) { ai.mode = 'roam'; a.rebootT = 0; return; }
+    if (j.kind === 'tag') {
+      const p = j.p; if (!p.alive) { ai.rescue = null; ai.mode = 'roam'; return; }
+      if (Math.hypot(p.x - a.pos.x, p.z - a.pos.z) < 1.8) { this.take(a, p); ai.rescue = null; ai.t = 0; return; }
+      moveTo(a, p, dt, true); return;
+    }
+    const tw = j.tw; if (tw.cd > 0) { ai.rescue = null; a.rebootT = 0; ai.t = 0; return; }
+    if (Math.hypot(tw.x - a.pos.x, tw.z - a.pos.z) > 2.6) { a.rebootT = 0; moveTo(a, { x: tw.x + 1.6, z: tw.z }, dt, true); return; }
+    lookAround(a, dt); a.rebootT = (a.rebootT || 0) + dt;
+    if (a.rebootT >= REBOOT_TIME) { a.rebootT = 0; this.complete(a, tw); ai.rescue = null; ai.mode = 'roam'; ai.t = 0; }
+  },
+};
 
 // =====================================================================
 //  Match: storm, flying bus, live event, modes, endings, rewards
@@ -6572,7 +6758,7 @@ const Match = {
   },
   setup() {
     Net.building = true;
-    genWorld(this.theme);
+    genWorld(this.theme); Reboot.setup(this.mode);
     $('ldFill').style.width = '80%';
     actors.length = 0; nextId = 1; ElimFX.clear(); CharPool.clear(); BotRig.hideAll(); Trails.clear();
     if (Net.guest) Net.guestSetup(); else {
@@ -6659,6 +6845,21 @@ const Match = {
     if (a === player) HUD.dirty = true;
     void z;
   },
+  // back from a Comeback Tower: launched up out of the tower on a glider, with a pistol
+  reboot(a, i, by) {
+    const tw = Reboot.towers[i]; if (!tw || a.alive || this.state !== 'play' || this.ending || !this.teamAlive(a.team)) return;
+    a.alive = true; a.hp = 100; a.shield = 0; a.stamina = 100; a.exhausted = false; a.crawl = false; a.over = a.overMax; a.invuln = 3;
+    a.state = 'glide'; a.vel.set(0, 0, 0); a.pos.set(tw.x + rnd(-2, 2), tw.y + 48, tw.z + rnd(-2, 2));
+    a.respawnT = 0; a.useT = 0; a.reloadT = 0; a._dissolveAt = 0; a._dieT = null; a.channel = null; a.emote = null; a.placement = 0; a.tags = []; a.rebootT = 0;
+    a.inv = [{ kind: 'pick' }, makeWeapon('pistol', 0), null, null, null, null]; a.slot = 1;
+    if (a.ammo) a.ammo.light = Math.max(a.ammo.light || 0, 60);
+    if (this.build) a.mats = { wood: 100, brick: 0, metal: 0 };
+    if (a.ai) { a.ai.target = null; a.ai.mode = 'roam'; a.ai.drop.set(tw.x, 0, tw.z); a.ai.deployH = GLIDER_AUTO; a.ai.loot = null; a.ai.rescue = null; }
+    if (camera.position.distanceToSquared(_v4.set(tw.x, tw.y, tw.z)) < 200 * 200) for (let k = 0; k < 6; k++) FX.burst(tw.x, tw.y + 4 + k * 7, tw.z, 0x3ff0d0, 6, 2, 0.8, 0.14, -1);
+    this.recount();
+    if (a === player) { this.spectate = null; Reboot.mine = null; HUD.banner('You are back!', (by || 'Your teammate') + ' brought you back at a Comeback Tower', 3.5); HUD.dirty = true; Sfx.chest(); }
+    HUD.feed('<b>' + esc(by || 'A teammate') + '</b> brought back <b>' + esc(a === player ? 'you' : a.name) + '</b>', a === player || (player && a.team === player.team));
+  },
   teamCount() { return this.mode === 'squads' ? 25 : this.mode === 'duos' ? 50 : 100; },
   recount() { const s = new Set(); let n = 0; for (const a of actors) if (a.alive && !a.npc) { n++; s.add(a.team); } this.aliveCount = n; this.teamsAlive = s.size; },
   teamAlive(t) { return actors.some(a => a.alive && !a.npc && a.team === t); },
@@ -6675,7 +6876,7 @@ const Match = {
     this.recount();
     if (t === player) this.spectate = src && src.alive ? src : null;
     if (!this.deathShown && !this.teamAlive(player.team)) { player.placement = this.teamsAlive + 1; this.deathShown = true; this.showDeath(src, o); }
-    else if (t === player) HUD.banner('You are out', 'Your squad fights on. Spectating a teammate.', 3);
+    else if (t === player) HUD.banner('You are out', Reboot.on ? 'Your teammate can bring you back: they need your Rescue Tag and a Comeback Tower.' : 'Your squad fights on. Spectating a teammate.', 3.5);
     if (this.teamsAlive <= 1 && !this.ending && !Net.guest) { const w = actors.find(a => a.alive && !a.npc); this.finish(w ? w.team : -2); }
   },
   showDeath(src, o = {}) {
@@ -7254,6 +7455,8 @@ const Net = {
 
   // ---------------------------------------------------------------- events
   // something happened here that the others need to know about
+  // bring back a character another game controls: the host forwards it to that player's game
+  rebootRemote(t, tw, by) { const d = { k: 'rbt', id: t.id, tw, by }; if (this.isHost) { if (t.human) this.send(t.human, d); } else this.emit(d); },
   emit(ev, pos, range) { if (!this.inMatch) return; if (this.isHost) this.toGuests(ev, 0, pos, range); else this.send('h', ev); },
   toGuests(ev, except, pos, range) {
     for (const [cid, a] of this.humans) {
@@ -7269,6 +7472,7 @@ const Net = {
     if (it.kind === 'heal') return !!HEALS[it.hid] && it.count > 0 && it.count <= 20;
     if (it.kind === 'ammo') return !!AMMO[it.ammo] && it.count > 0 && it.count <= 999;
     if (it.kind === 'mats') return !!MATS[it.mat] && it.count > 0 && it.count <= 999;
+    if (it.kind === 'tag') return Number.isFinite(it.aid) && Number.isFinite(it.team) && typeof it.name === 'string' && it.name.length <= 24;
     return false;
   },
   chestNear(x, z) { let best = null, bd = 9; for (const c of W.chests) { const d = (c.x - x) ** 2 + (c.z - z) ** 2; if (d < bd) { bd = d; best = c; } } return best; },
@@ -7300,6 +7504,8 @@ const Net = {
         if (Array.isArray(d.items)) scatterLoot(d.items.filter(it => this.okItem(it)).slice(0, 16), pos);
         this.toGuests({ k: 'elim', id: me.id, src: d.src, o: d.o || {} }, from);
       }
+      else if (d.k === 'rbt') { const t = this.ids.get(d.id); if (!t || t.alive) return; if (t.human) this.send(t.human, d); else if (!t.remote) Match.reboot(t, d.tw | 0, String(d.by || me.name).slice(0, 24)); }
+      else if (d.k === 'rbc') { Reboot.cool(d.tw | 0); this.toGuests({ k: 'rbc', tw: d.tw | 0 }, from); }
       else if (d.k === 'bye') this.dropHuman(from);
       else if (['bp', 'bd', 'hv', 'shot', 'rk'].includes(d.k)) { d.id = me.id; this.applyWorld(d); this.toGuests(d, from, d.k === 'shot' || d.k === 'rk' ? me.pos : null, NET_RANGE); }
       return;
@@ -7314,6 +7520,8 @@ const Net = {
     }
     else if (d.k === 'dmg') { if (player && player.alive) damageActor(player, clamp(+d.dmg || 0, 0, 400), this.ids.get(d.src) || null, d.o || {}); }
     else if (d.k === 'end') { if (Match.state === 'play') { HUD.toast('The host ended the match'); Match.showResults(); } }
+    else if (d.k === 'rbt') { if (player && d.id === player.id && !player.alive) Match.reboot(player, d.tw | 0, String(d.by || '').slice(0, 24)); }
+    else if (d.k === 'rbc') Reboot.cool(d.tw | 0);
     else this.applyWorld(d);
   },
   flush() { const q = this.queue.splice(0); for (const d of q) { try { this.onMsg(this.hostId, d); } catch (e) { console.error(e); } } },
@@ -7899,7 +8107,11 @@ function updatePlayer(dt) {
   P.clear(); Input.wheel = 0;
   if (a.channel) {
     const c = a.channel.obj; a.channel.t -= dt;
-    if (c.opened || Math.hypot(c.x - a.pos.x, c.z - a.pos.z) > 3.4) a.channel = null;
+    if (a.channel.tower) {   // bringing a teammate back at a Comeback Tower
+      if (c.cd > 0 || !a.tags || !a.tags.length || Math.hypot(c.x - a.pos.x, c.z - a.pos.z) > 4.2) a.channel = null;
+      else if (a.channel.t <= 0) { Reboot.complete(a, c); a.channel = null; }
+    }
+    else if (c.opened || Math.hypot(c.x - a.pos.x, c.z - a.pos.z) > 3.4) a.channel = null;
     else if (a.channel.t <= 0) { openChest(c, a); a.channel = null; }
   }
   void it;
@@ -8173,6 +8385,7 @@ function drawMarkers(g, S, cx, cz, scale, big) {
     g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth = 2; g.setLineDash([8, 6]); g.beginPath(); g.moveTo(ax, ay); g.lineTo(bx, by); g.stroke(); g.setLineDash([]);
     const [px, py] = mapXY(Bus.pos.x, Bus.pos.z, cx, cz, scale, S); g.fillStyle = '#3a8bff'; g.beginPath(); g.arc(px, py, big ? 7 : 5, 0, TAU); g.fill();
   }
+  Reboot.drawMap(g, S, cx, cz, scale, big);
   for (const c of W.chests) if (c.kind === 'supply' && !c.opened) { const [x, y] = mapXY(c.x, c.z, cx, cz, scale, S); g.fillStyle = '#3aa8ff'; g.fillRect(x - 4, y - 4, 8, 8); g.strokeStyle = '#fff'; g.strokeRect(x - 4, y - 4, 8, 8); }
   if (big || scale > 0.5) {
     g.font = (big ? 'bold 13px ' : 'bold 10px ') + 'Rubik, system-ui, sans-serif'; g.textAlign = 'center';
@@ -8252,38 +8465,41 @@ const Icons = {
 // Every player from the room gets a marker with their name and distance; it slides to the screen edge when they are off screen.
 const Waypoints = {
   els: new Map(), v: new THREE.Vector3(),
-  update() {
-    const box = $('wps'); if (!box) return;
-    const cam = camera, show = Net.inMatch && player && Match.state === 'play';
-    const seen = new Set();
-    if (show) {
-      const W2 = innerWidth / 2, H2 = innerHeight / 2, m = 46;
-      for (const a of actors) {
-        if (!(a.friend || a.human) || a === player || !a.alive || a.state === 'bus') continue;
-        seen.add(a);
-        let el = this.els.get(a);
-        if (!el) { el = document.createElement('div'); el.className = 'wp'; el.innerHTML = '<i></i><b></b><span></span>'; box.appendChild(el); this.els.set(a, el); }
-        const mate = a.team === player.team && Match.mode !== 'solo';
-        el.classList.toggle('mate', mate);
-        const v = this.v.set(a.pos.x, a.pos.y + 2.5 * (a.scale || 1), a.pos.z), cz = v.clone().applyMatrix4(cam.matrixWorldInverse).z;
-        v.project(cam); let x = v.x, y = -v.y; const behind = cz > 0;
-        if (behind) { x = -x; y = -y; }
-        let off = behind || Math.abs(x) > 1 || Math.abs(y) > 1;
-        let px = W2 + x * W2, py = H2 + y * H2;
-        if (off) {   // pin to the edge in the friend's direction
-          const k = Math.min((W2 - m) / Math.max(1e-3, Math.abs(px - W2)), (H2 - m) / Math.max(1e-3, Math.abs(py - H2)));
-          if (behind) { px = clamp(W2 + x * W2 * 3, m, W2 * 2 - m); py = H2 * 2 - m - 70; }   // behind you: along the bottom, on the side they are on
-          else { px = W2 + (px - W2) * Math.min(1, k); py = H2 + (py - H2) * Math.min(1, k); }
-        }
-        const d = Math.round(a.pos.distanceTo(player.pos));
-        el.style.transform = 'translate(' + Math.round(px) + 'px,' + Math.round(py) + 'px)';
-        el.classList.toggle('off', off);
-        const nm = a.name + (a.crawl ? ' (down)' : ''); if (el._n !== nm) { el._n = nm; el.querySelector('b').textContent = nm; }
-        const ds = d + ' m'; if (el._d !== ds) { el._d = ds; el.querySelector('span').textContent = ds; }
-        el.style.opacity = d < 6 ? 0.35 : 1;
-      }
+  // one marker on screen; pinned to the edge (or the bottom, when behind you) if it is off-screen
+  pin(key, cls, x, y, z, name, seen) {
+    const box = $('wps'); seen.add(key);
+    let el = this.els.get(key);
+    if (!el) { el = document.createElement('div'); el.className = 'wp'; el.innerHTML = '<i></i><b></b><span></span>'; box.appendChild(el); this.els.set(key, el); }
+    if (el._c !== cls) { el._c = cls; el.className = 'wp ' + cls; }
+    const cam = camera, W2 = innerWidth / 2, H2 = innerHeight / 2, m = 46;
+    const v = this.v.set(x, y, z), cz = v.clone().applyMatrix4(cam.matrixWorldInverse).z;
+    v.project(cam); let px0 = v.x, py0 = -v.y; const behind = cz > 0;
+    if (behind) { px0 = -px0; py0 = -py0; }
+    const off = behind || Math.abs(px0) > 1 || Math.abs(py0) > 1;
+    let px = W2 + px0 * W2, py = H2 + py0 * H2;
+    if (off) {
+      const k = Math.min((W2 - m) / Math.max(1e-3, Math.abs(px - W2)), (H2 - m) / Math.max(1e-3, Math.abs(py - H2)));
+      if (behind) { px = clamp(W2 + px0 * W2 * 3, m, W2 * 2 - m); py = H2 * 2 - m - 70; }   // behind you: along the bottom, on the side it is on
+      else { px = W2 + (px - W2) * Math.min(1, k); py = H2 + (py - H2) * Math.min(1, k); }
     }
-    for (const [a, el] of this.els) if (!seen.has(a)) { el.remove(); this.els.delete(a); }
+    const d = Math.round(Math.hypot(x - player.pos.x, y - player.pos.y, z - player.pos.z));
+    el.style.transform = 'translate(' + Math.round(px) + 'px,' + Math.round(py) + 'px)';
+    el.classList.toggle('off', off);
+    if (el._n !== name) { el._n = name; el.querySelector('b').textContent = name; }
+    const ds = d + ' m'; if (el._d !== ds) { el._d = ds; el.querySelector('span').textContent = ds; }
+    el.style.opacity = d < 6 ? 0.35 : 1;
+  },
+  update() {
+    if (!$('wps')) return;
+    const seen = new Set();
+    if (player && Match.state === 'play') {
+      if (Net.inMatch) for (const a of actors) {   // friends from the room
+        if (!(a.friend || a.human) || a === player || !a.alive || a.state === 'bus') continue;
+        this.pin(a, a.team === player.team && Match.mode !== 'solo' ? 'mate' : '', a.pos.x, a.pos.y + 2.5 * (a.scale || 1), a.pos.z, a.name + (a.crawl ? ' (down)' : ''), seen);
+      }
+      for (const w of Reboot.points()) this.pin(w.key, w.cls, w.x, w.y, w.z, w.label, seen);   // Rescue Tags and Comeback Towers
+    }
+    for (const [k, el] of this.els) if (!seen.has(k)) { el.remove(); this.els.delete(k); }
   },
 };
 
@@ -8695,7 +8911,7 @@ function step(now) {
     Vehicles.update(dt);
     Creatures.update(dt);
     Rockets.update(dt);
-    Match.update(dt); Net.update(dt); Tutorial.update(dt);
+    Match.update(dt); Net.update(dt); Tutorial.update(dt); Reboot.update(dt);
     Interact.find();
   }
   Pickups.update(dt); Build.update(dt); FX.update(dt);

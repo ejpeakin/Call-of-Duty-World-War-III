@@ -124,7 +124,7 @@ function step(now) {
     Vehicles.update(dt);
     Creatures.update(dt);
     Rockets.update(dt);
-    Match.update(dt); Net.update(dt); Tutorial.update(dt);
+    Match.update(dt); Net.update(dt); Tutorial.update(dt); Reboot.update(dt);
     Interact.find();
   }
   Pickups.update(dt); Build.update(dt); FX.update(dt);

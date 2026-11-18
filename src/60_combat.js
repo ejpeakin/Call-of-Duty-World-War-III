@@ -254,6 +254,8 @@ function dropLoot(t) { scatterLoot(lootOf(t), t.pos); }
 // everything an actor is carrying, taken off them
 function lootOf(t) {
   const items = [];
+  const tag = Reboot.tagFor(t); if (tag) items.push(tag);   // Duos/Squads: a Rescue Tag for your team
+  if (t.tags && t.tags.length) { for (const g of t.tags) items.push({ kind: 'tag', aid: g.aid, team: g.team, name: g.name }); t.tags = []; }
   for (let i = 1; i < 6; i++) if (t.inv[i]) items.push(t.inv[i]);
   if (t.isPlayer) { for (const k in t.ammo) if (t.ammo[k] > 0) items.push({ kind: 'ammo', ammo: k, count: t.ammo[k] }); }
   else for (let i = 1; i < 6; i++) if (t.inv[i] && t.inv[i].kind === 'weapon') items.push(ammoFor(t.inv[i].wid, 1.5));

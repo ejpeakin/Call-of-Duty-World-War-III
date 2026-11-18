@@ -98,9 +98,10 @@ function itemName(it) {
   if (it.kind === 'ammo') return AMMO[it.ammo].name + ' ×' + it.count;
   if (it.kind === 'mats') return MATS[it.mat].name + ' ×' + it.count;
   if (it.kind === 'pick') return 'Harvesting Tool';
+  if (it.kind === 'tag') { const n = Reboot.nameOf(it); return n === 'you' ? 'Your Rescue Tag' : n + '\u2019s Rescue Tag'; }
   return '';
 }
-function itemRarity(it) { return it.kind === 'weapon' ? it.rarity : it.kind === 'heal' ? HEALS[it.hid].rarity : 0; }
+function itemRarity(it) { return it.kind === 'weapon' ? it.rarity : it.kind === 'heal' ? HEALS[it.hid].rarity : it.kind === 'tag' ? 6 : 0; }
 const _stat = {};
 function wstat(it) {
   const k = it.wid + it.rarity; let s = _stat[k]; if (s) return s;
