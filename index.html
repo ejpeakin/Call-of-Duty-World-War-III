@@ -728,7 +728,7 @@ body.pad{cursor:none}
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js"></script>
 <script async src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>
-const BUILD_ID = '1117-2352';
+const BUILD_ID = '1118-1503';
 'use strict';
 // =====================================================================
 //  FORTDAY — core utilities, data tables, profile, audio
@@ -6588,12 +6588,17 @@ const NET_RANGE = 350;
 //  - credentialsUrl: an address that returns the current list of relay servers (Metered gives one), or
 //  - servers: the list itself, e.g. [{ urls: 'turns:relay.example.com:443?transport=tcp', username: '...', credential: '...' }]
 const NET_TURN = { credentialsUrl: '', servers: [] };
+// Free public relays that need no account, tried as a fallback. They are best effort: shared with everyone, and may be slow or offline.
+const NET_PUBLIC_TURN = [
+  { urls: ['turn:freeturn.net:3478', 'turn:freeturn.net:3478?transport=tcp', 'turns:freeturn.tel:5349'], username: 'free', credential: 'free' },
+  { urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443', 'turn:openrelay.metered.ca:443?transport=tcp'], username: 'openrelayproject', credential: 'openrelayproject' },
+];
 const P2P_CHUNK = 15000;   // characters per data-channel message: every browser accepts this size
 const P2P = {
   peer: null, conn: null, hosting: false, room: null, nextId: 2, parts: new Map(), joinT: 0,
   ok() { return typeof Peer === 'function'; },
   turn: null,
-  opts() { return Net.peerOpts || { debug: 0, config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }, { urls: 'stun:global.stun.twilio.com:3478' }].concat(this.turn || NET_TURN.servers || []) } }; },
+  opts() { return Net.peerOpts || { debug: 0, config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }, { urls: 'stun:global.stun.twilio.com:3478' }].concat(this.turn || NET_TURN.servers || [], NET_PUBLIC_TURN) } }; },
   // fetch the relay list once (it may hand out short-lived logins); a few seconds at most, then carry on without it
   loadTurn() {
     if (this.turn || !NET_TURN.credentialsUrl) return Promise.resolve();
