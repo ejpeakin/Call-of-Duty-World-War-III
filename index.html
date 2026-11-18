@@ -884,7 +884,7 @@ details.ctl .hint{margin-top:8px}
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js"></script>
 <script async src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>
-const BUILD_ID = '1118-2324';
+const BUILD_ID = '1118-2333';
 'use strict';
 // =====================================================================
 //  FORTDAY — core utilities, data tables, profile, audio
@@ -1777,12 +1777,13 @@ class Batch {
     g.setAttribute('normal', new THREE.Float32BufferAttribute(this.n, 3));
     g.setAttribute('color', new THREE.Float32BufferAttribute(this.c, 3));
     g.computeBoundingSphere(); W.disp.push(g);
-    const m = new THREE.Mesh(g, mat); m.castShadow = shadows; m.receiveShadow = shadows; return m;
+    const m = new THREE.Mesh(g, mat); m.castShadow = shadows; m.receiveShadow = shadows; this._mesh = m; return m;
   }
 }
+// a box you can see and bump into; it remembers its slice of the batch so mining can break it off
 function solid(b, x0, y0, z0, x1, y1, z1, hex, mat) {
-  b.box(x0, y0, z0, x1, y1, z1, hex);
-  return Grid.add({ minX: x0, minY: y0, minZ: z0, maxX: x1, maxY: y1, maxZ: z1, kind: 'static', mat: mat || 'brick' });
+  const v0 = b.p.length / 3; b.box(x0, y0, z0, x1, y1, z1, hex);
+  return Grid.add({ minX: x0, minY: y0, minZ: z0, maxX: x1, maxY: y1, maxZ: z1, kind: 'static', mat: mat || 'brick', vb: b, v0, v1: b.p.length / 3, tough: !!b.tough });
 }
 function wallSeg(b, axis, a0, a1, fixed, y0, y1, th, open, hex, mat) {
   const box = (s0, s1, yy0, yy1) => {
@@ -1805,8 +1806,8 @@ function rampGeo(b, x0, z0, x1, z1, y0, rise, dir, hex, thick = 0.22, lift = 0) 
   b.geo(g, hex); g.dispose();
 }
 function addRamp(b, x0, z0, x1, z1, y0, rise, dir, hex, mat) {
-  rampGeo(b, x0, z0, x1, z1, y0, rise, dir, hex);
-  return Grid.add({ kind: 'ramp', minX: x0, maxX: x1, minZ: z0, maxZ: z1, minY: y0, maxY: y0 + rise, y0, rise, dir, mat: mat || 'wood' });
+  const v0 = b.p.length / 3; rampGeo(b, x0, z0, x1, z1, y0, rise, dir, hex);
+  return Grid.add({ kind: 'ramp', minX: x0, maxX: x1, minZ: z0, maxZ: z1, minY: y0, maxY: y0 + rise, y0, rise, dir, mat: mat || 'wood', vb: b, v0, v1: b.p.length / 3, tough: !!b.tough });
 }
 
 function rollFloorLoot() {
@@ -2322,7 +2323,7 @@ function genWorld(key) {
   placeSites(R); computeHeights(); buildPaths(RN); planLandmarks(RN); buildTerrain();
   for (const s of W.pois.concat(W.vaults)) {
     const b = new Batch(), eb = new Batch();
-    if (s.kind === 'vault') buildVault(s, b, eb, R); else buildPOI(s, b, eb, R);
+    if (s.kind === 'vault') { b.tough = true; buildVault(s, b, eb, R); } else buildPOI(s, b, eb, R);   // vault walls can't be mined through
     if (b.count) W.group.add(b.mesh(MAT.batch, true));
     if (eb.count) W.group.add(eb.mesh(MAT.glow, false));
   }
@@ -4536,7 +4537,36 @@ function swingPick(a) {
     hv.hp -= 50; if (hv.hp <= 0) destroyHarv(hv);
     return;
   }
+  if (c.sunk == null) c.sunk = c.minY < groundH((c.minX + c.maxX) / 2, (c.minZ + c.maxZ) / 2) - 1.2;   // foundations sunk into the ground stay
+  if (c.tough || c.sunk || c.spent) { if (a === player) Sfx.noise(0.05, 1900, 1, 0.12); return; }   // can't be mined (or already mined out): no materials
   gainMats(a, mat, 4, h);
+  if (c.left == null) c.left = staticHits(c);
+  if (--c.left <= 0) { if (c.vb && c.vb._mesh) breakStatic(c); else c.spent = true; }
+}
+// hits a world piece takes before it breaks: wood 4, brick 5, metal 6 (small things fewer)
+function staticHits(c) {
+  const v = (c.maxX - c.minX) * (c.maxY - c.minY) * (c.maxZ - c.minZ), base = c.mat === 'wood' ? 4 : c.mat === 'metal' ? 6 : 5;
+  return v < 0.6 ? Math.max(2, base - 2) : base;
+}
+// a mined-out wall, roof, floor, prop or stair breaks off: its triangles collapse, its hitbox goes, debris flies
+const _dirtyAttrs = new Map();
+function breakStatic(c) {
+  if (c.dead) return;
+  const m = c.vb && c.vb._mesh;
+  if (m) { const pos = m.geometry.attributes.position; pos.array.fill(0, c.v0 * 3, c.v1 * 3); const d = _dirtyAttrs.get(pos); if (d) { d[0] = Math.min(d[0], c.v0 * 3); d[1] = Math.max(d[1], c.v1 * 3); } else _dirtyAttrs.set(pos, [c.v0 * 3, c.v1 * 3]); }
+  Grid.remove(c);
+  const cx = (c.minX + c.maxX) / 2, cy = (c.minY + c.maxY) / 2, cz = (c.minZ + c.maxZ) / 2, mat = MATS[c.mat] ? c.mat : 'brick';
+  if (camera.position.distanceToSquared(_v4.set(cx, cy, cz)) < 140 * 140) {
+    FX.burst(cx, cy, cz, MATS[mat].color, 16, 4.5, 0.8, 0.2, 9);
+    if (Sfx.vol(cx, cy, cz) > 0.15) { Sfx.harvest(mat); Sfx.noise(0.22, mat === 'wood' ? 260 : 180, 2, 0.3); }
+  }
+  if (Net.inMatch && !Net.applying) { const r2 = v => Math.round(v * 100) / 100; Net.emit({ k: 'sb', x: r2(cx), y: r2(cy), z: r2(cz) }); }
+}
+// upload only the changed part of each batch, once per frame
+function flushStaticBreaks() {
+  if (!_dirtyAttrs.size) return;
+  for (const [attr, [s, e]] of _dirtyAttrs) { attr.updateRange.offset = s; attr.updateRange.count = e - s; attr.needsUpdate = true; }
+  _dirtyAttrs.clear();
 }
 function destroyHarv(hv) {
   for (const m of hv.meshes) { m.setMatrixAt(hv.idx, ZERO_M); m.instanceMatrix.needsUpdate = true; }
@@ -6434,7 +6464,7 @@ const Reboot = {
     const orb = add(new THREE.SphereGeometry(0.42, 16, 12), glow, 0, 7.0, 0, false);
     const beam = add(new THREE.CylinderGeometry(0.55, 0.55, 46, 12, 1, true), soft, 0, 30, 0, false);               // tall light so you can spot it
     W.group.add(g);
-    Grid.add({ minX: x - 0.35, maxX: x + 0.35, minZ: z - 0.35, maxZ: z + 0.35, minY: y, maxY: y + 7.4, kind: 'static', mat: 'metal' });
+    Grid.add({ minX: x - 0.35, maxX: x + 0.35, minZ: z - 0.35, maxZ: z + 0.35, minY: y, maxY: y + 7.4, kind: 'static', mat: 'metal', tough: true });
     return { i, x, y, z, mesh: g, ring, orb, beam, glow, soft, cd: 0, _r: true };
   },
   actor(id) { return actors.find(a => a.id === id) || null; },
@@ -7519,7 +7549,7 @@ const Net = {
       else if (d.k === 'rbt') { const t = this.ids.get(d.id); if (!t || t.alive) return; if (t.human) this.send(t.human, d); else if (!t.remote) Match.reboot(t, d.tw | 0, String(d.by || me.name).slice(0, 24)); }
       else if (d.k === 'rbc') { Reboot.cool(d.tw | 0); this.toGuests({ k: 'rbc', tw: d.tw | 0 }, from); }
       else if (d.k === 'bye') this.dropHuman(from);
-      else if (['bp', 'bd', 'hv', 'shot', 'rk'].includes(d.k)) { d.id = me.id; this.applyWorld(d); this.toGuests(d, from, d.k === 'shot' || d.k === 'rk' ? me.pos : null, NET_RANGE); }
+      else if (['bp', 'bd', 'hv', 'sb', 'shot', 'rk'].includes(d.k)) { d.id = me.id; this.applyWorld(d); this.toGuests(d, from, d.k === 'shot' || d.k === 'rk' ? me.pos : null, NET_RANGE); }
       return;
     }
     if (from !== this.hostId) return;
@@ -7545,6 +7575,7 @@ const Net = {
       if (d.k === 'elim') { const t = A(d.id); if (t && t.alive && t !== player) eliminate(t, A(d.src), d.o || {}); }
       else if (d.k === 'bp') { const t = d.t; if (t && ['wall', 'floor', 'ramp', 'cone'].includes(t.type) && [t.gx, t.gy, t.gz, t.dir].every(Number.isInteger) && typeof t.key === 'string' && t.key.length < 40) Build.place({ mats: { wood: 99, brick: 99, metal: 99 }, mat: MATS[d.mat] ? d.mat : 'wood', remote: true }, { type: t.type, gx: t.gx, gy: t.gy, gz: t.gz, dir: t.dir, key: t.key }); }
       else if (d.k === 'bd') { const p = Build.map.get(d.key); if (p) Build.damage(p, clamp(+d.dmg || 0, 0, 2000), null); }
+      else if (d.k === 'sb') { if (V([d.x, d.y, d.z])) { const L = []; Grid.query(d.x - 0.2, d.z - 0.2, d.x + 0.2, d.z + 0.2, L); for (const c of L) if (!c.dead && !c.piece && !c.harv && Math.abs((c.minX + c.maxX) / 2 - d.x) < 0.02 && Math.abs((c.minY + c.maxY) / 2 - d.y) < 0.02 && Math.abs((c.minZ + c.maxZ) / 2 - d.z) < 0.02) { breakStatic(c); break; } } }
       else if (d.k === 'hv') { let best = null, bd = 4; for (const hv of W.harv) { if (hv.dead || hv.vehicle) continue; const q = (hv.x - d.x) ** 2 + (hv.z - d.z) ** 2; if (q < bd) { bd = q; best = hv; } } if (best) destroyHarv(best); }
       else if (d.k === 'shot') {
         if (!V(d.m) || !Array.isArray(d.h)) return; const a = A(d.id), col = Number.isFinite(d.c) ? d.c : 0xfff1a8;
@@ -8926,7 +8957,7 @@ function step(now) {
     Match.update(dt); Net.update(dt); Tutorial.update(dt); Reboot.update(dt);
     Interact.find();
   }
-  Pickups.update(dt); Build.update(dt); FX.update(dt);
+  Pickups.update(dt); Build.update(dt); FX.update(dt); flushStaticBreaks();
   Cam.update(dt); View.update();
   const v = Cam.view || player;
   if (PlayerRig && player) {

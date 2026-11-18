@@ -337,7 +337,36 @@ function swingPick(a) {
     hv.hp -= 50; if (hv.hp <= 0) destroyHarv(hv);
     return;
   }
+  if (c.sunk == null) c.sunk = c.minY < groundH((c.minX + c.maxX) / 2, (c.minZ + c.maxZ) / 2) - 1.2;   // foundations sunk into the ground stay
+  if (c.tough || c.sunk || c.spent) { if (a === player) Sfx.noise(0.05, 1900, 1, 0.12); return; }   // can't be mined (or already mined out): no materials
   gainMats(a, mat, 4, h);
+  if (c.left == null) c.left = staticHits(c);
+  if (--c.left <= 0) { if (c.vb && c.vb._mesh) breakStatic(c); else c.spent = true; }
+}
+// hits a world piece takes before it breaks: wood 4, brick 5, metal 6 (small things fewer)
+function staticHits(c) {
+  const v = (c.maxX - c.minX) * (c.maxY - c.minY) * (c.maxZ - c.minZ), base = c.mat === 'wood' ? 4 : c.mat === 'metal' ? 6 : 5;
+  return v < 0.6 ? Math.max(2, base - 2) : base;
+}
+// a mined-out wall, roof, floor, prop or stair breaks off: its triangles collapse, its hitbox goes, debris flies
+const _dirtyAttrs = new Map();
+function breakStatic(c) {
+  if (c.dead) return;
+  const m = c.vb && c.vb._mesh;
+  if (m) { const pos = m.geometry.attributes.position; pos.array.fill(0, c.v0 * 3, c.v1 * 3); const d = _dirtyAttrs.get(pos); if (d) { d[0] = Math.min(d[0], c.v0 * 3); d[1] = Math.max(d[1], c.v1 * 3); } else _dirtyAttrs.set(pos, [c.v0 * 3, c.v1 * 3]); }
+  Grid.remove(c);
+  const cx = (c.minX + c.maxX) / 2, cy = (c.minY + c.maxY) / 2, cz = (c.minZ + c.maxZ) / 2, mat = MATS[c.mat] ? c.mat : 'brick';
+  if (camera.position.distanceToSquared(_v4.set(cx, cy, cz)) < 140 * 140) {
+    FX.burst(cx, cy, cz, MATS[mat].color, 16, 4.5, 0.8, 0.2, 9);
+    if (Sfx.vol(cx, cy, cz) > 0.15) { Sfx.harvest(mat); Sfx.noise(0.22, mat === 'wood' ? 260 : 180, 2, 0.3); }
+  }
+  if (Net.inMatch && !Net.applying) { const r2 = v => Math.round(v * 100) / 100; Net.emit({ k: 'sb', x: r2(cx), y: r2(cy), z: r2(cz) }); }
+}
+// upload only the changed part of each batch, once per frame
+function flushStaticBreaks() {
+  if (!_dirtyAttrs.size) return;
+  for (const [attr, [s, e]] of _dirtyAttrs) { attr.updateRange.offset = s; attr.updateRange.count = e - s; attr.needsUpdate = true; }
+  _dirtyAttrs.clear();
 }
 function destroyHarv(hv) {
   for (const m of hv.meshes) { m.setMatrixAt(hv.idx, ZERO_M); m.instanceMatrix.needsUpdate = true; }

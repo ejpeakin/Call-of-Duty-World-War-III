@@ -127,7 +127,7 @@ function step(now) {
     Match.update(dt); Net.update(dt); Tutorial.update(dt); Reboot.update(dt);
     Interact.find();
   }
-  Pickups.update(dt); Build.update(dt); FX.update(dt);
+  Pickups.update(dt); Build.update(dt); FX.update(dt); flushStaticBreaks();
   Cam.update(dt); View.update();
   const v = Cam.view || player;
   if (PlayerRig && player) {

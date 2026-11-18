@@ -36,7 +36,7 @@ const Reboot = {
     const orb = add(new THREE.SphereGeometry(0.42, 16, 12), glow, 0, 7.0, 0, false);
     const beam = add(new THREE.CylinderGeometry(0.55, 0.55, 46, 12, 1, true), soft, 0, 30, 0, false);               // tall light so you can spot it
     W.group.add(g);
-    Grid.add({ minX: x - 0.35, maxX: x + 0.35, minZ: z - 0.35, maxZ: z + 0.35, minY: y, maxY: y + 7.4, kind: 'static', mat: 'metal' });
+    Grid.add({ minX: x - 0.35, maxX: x + 0.35, minZ: z - 0.35, maxZ: z + 0.35, minY: y, maxY: y + 7.4, kind: 'static', mat: 'metal', tough: true });
     return { i, x, y, z, mesh: g, ring, orb, beam, glow, soft, cd: 0, _r: true };
   },
   actor(id) { return actors.find(a => a.id === id) || null; },

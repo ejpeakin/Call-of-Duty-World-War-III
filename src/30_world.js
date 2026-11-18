@@ -181,12 +181,13 @@ class Batch {
     g.setAttribute('normal', new THREE.Float32BufferAttribute(this.n, 3));
     g.setAttribute('color', new THREE.Float32BufferAttribute(this.c, 3));
     g.computeBoundingSphere(); W.disp.push(g);
-    const m = new THREE.Mesh(g, mat); m.castShadow = shadows; m.receiveShadow = shadows; return m;
+    const m = new THREE.Mesh(g, mat); m.castShadow = shadows; m.receiveShadow = shadows; this._mesh = m; return m;
   }
 }
+// a box you can see and bump into; it remembers its slice of the batch so mining can break it off
 function solid(b, x0, y0, z0, x1, y1, z1, hex, mat) {
-  b.box(x0, y0, z0, x1, y1, z1, hex);
-  return Grid.add({ minX: x0, minY: y0, minZ: z0, maxX: x1, maxY: y1, maxZ: z1, kind: 'static', mat: mat || 'brick' });
+  const v0 = b.p.length / 3; b.box(x0, y0, z0, x1, y1, z1, hex);
+  return Grid.add({ minX: x0, minY: y0, minZ: z0, maxX: x1, maxY: y1, maxZ: z1, kind: 'static', mat: mat || 'brick', vb: b, v0, v1: b.p.length / 3, tough: !!b.tough });
 }
 function wallSeg(b, axis, a0, a1, fixed, y0, y1, th, open, hex, mat) {
   const box = (s0, s1, yy0, yy1) => {
@@ -209,8 +210,8 @@ function rampGeo(b, x0, z0, x1, z1, y0, rise, dir, hex, thick = 0.22, lift = 0) 
   b.geo(g, hex); g.dispose();
 }
 function addRamp(b, x0, z0, x1, z1, y0, rise, dir, hex, mat) {
-  rampGeo(b, x0, z0, x1, z1, y0, rise, dir, hex);
-  return Grid.add({ kind: 'ramp', minX: x0, maxX: x1, minZ: z0, maxZ: z1, minY: y0, maxY: y0 + rise, y0, rise, dir, mat: mat || 'wood' });
+  const v0 = b.p.length / 3; rampGeo(b, x0, z0, x1, z1, y0, rise, dir, hex);
+  return Grid.add({ kind: 'ramp', minX: x0, maxX: x1, minZ: z0, maxZ: z1, minY: y0, maxY: y0 + rise, y0, rise, dir, mat: mat || 'wood', vb: b, v0, v1: b.p.length / 3, tough: !!b.tough });
 }
 
 function rollFloorLoot() {
@@ -726,7 +727,7 @@ function genWorld(key) {
   placeSites(R); computeHeights(); buildPaths(RN); planLandmarks(RN); buildTerrain();
   for (const s of W.pois.concat(W.vaults)) {
     const b = new Batch(), eb = new Batch();
-    if (s.kind === 'vault') buildVault(s, b, eb, R); else buildPOI(s, b, eb, R);
+    if (s.kind === 'vault') { b.tough = true; buildVault(s, b, eb, R); } else buildPOI(s, b, eb, R);   // vault walls can't be mined through
     if (b.count) W.group.add(b.mesh(MAT.batch, true));
     if (eb.count) W.group.add(eb.mesh(MAT.glow, false));
   }
