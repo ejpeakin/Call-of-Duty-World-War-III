@@ -12,6 +12,16 @@ function boot() {
   HUD.init();
   Input.init(); Settings.init(); Tutorial.init(); Inv.init();
   Lobby.init();
+  // back from the $1 checkout: ?bp=CODE in the address unlocks the Battle Pass, then the code is removed from the address
+  (async () => {
+    let q; try { q = new URLSearchParams(location.search); } catch (e) { return; }
+    const c = q.get('bp'); if (!c) return;
+    q.delete('bp'); try { history.replaceState(null, '', location.pathname + (q.toString() ? '?' + q : '') + location.hash); } catch (e) { /* sandboxed */ }
+    let r; try { r = await redeemCode(c); } catch (e) { r = { err: 'Could not check your Battle Pass code. Enter it in the Pass tab.' }; }
+    Lobby.tab = 'pass'; Lobby.refresh();
+    $('bpMsg').textContent = r.err ? r.err : r.pass ? (r.had ? 'You already have the Battle Pass this season.' : 'Thanks for your purchase! Battle Pass unlocked. You are now ' + RANKS[Profile.rankIdx()][0] + '. Press Pick your free skin.') : r.it.name + ' is unlocked and equipped.';
+    if (r.pass && !r.had) Sfx.chest();
+  })();
   $('resumeBtn').addEventListener('click', () => togglePause());
   $('tkBtn').addEventListener('click', () => Ticket.close());
   $('sfEquip').addEventListener('click', () => ChestSkin.close(true)); $('sfBtn').addEventListener('click', () => ChestSkin.close(false));

@@ -107,6 +107,17 @@
         <h2 id="seasonName">Music Festival 2026</h2>
         <span class="season-left" id="seasonLeft"></span>
       </div>
+      <div class="bp-card" id="bpCard">
+        <div class="bp-head"><span class="bp-tag">Battle Pass</span><b id="bpTitle">Get the Battle Pass</b></div>
+        <ul class="bp-list" id="bpList"></ul>
+        <div class="bp-row"><span id="bpNote"></span><button id="bpBtn" class="buy">Buy</button></div>
+        <div class="bp-usd" id="bpUsd">
+          <div class="bp-pay"><b>Or pay $1 online</b><a id="bpPay" class="buy equip" hidden>Pay $1</a></div>
+          <span id="bpPayNote"></span>
+          <div class="bp-code"><input id="bpCode" type="text" placeholder="ABCD-EFGH-JKLM" autocomplete="off" spellcheck="false" maxlength="20" aria-label="Battle Pass code"><button id="bpRedeem" class="buy equip">Redeem</button></div>
+        </div>
+        <div class="bp-msg" id="bpMsg"></div>
+      </div>
       <div class="ticket-own" id="ticketOwn" hidden><b>Music Concert Ticket</b><span>Everything in the Item Shop is yours until the season ends.</span></div>
       <div class="lvl-row"><b id="passLvl">Level 1</b><span id="passXp"></span></div>
       <div class="bar"><i id="passFill"></i></div>
@@ -140,7 +151,7 @@
         <p class="sd-msg" id="shopMsg" role="status"></p>
       </article>
       <div class="shop-cards" id="shopGrid"></div>
-      <p class="hint">FortBux are hard to earn: 50 for every new level and 50 for winning a Battle Royale (1st place). Nothing else pays FortBux. Everything in the shop is cosmetic only.</p>
+      <p class="hint">FortBux are hard to earn: 50 for every new level, and up to 100 for a good Battle Royale match (a top finish and eliminations). The higher your rank, the more a good match pays. The Battle Pass puts you in Diamond. Everything in the shop is cosmetic only.</p>
     </section>
 
     <section class="panel" id="tab-career" hidden>

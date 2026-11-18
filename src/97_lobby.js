@@ -97,11 +97,36 @@ const Lobby = {
       const msg = $('shopMsg'), inp = $('codeIn'); Sfx.init(); msg.textContent = 'Checking…';
       let r; try { r = await redeemCode(inp.value); } catch (e) { r = { err: 'Could not check that code.' }; }
       if (r.err) { msg.textContent = r.err; return; }
+      if (r.pass) { inp.value = ''; $('codeRow').hidden = true; Sfx.chest(); this.refresh(); $('shopMsg').textContent = r.had ? 'You already have the Battle Pass this season.' : 'Battle Pass unlocked! You are now ' + RANKS[Profile.rankIdx()][0] + '. Pick your free skin.'; return; }
       inp.value = ''; $('codeRow').hidden = true; Sfx.chest(); this.shopSel = { cat: r.it.cat, id: r.it.id }; this.lockSel = null;
       this.refresh(); $('shopMsg').textContent = r.had ? r.it.name + ' was already yours, so it is now equipped.' : 'Code redeemed! ' + r.it.name + ' is unlocked and equipped.';
     };
     $('codeBtn').addEventListener('click', redeem);
     $('codeIn').addEventListener('keydown', e => { if (e.key === 'Enter') redeem(); e.stopPropagation(); });
+    // Battle Pass: 5,000 FortBux (tap twice to confirm), or a code bought for $1
+    $('bpBtn').addEventListener('click', () => {
+      Sfx.init(); const b = $('bpBtn');
+      if (Profile.hasPass()) {
+        if (!Profile.passPickLeft()) return;
+        const first = COS.outfit.find(c => Profile.canClaim(c)); this.tab = 'shop'; this.shopFilter = 'outfit'; if (first) this.shopSel = { cat: 'outfit', id: first.id };
+        this.refresh(); $('tab-shop').scrollTop = 0; $('shopMsg').textContent = 'Battle Pass: pick any skin and press Claim free. You get one per season.'; return;
+      }
+      if (Profile.d.coins < PASS_PRICE) { $('bpMsg').textContent = 'You need ' + (PASS_PRICE - Profile.d.coins).toLocaleString() + ' more ' + COIN + ', or use the $1 option below.'; return; }
+      if (!b.dataset.confirm) { b.dataset.confirm = '1'; b.textContent = 'Tap again to spend ' + PASS_PRICE.toLocaleString(); clearTimeout(this.bpT); this.bpT = setTimeout(() => { delete b.dataset.confirm; this.refresh(); }, 3500); return; }
+      delete b.dataset.confirm; clearTimeout(this.bpT);
+      const r = Profile.buyPass(); if (r.ok) Sfx.chest();
+      this.refresh(); $('bpMsg').textContent = r.err || 'Battle Pass unlocked! You are now ' + RANKS[Profile.rankIdx()][0] + '. Press Pick your free skin.';
+    });
+    const bpRedeem = async () => {
+      const inp = $('bpCode'), msg = $('bpMsg'); Sfx.init(); msg.textContent = 'Checking…';
+      let r; try { r = await redeemCode(inp.value); } catch (e) { r = { err: 'Could not check that code.' }; }
+      if (r.err) { msg.textContent = r.err; return; }
+      if (!r.pass) { msg.textContent = 'That is a skin code, so ' + r.it.name + ' is now unlocked and equipped. Battle Pass codes come from the $1 option.'; this.refresh(); return; }
+      inp.value = ''; Sfx.chest(); this.refresh();
+      msg.textContent = r.had ? 'You already have the Battle Pass this season.' : 'Battle Pass unlocked! You are now ' + RANKS[Profile.rankIdx()][0] + '. Press Pick your free skin.';
+    };
+    $('bpRedeem').addEventListener('click', bpRedeem);
+    $('bpCode').addEventListener('keydown', e => { if (e.key === 'Enter') bpRedeem(); e.stopPropagation(); });
     $('thankBtn').addEventListener('click', () => {
       const d = Profile.d; if (d.thankSeason === Season.id()) return;
       d.thankSeason = Season.id(); const lv = Profile.addXp(1000); Profile.save(); Sfx.init();
@@ -120,6 +145,7 @@ const Lobby = {
   },
   buy(cat, id) {
     const it = cosById(cat, id), d = Profile.d, msg = $('shopMsg'), price = itemPrice(it); Sfx.init();
+    if (Profile.canClaim(it)) { Profile.claimPassSkin(it); Sfx.chest(); msg.textContent = it.name + ' is yours for free with the Battle Pass, and equipped.'; this.refresh(); return; }
     if (Profile.unlocked(it)) { d.eq[cat] = id; Profile.save(); msg.textContent = it.name + ' equipped.' + (cat === 'car' ? ' Get into any car to drive it.' : ''); this.refresh(); return; }
     if (d.coins < price) { msg.textContent = 'You need ' + (price - d.coins).toLocaleString() + ' more ' + COIN + '. Play matches to earn them.'; return; }
     d.coins -= price; d.owned[cat + ':' + id] = true; d.eq[cat] = id; Profile.save(); Sfx.chest();
@@ -144,12 +170,14 @@ const Lobby = {
     if (it.unlock === 'win') feats.push('Also earned free by winning a match');
     if (!it.unlock) feats.push('Included with every account');
     if (Profile.ticket() && !Profile.owns(it) && it.unlock) feats.unshift('Included with your Music Concert Ticket until ' + Season.name() + ' ends');
+    if (Profile.canClaim(it)) feats.unshift('Free with your Battle Pass: one skin each season');
     feats.push('Cosmetic only, no gameplay advantage');
     $('shopFeats').innerHTML = feats.map(f => '<li>' + esc(f) + '</li>').join('');
     const pr = $('shopPrice').parentElement; pr.classList.toggle('owned', own);
     pr.innerHTML = own ? '<b id="shopPrice">' + (eq ? 'Equipped' : 'Owned') + '</b>' : '<i class="coin"></i><b id="shopPrice" class="num">' + price.toLocaleString() + '</b>';
     const btn = $('buyBtn'); btn.textContent = own ? (eq ? 'Equipped' : 'Equip') : 'Buy for ' + price.toLocaleString();
     btn.className = 'buy' + (own && eq ? ' owned' : own ? ' equip' : ''); btn.disabled = own && eq;
+    if (Profile.canClaim(it)) { pr.classList.remove('owned'); pr.innerHTML = '<b id="shopPrice">FREE</b>'; btn.textContent = 'Claim free · Battle Pass'; btn.className = 'buy equip'; btn.disabled = false; }
     const coded = !own && Object.values(SKIN_CODES).includes(sel.cat + ':' + sel.id); $('codeBox').hidden = !coded; if (!coded) $('codeRow').hidden = true;
   },
   lockerView() {
@@ -209,7 +237,7 @@ const Lobby = {
         .sort((a, b) => (featured(b) && this.shopFilter === 'all') - (featured(a) && this.shopFilter === 'all') || order.indexOf(a.cat) - order.indexOf(b.cat) || a.r - b.r || a.name.localeCompare(b.name));
       $('shopGrid').innerHTML = list.map(c => {
         const own = Profile.unlocked(c), eq = d.eq[c.cat] === c.id, on = this.shopSel.cat === c.cat && this.shopSel.id === c.id, rc = c.premium ? '#ffd23a' : RARITY[c.r].css;
-        const foot = eq ? '<span class="scard-foot eq">Equipped</span>' : own ? '<span class="scard-foot owned">Owned</span>' : `<span class="scard-foot"><i class="coin"></i>${itemPrice(c).toLocaleString()}</span>`;
+        const foot = Profile.canClaim(c) ? '<span class="scard-foot free">FREE · Pass</span>' : eq ? '<span class="scard-foot eq">Equipped</span>' : own ? '<span class="scard-foot owned">Owned</span>' : `<span class="scard-foot"><i class="coin"></i>${itemPrice(c).toLocaleString()}</span>`;
         const cat = COS_CATS.find(x => x[0] === c.cat)[1];
         return `<button class="scard ${on ? 'on' : ''}" data-cat="${c.cat}" data-id="${c.id}" style="--rc:${rc}">${c.premium ? '<span class="prem">PREMIUM</span>' : ''}<span class="scard-art">${this.shopIcon(c.cat, c)}</span><span class="scard-body"><b>${esc(c.name)}</b><span>${c.premium ? 'Premium' : RARITY[c.r].name} · ${cat}</span></span>${foot}</button>`;
       }).join('');
@@ -231,6 +259,15 @@ const Lobby = {
       $('seasonName').textContent = Season.name(); document.querySelector('.season-tag').textContent = 'Season ' + (sid + 1);
       $('seasonLeft').textContent = dl > 1 ? 'Ends in ' + dl + ' days' : dl === 1 ? 'Ends in 1 day' : 'Ends today';
       $('ticketOwn').hidden = !Profile.ticket();
+      { const has = Profile.hasPass(), left = Profile.passPickLeft(), dtx = dl > 1 ? dl + ' days' : dl === 1 ? '1 day' : 'less than a day';
+        $('bpCard').classList.toggle('on', has); $('bpTitle').textContent = has ? 'Battle Pass active' : 'Get the Battle Pass';
+        $('bpList').innerHTML = ['<b>Diamond rank</b> right away, and you can\'t drop below Diamond this season',
+          '<b>More ' + COIN + '</b>: at Diamond a good match pays ×' + RANK_COIN_MULT[PASS_RANK] + ' (up to ' + MATCH_COINS_MAX + ' a match)',
+          '<b>1 free skin</b> of your choice from the Item Shop' + (has ? (left ? ' · not picked yet' : ' · claimed ✓') : '')].map(x => '<li>' + x + '</li>').join('');
+        $('bpNote').textContent = has ? 'Active for ' + Season.name() + ' · ' + dtx + ' left. Get it again next season for another free skin.' : 'Lasts until ' + Season.name() + ' ends (' + dtx + '). Get it again each season for another free skin.';
+        const b = $('bpBtn'); if (!b.dataset.confirm) { b.textContent = has ? (left ? 'Pick your free skin' : 'Free skin claimed ✓') : 'Buy for ' + PASS_PRICE.toLocaleString() + ' ' + COIN; b.disabled = has && !left; b.className = 'buy' + (has ? (left ? ' equip' : ' owned') : ''); }
+        $('bpUsd').hidden = has; $('bpPay').hidden = !PASS_PAY_URL; if (PASS_PAY_URL) $('bpPay').href = PASS_PAY_URL;
+        $('bpPayNote').textContent = PASS_PAY_URL ? 'Pay securely on the checkout page. When you finish, you come straight back here and the pass unlocks by itself. Have a Battle Pass code instead? Enter it below.' : 'Online checkout is being set up. Check back soon. If you were given a Battle Pass code, enter it below.'; }
       $('passLvl').textContent = 'Level ' + tier; $('passXp').textContent = (d.seasonXp % XP_PER_LEVEL).toLocaleString() + ' / ' + XP_PER_LEVEL.toLocaleString() + ' XP';
       $('passInfo').textContent = `Every level takes ${XP_PER_LEVEL.toLocaleString()} XP and pays ${LEVEL_COINS} ${COIN}. Bonus XP: 1st place +2,500 · each shark you defeat +2,000 · first to land +500 · your first game +5,000 · thanking the maker +1,000 once a season. Levels start over each season; anything you unlock stays yours.`;
       $('passFill').style.width = ((d.seasonXp % XP_PER_LEVEL) / XP_PER_LEVEL * 100) + '%';
@@ -243,7 +280,7 @@ const Lobby = {
     if (this.tab === 'career') {
       $('statGrid').innerHTML = [['Wins', d.wins], ['Matches', d.matches], ['Eliminations', d.kills], ['Top 10 finishes', d.top10], ['Chests opened', (d.chests || 0).toLocaleString()]].map(s => `<div class="stat"><b>${s[1]}</b><span>${s[0]}</span></div>`).join('');
       const ri = Profile.rankIdx();
-      $('rankList').innerHTML = RANKS.map((r, i) => `<div class="rank ${i === ri ? 'cur' : ''}"><span>${r[0]}${i === ri ? ' · ' + d.rp + ' RP' : ''}</span><i>${r[1]} RP</i></div>`).join('');
+      $('rankList').innerHTML = (Profile.hasPass() ? '<div class="hint">Battle Pass: Diamond or higher until ' + esc(Season.name()) + ' ends.</div>' : '') + RANKS.map((r, i) => `<div class="rank ${i === ri ? 'cur' : ''}"><span>${r[0]}${i === ri ? ' · ' + d.rp + ' RP' : ''}</span><i>${r[1]} RP</i></div>`).join('');
     }
   },
 };

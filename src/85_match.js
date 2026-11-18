@@ -361,12 +361,13 @@ const Match = {
     d.matches++; d.kills += p.kills; d.chests = (d.chests || 0) + (p.chests || 0);
     if (r.win) d.wins++;
     if (place && place <= 10) d.top10++;
+    const rankI = Profile.rankIdx();   // your rank going into this match decides the FortBux multiplier
     let rpTxt = '';
-    if (this.ranked && place) { const rp = rankPoints(place, this.teamCount(), p.kills, Profile.rankIdx()); d.rp = Math.max(0, d.rp + rp); rpTxt = ' · ' + (rp >= 0 ? '+' : '') + rp + ' rank points (' + RANKS[Profile.rankIdx()][0] + ')'; }
+    if (this.ranked && place) { const rp = rankPoints(place, this.teamCount(), p.kills, Profile.rankIdx()); d.rp = Math.max(Profile.passFloor(), d.rp + rp); rpTxt = ' · ' + (rp >= 0 ? '+' : '') + rp + ' rank points (' + RANKS[Profile.rankIdx()][0] + ')'; }
     let newUmb = false;
     if (r.win && this.mode !== 'rumble' && !d.umbrella) { d.umbrella = true; newUmb = true; }
     const tier1 = lv.l1; const unl = lv.got.slice();
-    const winCoins = won && place === 1 ? WIN_COINS : 0, coins = winCoins + lv.coins;
+    const mc = this.mode === 'rumble' ? matchCoins(null) : matchCoins(place, this.teamCount(), p.kills, rankI), winCoins = mc.coins, coins = winCoins + lv.coins;
     d.coins += winCoins;
     Profile.save();
     if (newUmb) unl.push(cosById('glider', 'umbrella'));
@@ -375,7 +376,7 @@ const Match = {
     $('rSub').textContent = THEMES[this.theme].name + ' · ' + { solo: 'Solo', duos: 'Duos', squads: 'Squads', rumble: 'Storm Rumble', tutorial: 'Tutorial' }[this.mode] + ' · ' + (this.build ? 'Build' : 'No-Build');
     $('rStats').innerHTML = [['Eliminations', p.kills], ['Damage dealt', p.dmgDealt], ['Survived', fmtTime(p.aliveTime)]].map(s => `<div class="stat"><b>${s[1]}</b><span>${s[0]}</span></div>`).join('');
     $('rXp').innerHTML = lines.map(l => `<span class="xpl"><span>${esc(l[0])}</span><b>+${l[1].toLocaleString()} XP</b></span>`).join('')
-      + (winCoins ? `<span class="xpl gold"><span>Victory reward</span><b>+${winCoins} ${COIN}</b></span>` : '')
+      + (winCoins ? `<span class="xpl gold"><span>Match reward · ${RANKS[rankI][0]} ×${mc.mult}${mc.capped ? ' (max ' + MATCH_COINS_MAX + ')' : ''}${Profile.hasPass() ? ' · Battle Pass' : ''}</span><b>+${winCoins} ${COIN}</b></span>` : '')
       + (lv.coins ? `<span class="xpl gold"><span>Level ${tier0} → ${tier1}</span><b>+${lv.coins.toLocaleString()} ${COIN}</b></span>` : '')
       + `<span class="xpl tot"><span>Level ${tier1} · ${Season.name()}</span><b>${(d.seasonXp % XP_PER_LEVEL).toLocaleString()} / ${XP_PER_LEVEL.toLocaleString()} XP</b></span>` + (rpTxt ? `<span class="xpl"><span>Ranked</span><b>${esc(rpTxt.replace(/^ · /, ''))}</b></span>` : '');
     $('rXpFill').style.width = ((d.seasonXp % XP_PER_LEVEL) / XP_PER_LEVEL * 100) + '%';

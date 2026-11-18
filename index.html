@@ -177,6 +177,24 @@ button:focus-visible{outline:2px solid var(--sun-2);outline-offset:2px}
 .thank div{display:flex;flex-direction:column;gap:2px}
 .thank b{font-size:15px}
 .thank span{font-size:12.5px;color:#d6e4fb}
+.bp-card{display:flex;flex-direction:column;gap:10px;padding:14px;border-radius:14px;background:linear-gradient(135deg,rgba(120,210,255,.2),rgba(155,107,255,.18));border:1px solid rgba(160,200,255,.45)}
+.bp-card.on{background:linear-gradient(135deg,rgba(86,220,255,.28),rgba(47,134,255,.22));border-color:#7fd8ff}
+.bp-head{display:flex;flex-direction:column;gap:2px}
+.bp-tag{align-self:flex-start;font:800 10.5px var(--f-body);letter-spacing:.1em;text-transform:uppercase;color:#05101f;background:#7fd8ff;border-radius:999px;padding:2px 9px}
+.bp-head b{font-family:var(--f-display);font-weight:900;font-style:italic;font-size:22px;text-transform:uppercase}
+.bp-list{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px;font-size:13px;line-height:1.4;color:#dbe8ff}
+.bp-list b{color:#fff}
+.bp-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.bp-row span{font-size:12px;color:var(--mute);flex:1;min-width:160px}
+.bp-usd{display:flex;flex-direction:column;gap:6px;padding-top:10px;border-top:1px dashed rgba(160,200,255,.3);font-size:12.5px;color:#dbe8ff}
+.bp-pay{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.bp-pay b{font-size:14px}
+.bp-pay a{text-decoration:none;padding:8px 18px;font-size:15px}
+.bp-code{display:flex;gap:8px}
+.bp-code input{flex:1;min-width:0;background:rgba(5,14,36,.6);border:1px solid rgba(150,195,255,.3);border-radius:8px;color:var(--ink);font:700 14px var(--f-body);letter-spacing:.08em;padding:8px 10px;text-transform:uppercase}
+.bp-msg{font-size:12.5px;color:#ffe9a6;min-height:0}
+.bp-msg:empty{display:none}
+.scard-foot.free{color:#7fd8ff;font-weight:800}
 .ticket-own{display:flex;flex-direction:column;gap:2px;padding:10px 14px;border-radius:12px;background:linear-gradient(100deg,#ffd84a,#ff9a3c);color:#2a1200}
 .ticket-own b{font-family:var(--f-display);font-weight:900;font-style:italic;font-size:20px;text-transform:uppercase}
 .ticket-own span{font-size:12.5px;font-weight:700}
@@ -656,6 +674,17 @@ details.ctl .hint{margin-top:8px}
         <h2 id="seasonName">Music Festival 2026</h2>
         <span class="season-left" id="seasonLeft"></span>
       </div>
+      <div class="bp-card" id="bpCard">
+        <div class="bp-head"><span class="bp-tag">Battle Pass</span><b id="bpTitle">Get the Battle Pass</b></div>
+        <ul class="bp-list" id="bpList"></ul>
+        <div class="bp-row"><span id="bpNote"></span><button id="bpBtn" class="buy">Buy</button></div>
+        <div class="bp-usd" id="bpUsd">
+          <div class="bp-pay"><b>Or pay $1 online</b><a id="bpPay" class="buy equip" hidden>Pay $1</a></div>
+          <span id="bpPayNote"></span>
+          <div class="bp-code"><input id="bpCode" type="text" placeholder="ABCD-EFGH-JKLM" autocomplete="off" spellcheck="false" maxlength="20" aria-label="Battle Pass code"><button id="bpRedeem" class="buy equip">Redeem</button></div>
+        </div>
+        <div class="bp-msg" id="bpMsg"></div>
+      </div>
       <div class="ticket-own" id="ticketOwn" hidden><b>Music Concert Ticket</b><span>Everything in the Item Shop is yours until the season ends.</span></div>
       <div class="lvl-row"><b id="passLvl">Level 1</b><span id="passXp"></span></div>
       <div class="bar"><i id="passFill"></i></div>
@@ -689,7 +718,7 @@ details.ctl .hint{margin-top:8px}
         <p class="sd-msg" id="shopMsg" role="status"></p>
       </article>
       <div class="shop-cards" id="shopGrid"></div>
-      <p class="hint">FortBux are hard to earn: 50 for every new level and 50 for winning a Battle Royale (1st place). Nothing else pays FortBux. Everything in the shop is cosmetic only.</p>
+      <p class="hint">FortBux are hard to earn: 50 for every new level, and up to 100 for a good Battle Royale match (a top finish and eliminations). The higher your rank, the more a good match pays. The Battle Pass puts you in Diamond. Everything in the shop is cosmetic only.</p>
     </section>
 
     <section class="panel" id="tab-career" hidden>
@@ -847,7 +876,7 @@ details.ctl .hint{margin-top:8px}
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js"></script>
 <script async src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>
-const BUILD_ID = '1118-1602';
+const BUILD_ID = '1118-1619';
 'use strict';
 // =====================================================================
 //  FORTDAY — core utilities, data tables, profile, audio
@@ -1130,7 +1159,7 @@ const COS_CATS = [['outfit', 'Skins'], ['backpack', 'Back Bling'], ['pickaxe', '
 for (const [cat] of COS_CATS) for (const c of COS[cat]) c.cat = cat;
 const RARITY_PRICE = [0, 400, 800, 1200, 1500, 2500, 2000];
 // Skin codes: each unlocks one skin. Only a hash of each code is stored here, so the codes cannot be read from the page.
-const SKIN_CODES = {"b988f760c06661598b2306f9190cf3e2b49eede966a437b893f9cec8b7da4e94": "outfit:moss", "c9f8ccf00415edf51af71a754d7ff028524b44e8460a6b3ae71782999a660226": "outfit:comet", "6c20490c4a51a9daf0e4a506051bbef481b69064ad73f1dc55c730b4ab67669c": "outfit:siren", "0482d235e2b487cb4bd726f72f61f4bccaf818d6490108418b5bb454e75286a0": "outfit:toast", "d29e86b0e73b5f53bad9eef6e3cac179a1b954cceca8fab647db777288b95123": "outfit:nightwarden", "d415b6c930bf893cab24401df88e72dc4ef49125a8d35fdbb3d22dc5145ba25e": "outfit:tycoon", "b24e8cb0fb398c0acc64c00a5f55ae9b9277e60bb507b1d55388c2a1b5be067b": "outfit:stormborn", "a45886e085b42acdb18940bc409c2d3ba927f3cebcd7f6ad8120cca9a917c400": "outfit:headliner", "7fb23ee2720fbf9744db86140a291c9da1d319b81592f0d64691b2490c78bd26": "outfit:nova", "768389476f280ee7e04103893784363c1d8311b1a1ef76ec7c9c8b6d9125123c": "outfit:tripy", "b6f82df325a16d8401efe178553f6f17bdd69e8c5a82e7dcfb9f41f699165f30": "outfit:uzi", "e9baf6540e4d5eda6e4c4c2b68fd2fe8b2d5c7a6578b203ce98be105e8b03812": "outfit:week"};
+const SKIN_CODES = {"b988f760c06661598b2306f9190cf3e2b49eede966a437b893f9cec8b7da4e94": "outfit:moss", "c9f8ccf00415edf51af71a754d7ff028524b44e8460a6b3ae71782999a660226": "outfit:comet", "6c20490c4a51a9daf0e4a506051bbef481b69064ad73f1dc55c730b4ab67669c": "outfit:siren", "0482d235e2b487cb4bd726f72f61f4bccaf818d6490108418b5bb454e75286a0": "outfit:toast", "d29e86b0e73b5f53bad9eef6e3cac179a1b954cceca8fab647db777288b95123": "outfit:nightwarden", "d415b6c930bf893cab24401df88e72dc4ef49125a8d35fdbb3d22dc5145ba25e": "outfit:tycoon", "b24e8cb0fb398c0acc64c00a5f55ae9b9277e60bb507b1d55388c2a1b5be067b": "outfit:stormborn", "a45886e085b42acdb18940bc409c2d3ba927f3cebcd7f6ad8120cca9a917c400": "outfit:headliner", "7fb23ee2720fbf9744db86140a291c9da1d319b81592f0d64691b2490c78bd26": "outfit:nova", "768389476f280ee7e04103893784363c1d8311b1a1ef76ec7c9c8b6d9125123c": "outfit:tripy", "b6f82df325a16d8401efe178553f6f17bdd69e8c5a82e7dcfb9f41f699165f30": "outfit:uzi", "e9baf6540e4d5eda6e4c4c2b68fd2fe8b2d5c7a6578b203ce98be105e8b03812": "outfit:week", "5de5e51f9c69811cb13b7e8c957103a81ff8425ea5847cef230993146b000e77": "pass:0", "01fd9ff7793b409bfbe95f95150903b4a0e73fc135c6bf506a98476f114ede05": "pass:0", "df19e7a5c31dab234f010fc7027922a8eb6bbdcbaf87b70b6989895726e90ff4": "pass:0", "7d2050ad94f7dd67d567a46eb7db65f0152f96cdbdceac8a71f8873cb929d66a": "pass:0", "3b6ff81ac40e99bdc8c38a08b0f44df4d2a45f9b6096d2b0606ea4686feb50f0": "pass:0", "e1a9f3b014dd6b1d30e1743036d61d6dba940aa0094de086494628f6fcfbcc45": "pass:0", "84ce569700ac25b36ee7b332776596cdb9caca7a5177d1cbf1cf79163fab2507": "pass:0", "7401708a2549853480c92fe3ec96bea42cb19c9b69806a9885f24090419c28af": "pass:0", "9446e2a9a03b87adf00e931129f5ed505b46d49a6ea637f870225bb04f128eb4": "pass:0", "cd86a09392529c24e1c67ed0ea4a8935467b2763226313825e9c21f088fa1af1": "pass:0", "58700b5b115b12fa7704796b9d78c8e38ee4682535d7b1c500f36c2806f7c323": "pass:0", "9c61fbb7e701674e940c73c1e4586260c9072b7c801c7afc288c204805beba22": "pass:0", "6f5e8c86403b1d934104e55d7ecc780c2a05c48b404213e04d5ed39b1aba30d9": "pass:0", "472b1547a6040c2d5011fa8b90072b58375d3f573a22d94b9b8babeb311ac045": "pass:0", "5fc08167b46a5ef7d9191ad8602d9b7adb5f23bcfd679d0f2bcab863bb3418cd": "pass:0", "8246a04db0cc4e1b9f95b20e693d6b01a164dc3a23e3055f635e6577086692f4": "pass:1", "a63e6313b53470dbd2353e06da958a7aa2723713af2efaacf6b402e9e643a3b9": "pass:1", "7bb3de2e7e37e8d03d817c83ff5e5cd465fa87e2746091879025e2ea87f51c4a": "pass:1", "064956c1409de96b0d21d06ba6e1bf5ae1ab4b3fb81e4e4b3c1a2bdf69282a76": "pass:1", "987a65fb8fa970e3dede91ff94d4a7517cba48eaee8328fd893ffe7837c768d5": "pass:1", "447595316ee11be75e8ab8a4a92800a29acdc6717e1d4ba39b857065afe518c3": "pass:1", "454d86d75c3754db241ae9290acea0bada7b94e92874b503d05877bb0d30e7f5": "pass:1", "79000b2735ac9036181c55059c845bd48c36254a52e222fbd6461385873ec226": "pass:1", "b8d66e2ac184b8c7637db26e5ecdcd1e73e6fe5e19bf7dbc1dea05ae6d29014b": "pass:1", "555f8eb60169bf201cfd1e11415ce6a25d1a4853642a84d50b552d2e6c80bad0": "pass:1", "75606a5190817f81491a9b7edb4262417ac615c538297eef5a7d23f720022306": "pass:1", "6e10a112491bf2d161406709f52499b8021d9c396660981cb9b96a554e46148e": "pass:1", "dc9dd8eb38eb4b3f62849be05d1597f7166c640c1a1a162129ad690e50e6a77f": "pass:1", "ba215fb6370cfd3421db7e7d64af4ab46f2ccd19e68df582ee22358bb2289df4": "pass:1", "2c96ef14d8e97b0bef3c2a702073374bd25f93ed9aec5417b162d6aa7f360558": "pass:1", "c907d9f07f41c71149f205303f5622819a6f43976b44d5dd421273e606371b68": "pass:0", "291912e12ef30a4b3401e7cb8887c1ea700d09f630132fff575fd2aeb0ee6c4b": "pass:1", "9b0da9c9785a3074db00a30e5f234bce17a5a848c9ae513467461d6bce7eaeff": "pass:2", "7b5073b681f6200f743b65ec53942f4504fe5c9c6ffe84ebe79348d9b1eae9e9": "pass:3", "cb55869d673af61bf155e943966c9b3695fc53b7116e0eda4024bc599ad00ef6": "pass:4", "04fac98027fa41f081eb18e0d30ff1f05d618c75341622b07f5b2add48272005": "pass:5"};
 async function redeemCode(raw) {
   const code = String(raw || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
   if (code.length < 8) return { err: 'Type the whole code, like ABCD-EFGH-JKLM.' };
@@ -1138,6 +1167,13 @@ async function redeemCode(raw) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('fortday:' + code));
   const hex = [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join(''), hit = SKIN_CODES[hex];
   if (!hit) return { err: 'That code does not work. Check the letters and try again.' };
+  if (hit.startsWith('pass:')) {   // a Battle Pass code (the $1 option): only for the season it was made for
+    const sid = +hit.slice(5);
+    if (sid < Season.id()) return { err: 'That Battle Pass code was for an earlier season.' };
+    if (sid > Season.id()) return { err: 'That Battle Pass code is for ' + Season.name(sid) + '. Use it when that season starts.' };
+    if (Profile.hasPass()) return { pass: true, had: true };
+    Profile.d.passSeason = sid; Profile.d.rp = Math.max(Profile.d.rp, Profile.passFloor()); Profile.save(); return { pass: true };
+  }
   const [cat, id] = hit.split(':'), it = cosById(cat, id); if (!it) return { err: 'That code does not work.' };
   if (it.unlock === 'chest' && !Profile.owns(it)) return { err: it.name + ' can only be found in chests now (1 in 1,000).' };
   const had = Profile.owns(it); Profile.d.owned[cat + ':' + id] = true; Profile.d.eq[cat] = id; Profile.save();
@@ -1145,7 +1181,10 @@ async function redeemCode(raw) {
 }
 function itemPrice(c) { return c.price || RARITY_PRICE[c.r] || 0; }
 const COIN = 'FortBux';
-const PASS_TIERS = 30, XP_PER_TIER = 5000, XP_PER_LEVEL = 5000, LEVEL_COINS = 50, WIN_COINS = 50, TICKET_CHANCE = 1 / 10000, CHEST_SKIN = 'nightwarden', CHEST_SKIN_CHANCE = 1 / 1000;
+const PASS_TIERS = 30, XP_PER_TIER = 5000, XP_PER_LEVEL = 5000, LEVEL_COINS = 50, MATCH_COINS_MAX = 100, PASS_PRICE = 5000, PASS_USD = '$1',
+  // the $1 checkout page (e.g. a Stripe Payment Link). After paying it should send the buyer back to
+  // https://ejpeakin.github.io/FortDay/?bp=<this season's checkout code>, which unlocks the pass automatically.
+  PASS_PAY_URL = '', PASS_RANK = 4 /* Diamond */, TICKET_CHANCE = 1 / 10000, CHEST_SKIN = 'nightwarden', CHEST_SKIN_CHANCE = 1 / 1000;
 // ---------------------------------------------------------------- seasons: 30 days each, the first is Music Festival 2026
 const SEASON_EPOCH = Date.UTC(2026, 10, 16), SEASON_DAYS = 30, SEASON_NAMES = ['Music Festival 2026'];
 const Season = {
@@ -1154,6 +1193,16 @@ const Season = {
   endsAt(id = this.id()) { return SEASON_EPOCH + (id + 1) * SEASON_DAYS * 864e5; },
   daysLeft() { return Math.max(0, Math.ceil((this.endsAt() - Date.now()) / 864e5)); },
 };
+// FortBux for a good Battle Royale: better finishes and eliminations pay more, and the higher your rank the
+// bigger the multiplier (Bronze x1 ... Diamond x2 ... Legend x2.5). Never more than MATCH_COINS_MAX in one match.
+const RANK_COIN_MULT = [1, 1.25, 1.5, 1.75, 2, 2.25, 2.5];
+function matchCoins(place, teams, kills, rankI) {
+  if (!place) return { coins: 0, base: 0, mult: 1, capped: false };
+  const f = place / Math.max(1, teams);
+  const base = (place === 1 ? 40 : f <= 0.05 ? 20 : f <= 0.1 ? 12 : f <= 0.25 ? 6 : 0) + Math.min(10, kills || 0) * 2;
+  const mult = RANK_COIN_MULT[rankI] || 1, raw = Math.round(base * mult);
+  return { coins: Math.min(MATCH_COINS_MAX, raw), base, mult, capped: raw > MATCH_COINS_MAX };
+}
 // ranked points for one Battle Royale: top finishes gain, the bottom half loses more the worse you place,
 // and higher ranks lose more for a bad game. Each elimination is +10.
 function rankPoints(place, teams, kills, rankI) {
@@ -1176,7 +1225,7 @@ const Profile = {
     xp: 0, wins: 0, matches: 0, kills: 0, top10: 0, chests: 0, rp: 0, umbrella: false, coins: 0, owned: {},
     eq: { outfit: 'rae', body: 'woman', backpack: 'ruck', pickaxe: 'pick', glider: 'sail', wrap: 'none', emote: 'groove', car: 'street' },
     sens: 1, shadows: !IS_TOUCH, mode: 'solo', build: true, theme: 'greenvale', ranked: false, novaGiven: true,
-    season: -1, seasonXp: 0, firstBonus: false, thankSeason: -1, ticketSeason: -1, skinsPaid: true, keys: {}, gfxV: 2,
+    season: -1, seasonXp: 0, firstBonus: false, thankSeason: -1, ticketSeason: -1, passSeason: -1, passPick: -1, skinsPaid: true, keys: {}, gfxV: 2,
   },
   load() {
     try {
@@ -1225,7 +1274,22 @@ const Profile = {
     if (u.startsWith('tier:')) return this.tier() >= +u.slice(5);
     return true;
   },
-  rankIdx() { let i = 0; for (let k = 0; k < RANKS.length; k++) if (this.d.rp >= RANKS[k][1]) i = k; return i; },
+  rankIdx() { let i = 0; for (let k = 0; k < RANKS.length; k++) if (this.d.rp >= RANKS[k][1]) i = k; return this.hasPass() ? Math.max(i, PASS_RANK) : i; },
+  // Battle Pass: bought with FortBux for one season. Diamond rank right away (and never below it that season),
+  // so good matches pay more FortBux, plus one free Shop skin of your choice each season you have it.
+  hasPass() { return this.d.passSeason === Season.id(); },
+  passPickLeft() { return this.hasPass() && this.d.passPick !== Season.id(); },
+  passFloor() { return this.hasPass() ? RANKS[PASS_RANK][1] : 0; },
+  buyPass() {
+    const d = this.d; if (this.hasPass()) return { had: true };
+    if (d.coins < PASS_PRICE) return { err: 'You need ' + (PASS_PRICE - d.coins).toLocaleString() + ' more ' + COIN + ' for the Battle Pass.' };
+    d.coins -= PASS_PRICE; d.passSeason = Season.id(); d.rp = Math.max(d.rp, this.passFloor()); this.save(); return { ok: true };
+  },
+  canClaim(it) { return !!it && this.passPickLeft() && it.cat === 'outfit' && it.unlock !== 'chest' && !this.owns(it) && !!it.unlock; },
+  claimPassSkin(it) {
+    if (!this.canClaim(it)) return false;
+    const d = this.d; d.owned['outfit:' + it.id] = true; d.eq.outfit = it.id; d.passPick = Season.id(); this.save(); return true;
+  },
 };
 Profile.load(); Profile.syncSeason();
 
@@ -6564,12 +6628,13 @@ const Match = {
     d.matches++; d.kills += p.kills; d.chests = (d.chests || 0) + (p.chests || 0);
     if (r.win) d.wins++;
     if (place && place <= 10) d.top10++;
+    const rankI = Profile.rankIdx();   // your rank going into this match decides the FortBux multiplier
     let rpTxt = '';
-    if (this.ranked && place) { const rp = rankPoints(place, this.teamCount(), p.kills, Profile.rankIdx()); d.rp = Math.max(0, d.rp + rp); rpTxt = ' · ' + (rp >= 0 ? '+' : '') + rp + ' rank points (' + RANKS[Profile.rankIdx()][0] + ')'; }
+    if (this.ranked && place) { const rp = rankPoints(place, this.teamCount(), p.kills, Profile.rankIdx()); d.rp = Math.max(Profile.passFloor(), d.rp + rp); rpTxt = ' · ' + (rp >= 0 ? '+' : '') + rp + ' rank points (' + RANKS[Profile.rankIdx()][0] + ')'; }
     let newUmb = false;
     if (r.win && this.mode !== 'rumble' && !d.umbrella) { d.umbrella = true; newUmb = true; }
     const tier1 = lv.l1; const unl = lv.got.slice();
-    const winCoins = won && place === 1 ? WIN_COINS : 0, coins = winCoins + lv.coins;
+    const mc = this.mode === 'rumble' ? matchCoins(null) : matchCoins(place, this.teamCount(), p.kills, rankI), winCoins = mc.coins, coins = winCoins + lv.coins;
     d.coins += winCoins;
     Profile.save();
     if (newUmb) unl.push(cosById('glider', 'umbrella'));
@@ -6578,7 +6643,7 @@ const Match = {
     $('rSub').textContent = THEMES[this.theme].name + ' · ' + { solo: 'Solo', duos: 'Duos', squads: 'Squads', rumble: 'Storm Rumble', tutorial: 'Tutorial' }[this.mode] + ' · ' + (this.build ? 'Build' : 'No-Build');
     $('rStats').innerHTML = [['Eliminations', p.kills], ['Damage dealt', p.dmgDealt], ['Survived', fmtTime(p.aliveTime)]].map(s => `<div class="stat"><b>${s[1]}</b><span>${s[0]}</span></div>`).join('');
     $('rXp').innerHTML = lines.map(l => `<span class="xpl"><span>${esc(l[0])}</span><b>+${l[1].toLocaleString()} XP</b></span>`).join('')
-      + (winCoins ? `<span class="xpl gold"><span>Victory reward</span><b>+${winCoins} ${COIN}</b></span>` : '')
+      + (winCoins ? `<span class="xpl gold"><span>Match reward · ${RANKS[rankI][0]} ×${mc.mult}${mc.capped ? ' (max ' + MATCH_COINS_MAX + ')' : ''}${Profile.hasPass() ? ' · Battle Pass' : ''}</span><b>+${winCoins} ${COIN}</b></span>` : '')
       + (lv.coins ? `<span class="xpl gold"><span>Level ${tier0} → ${tier1}</span><b>+${lv.coins.toLocaleString()} ${COIN}</b></span>` : '')
       + `<span class="xpl tot"><span>Level ${tier1} · ${Season.name()}</span><b>${(d.seasonXp % XP_PER_LEVEL).toLocaleString()} / ${XP_PER_LEVEL.toLocaleString()} XP</b></span>` + (rpTxt ? `<span class="xpl"><span>Ranked</span><b>${esc(rpTxt.replace(/^ · /, ''))}</b></span>` : '');
     $('rXpFill').style.width = ((d.seasonXp % XP_PER_LEVEL) / XP_PER_LEVEL * 100) + '%';
@@ -8222,11 +8287,36 @@ const Lobby = {
       const msg = $('shopMsg'), inp = $('codeIn'); Sfx.init(); msg.textContent = 'Checking…';
       let r; try { r = await redeemCode(inp.value); } catch (e) { r = { err: 'Could not check that code.' }; }
       if (r.err) { msg.textContent = r.err; return; }
+      if (r.pass) { inp.value = ''; $('codeRow').hidden = true; Sfx.chest(); this.refresh(); $('shopMsg').textContent = r.had ? 'You already have the Battle Pass this season.' : 'Battle Pass unlocked! You are now ' + RANKS[Profile.rankIdx()][0] + '. Pick your free skin.'; return; }
       inp.value = ''; $('codeRow').hidden = true; Sfx.chest(); this.shopSel = { cat: r.it.cat, id: r.it.id }; this.lockSel = null;
       this.refresh(); $('shopMsg').textContent = r.had ? r.it.name + ' was already yours, so it is now equipped.' : 'Code redeemed! ' + r.it.name + ' is unlocked and equipped.';
     };
     $('codeBtn').addEventListener('click', redeem);
     $('codeIn').addEventListener('keydown', e => { if (e.key === 'Enter') redeem(); e.stopPropagation(); });
+    // Battle Pass: 5,000 FortBux (tap twice to confirm), or a code bought for $1
+    $('bpBtn').addEventListener('click', () => {
+      Sfx.init(); const b = $('bpBtn');
+      if (Profile.hasPass()) {
+        if (!Profile.passPickLeft()) return;
+        const first = COS.outfit.find(c => Profile.canClaim(c)); this.tab = 'shop'; this.shopFilter = 'outfit'; if (first) this.shopSel = { cat: 'outfit', id: first.id };
+        this.refresh(); $('tab-shop').scrollTop = 0; $('shopMsg').textContent = 'Battle Pass: pick any skin and press Claim free. You get one per season.'; return;
+      }
+      if (Profile.d.coins < PASS_PRICE) { $('bpMsg').textContent = 'You need ' + (PASS_PRICE - Profile.d.coins).toLocaleString() + ' more ' + COIN + ', or use the $1 option below.'; return; }
+      if (!b.dataset.confirm) { b.dataset.confirm = '1'; b.textContent = 'Tap again to spend ' + PASS_PRICE.toLocaleString(); clearTimeout(this.bpT); this.bpT = setTimeout(() => { delete b.dataset.confirm; this.refresh(); }, 3500); return; }
+      delete b.dataset.confirm; clearTimeout(this.bpT);
+      const r = Profile.buyPass(); if (r.ok) Sfx.chest();
+      this.refresh(); $('bpMsg').textContent = r.err || 'Battle Pass unlocked! You are now ' + RANKS[Profile.rankIdx()][0] + '. Press Pick your free skin.';
+    });
+    const bpRedeem = async () => {
+      const inp = $('bpCode'), msg = $('bpMsg'); Sfx.init(); msg.textContent = 'Checking…';
+      let r; try { r = await redeemCode(inp.value); } catch (e) { r = { err: 'Could not check that code.' }; }
+      if (r.err) { msg.textContent = r.err; return; }
+      if (!r.pass) { msg.textContent = 'That is a skin code, so ' + r.it.name + ' is now unlocked and equipped. Battle Pass codes come from the $1 option.'; this.refresh(); return; }
+      inp.value = ''; Sfx.chest(); this.refresh();
+      msg.textContent = r.had ? 'You already have the Battle Pass this season.' : 'Battle Pass unlocked! You are now ' + RANKS[Profile.rankIdx()][0] + '. Press Pick your free skin.';
+    };
+    $('bpRedeem').addEventListener('click', bpRedeem);
+    $('bpCode').addEventListener('keydown', e => { if (e.key === 'Enter') bpRedeem(); e.stopPropagation(); });
     $('thankBtn').addEventListener('click', () => {
       const d = Profile.d; if (d.thankSeason === Season.id()) return;
       d.thankSeason = Season.id(); const lv = Profile.addXp(1000); Profile.save(); Sfx.init();
@@ -8245,6 +8335,7 @@ const Lobby = {
   },
   buy(cat, id) {
     const it = cosById(cat, id), d = Profile.d, msg = $('shopMsg'), price = itemPrice(it); Sfx.init();
+    if (Profile.canClaim(it)) { Profile.claimPassSkin(it); Sfx.chest(); msg.textContent = it.name + ' is yours for free with the Battle Pass, and equipped.'; this.refresh(); return; }
     if (Profile.unlocked(it)) { d.eq[cat] = id; Profile.save(); msg.textContent = it.name + ' equipped.' + (cat === 'car' ? ' Get into any car to drive it.' : ''); this.refresh(); return; }
     if (d.coins < price) { msg.textContent = 'You need ' + (price - d.coins).toLocaleString() + ' more ' + COIN + '. Play matches to earn them.'; return; }
     d.coins -= price; d.owned[cat + ':' + id] = true; d.eq[cat] = id; Profile.save(); Sfx.chest();
@@ -8269,12 +8360,14 @@ const Lobby = {
     if (it.unlock === 'win') feats.push('Also earned free by winning a match');
     if (!it.unlock) feats.push('Included with every account');
     if (Profile.ticket() && !Profile.owns(it) && it.unlock) feats.unshift('Included with your Music Concert Ticket until ' + Season.name() + ' ends');
+    if (Profile.canClaim(it)) feats.unshift('Free with your Battle Pass: one skin each season');
     feats.push('Cosmetic only, no gameplay advantage');
     $('shopFeats').innerHTML = feats.map(f => '<li>' + esc(f) + '</li>').join('');
     const pr = $('shopPrice').parentElement; pr.classList.toggle('owned', own);
     pr.innerHTML = own ? '<b id="shopPrice">' + (eq ? 'Equipped' : 'Owned') + '</b>' : '<i class="coin"></i><b id="shopPrice" class="num">' + price.toLocaleString() + '</b>';
     const btn = $('buyBtn'); btn.textContent = own ? (eq ? 'Equipped' : 'Equip') : 'Buy for ' + price.toLocaleString();
     btn.className = 'buy' + (own && eq ? ' owned' : own ? ' equip' : ''); btn.disabled = own && eq;
+    if (Profile.canClaim(it)) { pr.classList.remove('owned'); pr.innerHTML = '<b id="shopPrice">FREE</b>'; btn.textContent = 'Claim free · Battle Pass'; btn.className = 'buy equip'; btn.disabled = false; }
     const coded = !own && Object.values(SKIN_CODES).includes(sel.cat + ':' + sel.id); $('codeBox').hidden = !coded; if (!coded) $('codeRow').hidden = true;
   },
   lockerView() {
@@ -8334,7 +8427,7 @@ const Lobby = {
         .sort((a, b) => (featured(b) && this.shopFilter === 'all') - (featured(a) && this.shopFilter === 'all') || order.indexOf(a.cat) - order.indexOf(b.cat) || a.r - b.r || a.name.localeCompare(b.name));
       $('shopGrid').innerHTML = list.map(c => {
         const own = Profile.unlocked(c), eq = d.eq[c.cat] === c.id, on = this.shopSel.cat === c.cat && this.shopSel.id === c.id, rc = c.premium ? '#ffd23a' : RARITY[c.r].css;
-        const foot = eq ? '<span class="scard-foot eq">Equipped</span>' : own ? '<span class="scard-foot owned">Owned</span>' : `<span class="scard-foot"><i class="coin"></i>${itemPrice(c).toLocaleString()}</span>`;
+        const foot = Profile.canClaim(c) ? '<span class="scard-foot free">FREE · Pass</span>' : eq ? '<span class="scard-foot eq">Equipped</span>' : own ? '<span class="scard-foot owned">Owned</span>' : `<span class="scard-foot"><i class="coin"></i>${itemPrice(c).toLocaleString()}</span>`;
         const cat = COS_CATS.find(x => x[0] === c.cat)[1];
         return `<button class="scard ${on ? 'on' : ''}" data-cat="${c.cat}" data-id="${c.id}" style="--rc:${rc}">${c.premium ? '<span class="prem">PREMIUM</span>' : ''}<span class="scard-art">${this.shopIcon(c.cat, c)}</span><span class="scard-body"><b>${esc(c.name)}</b><span>${c.premium ? 'Premium' : RARITY[c.r].name} · ${cat}</span></span>${foot}</button>`;
       }).join('');
@@ -8356,6 +8449,15 @@ const Lobby = {
       $('seasonName').textContent = Season.name(); document.querySelector('.season-tag').textContent = 'Season ' + (sid + 1);
       $('seasonLeft').textContent = dl > 1 ? 'Ends in ' + dl + ' days' : dl === 1 ? 'Ends in 1 day' : 'Ends today';
       $('ticketOwn').hidden = !Profile.ticket();
+      { const has = Profile.hasPass(), left = Profile.passPickLeft(), dtx = dl > 1 ? dl + ' days' : dl === 1 ? '1 day' : 'less than a day';
+        $('bpCard').classList.toggle('on', has); $('bpTitle').textContent = has ? 'Battle Pass active' : 'Get the Battle Pass';
+        $('bpList').innerHTML = ['<b>Diamond rank</b> right away, and you can\'t drop below Diamond this season',
+          '<b>More ' + COIN + '</b>: at Diamond a good match pays ×' + RANK_COIN_MULT[PASS_RANK] + ' (up to ' + MATCH_COINS_MAX + ' a match)',
+          '<b>1 free skin</b> of your choice from the Item Shop' + (has ? (left ? ' · not picked yet' : ' · claimed ✓') : '')].map(x => '<li>' + x + '</li>').join('');
+        $('bpNote').textContent = has ? 'Active for ' + Season.name() + ' · ' + dtx + ' left. Get it again next season for another free skin.' : 'Lasts until ' + Season.name() + ' ends (' + dtx + '). Get it again each season for another free skin.';
+        const b = $('bpBtn'); if (!b.dataset.confirm) { b.textContent = has ? (left ? 'Pick your free skin' : 'Free skin claimed ✓') : 'Buy for ' + PASS_PRICE.toLocaleString() + ' ' + COIN; b.disabled = has && !left; b.className = 'buy' + (has ? (left ? ' equip' : ' owned') : ''); }
+        $('bpUsd').hidden = has; $('bpPay').hidden = !PASS_PAY_URL; if (PASS_PAY_URL) $('bpPay').href = PASS_PAY_URL;
+        $('bpPayNote').textContent = PASS_PAY_URL ? 'Pay securely on the checkout page. When you finish, you come straight back here and the pass unlocks by itself. Have a Battle Pass code instead? Enter it below.' : 'Online checkout is being set up. Check back soon. If you were given a Battle Pass code, enter it below.'; }
       $('passLvl').textContent = 'Level ' + tier; $('passXp').textContent = (d.seasonXp % XP_PER_LEVEL).toLocaleString() + ' / ' + XP_PER_LEVEL.toLocaleString() + ' XP';
       $('passInfo').textContent = `Every level takes ${XP_PER_LEVEL.toLocaleString()} XP and pays ${LEVEL_COINS} ${COIN}. Bonus XP: 1st place +2,500 · each shark you defeat +2,000 · first to land +500 · your first game +5,000 · thanking the maker +1,000 once a season. Levels start over each season; anything you unlock stays yours.`;
       $('passFill').style.width = ((d.seasonXp % XP_PER_LEVEL) / XP_PER_LEVEL * 100) + '%';
@@ -8368,7 +8470,7 @@ const Lobby = {
     if (this.tab === 'career') {
       $('statGrid').innerHTML = [['Wins', d.wins], ['Matches', d.matches], ['Eliminations', d.kills], ['Top 10 finishes', d.top10], ['Chests opened', (d.chests || 0).toLocaleString()]].map(s => `<div class="stat"><b>${s[1]}</b><span>${s[0]}</span></div>`).join('');
       const ri = Profile.rankIdx();
-      $('rankList').innerHTML = RANKS.map((r, i) => `<div class="rank ${i === ri ? 'cur' : ''}"><span>${r[0]}${i === ri ? ' · ' + d.rp + ' RP' : ''}</span><i>${r[1]} RP</i></div>`).join('');
+      $('rankList').innerHTML = (Profile.hasPass() ? '<div class="hint">Battle Pass: Diamond or higher until ' + esc(Season.name()) + ' ends.</div>' : '') + RANKS.map((r, i) => `<div class="rank ${i === ri ? 'cur' : ''}"><span>${r[0]}${i === ri ? ' · ' + d.rp + ' RP' : ''}</span><i>${r[1]} RP</i></div>`).join('');
     }
   },
 };
@@ -8387,6 +8489,16 @@ function boot() {
   HUD.init();
   Input.init(); Settings.init(); Tutorial.init(); Inv.init();
   Lobby.init();
+  // back from the $1 checkout: ?bp=CODE in the address unlocks the Battle Pass, then the code is removed from the address
+  (async () => {
+    let q; try { q = new URLSearchParams(location.search); } catch (e) { return; }
+    const c = q.get('bp'); if (!c) return;
+    q.delete('bp'); try { history.replaceState(null, '', location.pathname + (q.toString() ? '?' + q : '') + location.hash); } catch (e) { /* sandboxed */ }
+    let r; try { r = await redeemCode(c); } catch (e) { r = { err: 'Could not check your Battle Pass code. Enter it in the Pass tab.' }; }
+    Lobby.tab = 'pass'; Lobby.refresh();
+    $('bpMsg').textContent = r.err ? r.err : r.pass ? (r.had ? 'You already have the Battle Pass this season.' : 'Thanks for your purchase! Battle Pass unlocked. You are now ' + RANKS[Profile.rankIdx()][0] + '. Press Pick your free skin.') : r.it.name + ' is unlocked and equipped.';
+    if (r.pass && !r.had) Sfx.chest();
+  })();
   $('resumeBtn').addEventListener('click', () => togglePause());
   $('tkBtn').addEventListener('click', () => Ticket.close());
   $('sfEquip').addEventListener('click', () => ChestSkin.close(true)); $('sfBtn').addEventListener('click', () => ChestSkin.close(false));

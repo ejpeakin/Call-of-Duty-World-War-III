@@ -280,7 +280,7 @@ const COS_CATS = [['outfit', 'Skins'], ['backpack', 'Back Bling'], ['pickaxe', '
 for (const [cat] of COS_CATS) for (const c of COS[cat]) c.cat = cat;
 const RARITY_PRICE = [0, 400, 800, 1200, 1500, 2500, 2000];
 // Skin codes: each unlocks one skin. Only a hash of each code is stored here, so the codes cannot be read from the page.
-const SKIN_CODES = {"b988f760c06661598b2306f9190cf3e2b49eede966a437b893f9cec8b7da4e94": "outfit:moss", "c9f8ccf00415edf51af71a754d7ff028524b44e8460a6b3ae71782999a660226": "outfit:comet", "6c20490c4a51a9daf0e4a506051bbef481b69064ad73f1dc55c730b4ab67669c": "outfit:siren", "0482d235e2b487cb4bd726f72f61f4bccaf818d6490108418b5bb454e75286a0": "outfit:toast", "d29e86b0e73b5f53bad9eef6e3cac179a1b954cceca8fab647db777288b95123": "outfit:nightwarden", "d415b6c930bf893cab24401df88e72dc4ef49125a8d35fdbb3d22dc5145ba25e": "outfit:tycoon", "b24e8cb0fb398c0acc64c00a5f55ae9b9277e60bb507b1d55388c2a1b5be067b": "outfit:stormborn", "a45886e085b42acdb18940bc409c2d3ba927f3cebcd7f6ad8120cca9a917c400": "outfit:headliner", "7fb23ee2720fbf9744db86140a291c9da1d319b81592f0d64691b2490c78bd26": "outfit:nova", "768389476f280ee7e04103893784363c1d8311b1a1ef76ec7c9c8b6d9125123c": "outfit:tripy", "b6f82df325a16d8401efe178553f6f17bdd69e8c5a82e7dcfb9f41f699165f30": "outfit:uzi", "e9baf6540e4d5eda6e4c4c2b68fd2fe8b2d5c7a6578b203ce98be105e8b03812": "outfit:week"};
+const SKIN_CODES = {"b988f760c06661598b2306f9190cf3e2b49eede966a437b893f9cec8b7da4e94": "outfit:moss", "c9f8ccf00415edf51af71a754d7ff028524b44e8460a6b3ae71782999a660226": "outfit:comet", "6c20490c4a51a9daf0e4a506051bbef481b69064ad73f1dc55c730b4ab67669c": "outfit:siren", "0482d235e2b487cb4bd726f72f61f4bccaf818d6490108418b5bb454e75286a0": "outfit:toast", "d29e86b0e73b5f53bad9eef6e3cac179a1b954cceca8fab647db777288b95123": "outfit:nightwarden", "d415b6c930bf893cab24401df88e72dc4ef49125a8d35fdbb3d22dc5145ba25e": "outfit:tycoon", "b24e8cb0fb398c0acc64c00a5f55ae9b9277e60bb507b1d55388c2a1b5be067b": "outfit:stormborn", "a45886e085b42acdb18940bc409c2d3ba927f3cebcd7f6ad8120cca9a917c400": "outfit:headliner", "7fb23ee2720fbf9744db86140a291c9da1d319b81592f0d64691b2490c78bd26": "outfit:nova", "768389476f280ee7e04103893784363c1d8311b1a1ef76ec7c9c8b6d9125123c": "outfit:tripy", "b6f82df325a16d8401efe178553f6f17bdd69e8c5a82e7dcfb9f41f699165f30": "outfit:uzi", "e9baf6540e4d5eda6e4c4c2b68fd2fe8b2d5c7a6578b203ce98be105e8b03812": "outfit:week", "5de5e51f9c69811cb13b7e8c957103a81ff8425ea5847cef230993146b000e77": "pass:0", "01fd9ff7793b409bfbe95f95150903b4a0e73fc135c6bf506a98476f114ede05": "pass:0", "df19e7a5c31dab234f010fc7027922a8eb6bbdcbaf87b70b6989895726e90ff4": "pass:0", "7d2050ad94f7dd67d567a46eb7db65f0152f96cdbdceac8a71f8873cb929d66a": "pass:0", "3b6ff81ac40e99bdc8c38a08b0f44df4d2a45f9b6096d2b0606ea4686feb50f0": "pass:0", "e1a9f3b014dd6b1d30e1743036d61d6dba940aa0094de086494628f6fcfbcc45": "pass:0", "84ce569700ac25b36ee7b332776596cdb9caca7a5177d1cbf1cf79163fab2507": "pass:0", "7401708a2549853480c92fe3ec96bea42cb19c9b69806a9885f24090419c28af": "pass:0", "9446e2a9a03b87adf00e931129f5ed505b46d49a6ea637f870225bb04f128eb4": "pass:0", "cd86a09392529c24e1c67ed0ea4a8935467b2763226313825e9c21f088fa1af1": "pass:0", "58700b5b115b12fa7704796b9d78c8e38ee4682535d7b1c500f36c2806f7c323": "pass:0", "9c61fbb7e701674e940c73c1e4586260c9072b7c801c7afc288c204805beba22": "pass:0", "6f5e8c86403b1d934104e55d7ecc780c2a05c48b404213e04d5ed39b1aba30d9": "pass:0", "472b1547a6040c2d5011fa8b90072b58375d3f573a22d94b9b8babeb311ac045": "pass:0", "5fc08167b46a5ef7d9191ad8602d9b7adb5f23bcfd679d0f2bcab863bb3418cd": "pass:0", "8246a04db0cc4e1b9f95b20e693d6b01a164dc3a23e3055f635e6577086692f4": "pass:1", "a63e6313b53470dbd2353e06da958a7aa2723713af2efaacf6b402e9e643a3b9": "pass:1", "7bb3de2e7e37e8d03d817c83ff5e5cd465fa87e2746091879025e2ea87f51c4a": "pass:1", "064956c1409de96b0d21d06ba6e1bf5ae1ab4b3fb81e4e4b3c1a2bdf69282a76": "pass:1", "987a65fb8fa970e3dede91ff94d4a7517cba48eaee8328fd893ffe7837c768d5": "pass:1", "447595316ee11be75e8ab8a4a92800a29acdc6717e1d4ba39b857065afe518c3": "pass:1", "454d86d75c3754db241ae9290acea0bada7b94e92874b503d05877bb0d30e7f5": "pass:1", "79000b2735ac9036181c55059c845bd48c36254a52e222fbd6461385873ec226": "pass:1", "b8d66e2ac184b8c7637db26e5ecdcd1e73e6fe5e19bf7dbc1dea05ae6d29014b": "pass:1", "555f8eb60169bf201cfd1e11415ce6a25d1a4853642a84d50b552d2e6c80bad0": "pass:1", "75606a5190817f81491a9b7edb4262417ac615c538297eef5a7d23f720022306": "pass:1", "6e10a112491bf2d161406709f52499b8021d9c396660981cb9b96a554e46148e": "pass:1", "dc9dd8eb38eb4b3f62849be05d1597f7166c640c1a1a162129ad690e50e6a77f": "pass:1", "ba215fb6370cfd3421db7e7d64af4ab46f2ccd19e68df582ee22358bb2289df4": "pass:1", "2c96ef14d8e97b0bef3c2a702073374bd25f93ed9aec5417b162d6aa7f360558": "pass:1", "c907d9f07f41c71149f205303f5622819a6f43976b44d5dd421273e606371b68": "pass:0", "291912e12ef30a4b3401e7cb8887c1ea700d09f630132fff575fd2aeb0ee6c4b": "pass:1", "9b0da9c9785a3074db00a30e5f234bce17a5a848c9ae513467461d6bce7eaeff": "pass:2", "7b5073b681f6200f743b65ec53942f4504fe5c9c6ffe84ebe79348d9b1eae9e9": "pass:3", "cb55869d673af61bf155e943966c9b3695fc53b7116e0eda4024bc599ad00ef6": "pass:4", "04fac98027fa41f081eb18e0d30ff1f05d618c75341622b07f5b2add48272005": "pass:5"};
 async function redeemCode(raw) {
   const code = String(raw || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
   if (code.length < 8) return { err: 'Type the whole code, like ABCD-EFGH-JKLM.' };
@@ -288,6 +288,13 @@ async function redeemCode(raw) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('fortday:' + code));
   const hex = [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join(''), hit = SKIN_CODES[hex];
   if (!hit) return { err: 'That code does not work. Check the letters and try again.' };
+  if (hit.startsWith('pass:')) {   // a Battle Pass code (the $1 option): only for the season it was made for
+    const sid = +hit.slice(5);
+    if (sid < Season.id()) return { err: 'That Battle Pass code was for an earlier season.' };
+    if (sid > Season.id()) return { err: 'That Battle Pass code is for ' + Season.name(sid) + '. Use it when that season starts.' };
+    if (Profile.hasPass()) return { pass: true, had: true };
+    Profile.d.passSeason = sid; Profile.d.rp = Math.max(Profile.d.rp, Profile.passFloor()); Profile.save(); return { pass: true };
+  }
   const [cat, id] = hit.split(':'), it = cosById(cat, id); if (!it) return { err: 'That code does not work.' };
   if (it.unlock === 'chest' && !Profile.owns(it)) return { err: it.name + ' can only be found in chests now (1 in 1,000).' };
   const had = Profile.owns(it); Profile.d.owned[cat + ':' + id] = true; Profile.d.eq[cat] = id; Profile.save();
@@ -295,7 +302,10 @@ async function redeemCode(raw) {
 }
 function itemPrice(c) { return c.price || RARITY_PRICE[c.r] || 0; }
 const COIN = 'FortBux';
-const PASS_TIERS = 30, XP_PER_TIER = 5000, XP_PER_LEVEL = 5000, LEVEL_COINS = 50, WIN_COINS = 50, TICKET_CHANCE = 1 / 10000, CHEST_SKIN = 'nightwarden', CHEST_SKIN_CHANCE = 1 / 1000;
+const PASS_TIERS = 30, XP_PER_TIER = 5000, XP_PER_LEVEL = 5000, LEVEL_COINS = 50, MATCH_COINS_MAX = 100, PASS_PRICE = 5000, PASS_USD = '$1',
+  // the $1 checkout page (e.g. a Stripe Payment Link). After paying it should send the buyer back to
+  // https://ejpeakin.github.io/FortDay/?bp=<this season's checkout code>, which unlocks the pass automatically.
+  PASS_PAY_URL = '', PASS_RANK = 4 /* Diamond */, TICKET_CHANCE = 1 / 10000, CHEST_SKIN = 'nightwarden', CHEST_SKIN_CHANCE = 1 / 1000;
 // ---------------------------------------------------------------- seasons: 30 days each, the first is Music Festival 2026
 const SEASON_EPOCH = Date.UTC(2026, 10, 16), SEASON_DAYS = 30, SEASON_NAMES = ['Music Festival 2026'];
 const Season = {
@@ -304,6 +314,16 @@ const Season = {
   endsAt(id = this.id()) { return SEASON_EPOCH + (id + 1) * SEASON_DAYS * 864e5; },
   daysLeft() { return Math.max(0, Math.ceil((this.endsAt() - Date.now()) / 864e5)); },
 };
+// FortBux for a good Battle Royale: better finishes and eliminations pay more, and the higher your rank the
+// bigger the multiplier (Bronze x1 ... Diamond x2 ... Legend x2.5). Never more than MATCH_COINS_MAX in one match.
+const RANK_COIN_MULT = [1, 1.25, 1.5, 1.75, 2, 2.25, 2.5];
+function matchCoins(place, teams, kills, rankI) {
+  if (!place) return { coins: 0, base: 0, mult: 1, capped: false };
+  const f = place / Math.max(1, teams);
+  const base = (place === 1 ? 40 : f <= 0.05 ? 20 : f <= 0.1 ? 12 : f <= 0.25 ? 6 : 0) + Math.min(10, kills || 0) * 2;
+  const mult = RANK_COIN_MULT[rankI] || 1, raw = Math.round(base * mult);
+  return { coins: Math.min(MATCH_COINS_MAX, raw), base, mult, capped: raw > MATCH_COINS_MAX };
+}
 // ranked points for one Battle Royale: top finishes gain, the bottom half loses more the worse you place,
 // and higher ranks lose more for a bad game. Each elimination is +10.
 function rankPoints(place, teams, kills, rankI) {
@@ -326,7 +346,7 @@ const Profile = {
     xp: 0, wins: 0, matches: 0, kills: 0, top10: 0, chests: 0, rp: 0, umbrella: false, coins: 0, owned: {},
     eq: { outfit: 'rae', body: 'woman', backpack: 'ruck', pickaxe: 'pick', glider: 'sail', wrap: 'none', emote: 'groove', car: 'street' },
     sens: 1, shadows: !IS_TOUCH, mode: 'solo', build: true, theme: 'greenvale', ranked: false, novaGiven: true,
-    season: -1, seasonXp: 0, firstBonus: false, thankSeason: -1, ticketSeason: -1, skinsPaid: true, keys: {}, gfxV: 2,
+    season: -1, seasonXp: 0, firstBonus: false, thankSeason: -1, ticketSeason: -1, passSeason: -1, passPick: -1, skinsPaid: true, keys: {}, gfxV: 2,
   },
   load() {
     try {
@@ -375,7 +395,22 @@ const Profile = {
     if (u.startsWith('tier:')) return this.tier() >= +u.slice(5);
     return true;
   },
-  rankIdx() { let i = 0; for (let k = 0; k < RANKS.length; k++) if (this.d.rp >= RANKS[k][1]) i = k; return i; },
+  rankIdx() { let i = 0; for (let k = 0; k < RANKS.length; k++) if (this.d.rp >= RANKS[k][1]) i = k; return this.hasPass() ? Math.max(i, PASS_RANK) : i; },
+  // Battle Pass: bought with FortBux for one season. Diamond rank right away (and never below it that season),
+  // so good matches pay more FortBux, plus one free Shop skin of your choice each season you have it.
+  hasPass() { return this.d.passSeason === Season.id(); },
+  passPickLeft() { return this.hasPass() && this.d.passPick !== Season.id(); },
+  passFloor() { return this.hasPass() ? RANKS[PASS_RANK][1] : 0; },
+  buyPass() {
+    const d = this.d; if (this.hasPass()) return { had: true };
+    if (d.coins < PASS_PRICE) return { err: 'You need ' + (PASS_PRICE - d.coins).toLocaleString() + ' more ' + COIN + ' for the Battle Pass.' };
+    d.coins -= PASS_PRICE; d.passSeason = Season.id(); d.rp = Math.max(d.rp, this.passFloor()); this.save(); return { ok: true };
+  },
+  canClaim(it) { return !!it && this.passPickLeft() && it.cat === 'outfit' && it.unlock !== 'chest' && !this.owns(it) && !!it.unlock; },
+  claimPassSkin(it) {
+    if (!this.canClaim(it)) return false;
+    const d = this.d; d.owned['outfit:' + it.id] = true; d.eq.outfit = it.id; d.passPick = Season.id(); this.save(); return true;
+  },
 };
 Profile.load(); Profile.syncSeason();
 
