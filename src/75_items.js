@@ -129,6 +129,7 @@ function openChest(c, a) {
   if (Net.guest && !Net.applying) {   // the host opens it, so everyone sees the same loot
     if (c.asked > Match.time) return; c.asked = Match.time + 1.5; a.chests++; Net.emit({ k: 'chest', x: c.x, z: c.z });
     if (a === player && !Profile.ticket() && (Math.random() < TICKET_CHANCE || window.__forceTicket)) Ticket.found(c);
+    if (a === player) ChestSkin.roll(c);
     return;
   }
   c.opened = true; c.claim = null; if (!Net.applying) a.chests++;
@@ -145,6 +146,8 @@ function openChest(c, a) {
   if (a === player) HUD.dirty = true;
   // Music Concert Ticket: one per season, a tiny chance in any chest you open
   if (a === player && !Profile.ticket() && (Math.random() < TICKET_CHANCE || window.__forceTicket)) Ticket.found(c);
+  // Lil Play Carti: a 1 in 1,000 chest find, once per player
+  if (a === player) ChestSkin.roll(c);
 }
 function playerTakePickup(p) {
   const it = p.item, a = player;
@@ -444,6 +447,32 @@ const Vehicles = {
         }
       }
     }
+  },
+};
+
+// ---------------------------------------------------------------- the 1 in 1,000 chest skin
+const ChestSkin = {
+  roll(c) {
+    if (Match.mode === 'tutorial' || Profile.d.owned['outfit:' + CHEST_SKIN]) return;   // once per player
+    if (!(Math.random() < CHEST_SKIN_CHANCE || window.__forceSkin)) return;
+    window.__forceSkin = false;
+    Profile.d.owned['outfit:' + CHEST_SKIN] = true; Profile.d.chestSkinAt = Date.now(); Profile.save();
+    for (let i = 0; i < 4; i++) setTimeout(() => FX.burst(c.x, c.y + 1 + i * 0.4, c.z, i % 2 ? 0xd0101e : 0x111111, 26, 6, 1.1, 0.16, -2), i * 120);
+    HUD.banner('Something rare is inside...', '', 1.2);
+    setTimeout(() => this.show(), 800);
+  },
+  show() {
+    const it = cosById('outfit', CHEST_SKIN); $('sfName').textContent = it.name;
+    if (!$('ticket').hidden) { setTimeout(() => this.show(), 600); return; }   // never on top of the ticket reveal
+    if (Match.state === 'play') { Match.paused = true; if (document.pointerLockElement) document.exitPointerLock(); }
+    $('skinFind').hidden = false; Sfx.init();
+    [392, 466, 587, 698, 587, 784, 932].forEach((f, i) => Sfx.tone(f, i === 6 ? 0.8 : 0.2, 'sawtooth', 0.09, 0, 0.25 + i * 0.13));
+    [196, 233, 294].forEach(f => Sfx.tone(f, 1.3, 'sine', 0.08, 0, 1.1));
+  },
+  close(equip) {
+    if (equip) { Profile.d.eq.outfit = CHEST_SKIN; Profile.save(); }
+    $('skinFind').hidden = true; if (Match.state === 'play') Match.paused = false; HUD.dirty = true;
+    if (equip && Match.state === 'play') HUD.banner('Equipped', 'You will wear it from your next match', 2.2);
   },
 };
 

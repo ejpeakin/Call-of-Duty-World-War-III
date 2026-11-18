@@ -1,15 +1,15 @@
 // =====================================================================
 //  Match: storm, flying bus, live event, modes, endings, rewards
 // =====================================================================
-// tuned for the 530 m island: one more early circle, longer moves while the storm is large
+// tuned for the 530 m island: one more early circle, longer moves while the storm is large (moves ~30% slower)
 const PHASES = [
-  { wait: 70, shrink: 60, r: 400, dmg: 1 },
-  { wait: 60, shrink: 52, r: 250, dmg: 1 },
-  { wait: 52, shrink: 46, r: 150, dmg: 2 },
-  { wait: 45, shrink: 40, r: 85, dmg: 4 },
-  { wait: 40, shrink: 33, r: 45, dmg: 7 },
-  { wait: 32, shrink: 27, r: 20, dmg: 10 },
-  { wait: 24, shrink: 30, r: 0, dmg: 15 },
+  { wait: 70, shrink: 78, r: 400, dmg: 1 },
+  { wait: 60, shrink: 68, r: 250, dmg: 1 },
+  { wait: 52, shrink: 60, r: 150, dmg: 2 },
+  { wait: 45, shrink: 52, r: 85, dmg: 4 },
+  { wait: 40, shrink: 43, r: 45, dmg: 7 },
+  { wait: 32, shrink: 35, r: 20, dmg: 10 },
+  { wait: 24, shrink: 39, r: 0, dmg: 15 },
 ];
 const STORM_START = 900;
 const Storm = {
@@ -362,11 +362,11 @@ const Match = {
     if (r.win) d.wins++;
     if (place && place <= 10) d.top10++;
     let rpTxt = '';
-    if (this.ranked && place) { const rp = (place === 1 ? 120 : place <= 5 ? 60 : place <= 10 ? 35 : place <= 25 ? 10 : -10) + p.kills * 10; d.rp = Math.max(0, d.rp + rp); rpTxt = ' · ' + (rp >= 0 ? '+' : '') + rp + ' rank points (' + RANKS[Profile.rankIdx()][0] + ')'; }
+    if (this.ranked && place) { const rp = rankPoints(place, this.teamCount(), p.kills, Profile.rankIdx()); d.rp = Math.max(0, d.rp + rp); rpTxt = ' · ' + (rp >= 0 ? '+' : '') + rp + ' rank points (' + RANKS[Profile.rankIdx()][0] + ')'; }
     let newUmb = false;
     if (r.win && this.mode !== 'rumble' && !d.umbrella) { d.umbrella = true; newUmb = true; }
     const tier1 = lv.l1; const unl = lv.got.slice();
-    const winCoins = won ? 100 : 0, coins = winCoins + lv.coins;
+    const winCoins = won && place === 1 ? WIN_COINS : 0, coins = winCoins + lv.coins;
     d.coins += winCoins;
     Profile.save();
     if (newUmb) unl.push(cosById('glider', 'umbrella'));

@@ -200,6 +200,16 @@ button:focus-visible{outline:2px solid var(--sun-2);outline-offset:2px}
 .tk-shine{position:absolute;inset:0;background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.75) 50%,transparent 65%);transform:translateX(-120%);animation:tkShine 2.6s ease-in-out 1.1s infinite}
 .tk-desc{margin:0;max-width:520px;font-size:16px;line-height:1.45;font-weight:600;color:#f3e8ff;animation:tkPop .6s .9s both}
 #tkBtn{font-family:var(--f-display);font-weight:900;font-style:italic;text-transform:uppercase;font-size:24px;letter-spacing:.04em;padding:12px 34px;border:0;border-radius:14px;color:#2a1200;background:linear-gradient(180deg,#ffe36a,#ffb02e);box-shadow:0 6px 0 #b86a10,0 12px 30px rgba(255,170,40,.4);animation:tkPop .6s 1.1s both}
+#skinFind{position:fixed;inset:0;z-index:61;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at 50% 45%,#5a0a12 0%,#1a0306 60%,#060102 100%);animation:tkIn .5s ease-out}
+#skinFind .tk-rays{background:repeating-conic-gradient(from 0deg,rgba(255,40,50,.16) 0 8deg,transparent 8deg 20deg)}
+#skinFind .tk-kicker{color:#ff6a6a}
+.sf-card{color:#fff;background:linear-gradient(115deg,#1a0204 0%,#5e0710 35%,#b00e1c 70%,#ff3b30 100%);box-shadow:0 0 0 3px rgba(255,255,255,.35) inset,0 30px 80px rgba(200,10,30,.5),0 0 120px rgba(255,40,50,.3)}
+.sf-card .tk-stub{border-right-color:rgba(255,255,255,.35);background:rgba(0,0,0,.25);align-items:center}
+.sf-card .tk-stub small{font-size:13px;opacity:.8}
+.sf-btns{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;animation:tkPop .6s 1.1s both}
+.sf-btns button{font-family:var(--f-display);font-weight:900;font-style:italic;text-transform:uppercase;font-size:22px;letter-spacing:.04em;padding:12px 30px;border:0;border-radius:14px;cursor:pointer}
+#sfEquip{color:#fff;background:linear-gradient(180deg,#ff4a3a,#b00e1c);box-shadow:0 6px 0 #5e0710,0 12px 30px rgba(255,40,50,.4)}
+#sfBtn{color:#fff;background:rgba(255,255,255,.14);box-shadow:0 0 0 2px rgba(255,255,255,.4) inset}
 @keyframes tkIn{from{opacity:0}to{opacity:1}}
 @keyframes tkSpin{to{transform:translate(-50%,-50%) rotate(360deg)}}
 @keyframes tkCard{from{opacity:0;transform:scale(.2) rotate(-18deg)}to{opacity:1;transform:scale(1) rotate(0)}}
@@ -253,6 +263,16 @@ button:focus-visible{outline:2px solid var(--sun-2);outline-offset:2px}
 #crosshair i:nth-child(3){width:8px;height:2px;top:-1px;left:calc(-8px - var(--spr,6px))}
 #crosshair i:nth-child(4){width:8px;height:2px;top:-1px;left:var(--spr,6px)}
 #crosshair.pick i{opacity:.0}
+#crosshair .ring{display:none;position:absolute;box-sizing:border-box;width:calc(var(--spr,20px)*2);height:calc(var(--spr,20px)*2);left:calc(var(--spr,20px)*-1);top:calc(var(--spr,20px)*-1);border:2px solid rgba(255,255,255,.9);border-radius:50%;box-shadow:0 0 2px #000,inset 0 0 2px #000}
+#crosshair.sg .ring{display:block}
+#crosshair.sg i{height:6px;width:2px}
+#crosshair.sg i:nth-child(1){top:calc(-3px - var(--spr,20px))}
+#crosshair.sg i:nth-child(2){top:calc(var(--spr,20px) - 3px)}
+#crosshair.sg i:nth-child(3),#crosshair.sg i:nth-child(4){width:6px;height:2px}
+#crosshair.sg i:nth-child(3){left:calc(-3px - var(--spr,20px))}
+#crosshair.sg i:nth-child(4){left:calc(var(--spr,20px) - 3px)}
+#crosshair.sg::before{content:"";position:absolute;width:4px;height:4px;border-radius:50%;left:-2px;top:-2px;background:#fff;box-shadow:0 0 2px #000}
+#crosshair.sg.ads .ring{border-color:#9fe3ff}
 #stormTint{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .7s;background:radial-gradient(ellipse at 50% 55%,rgba(40,10,85,.28) 0%,rgba(30,6,66,.55) 55%,rgba(14,2,34,.85) 100%)}
 #stormTint.on{opacity:1}
 #reloadArc{position:absolute;left:50%;top:50%;width:110px;height:110px;transform:translate(-50%,-50%);pointer-events:none;filter:drop-shadow(0 0 2px rgba(0,0,0,.7))}
@@ -600,7 +620,7 @@ body.pad{cursor:none}
         <p class="sd-msg" id="shopMsg" role="status"></p>
       </article>
       <div class="shop-cards" id="shopGrid"></div>
-      <p class="hint">Every match pays FortBux: 40 for playing, 15 per elimination, plus 200 for a win, 60 for a top-10 finish or 25 for top 25. Each new Pass tier adds 100 more. Everything in the shop is cosmetic only.</p>
+      <p class="hint">FortBux are hard to earn: 50 for every new level and 50 for winning a Battle Royale (1st place). Nothing else pays FortBux. Everything in the shop is cosmetic only.</p>
     </section>
 
     <section class="panel" id="tab-career" hidden>
@@ -638,7 +658,7 @@ body.pad{cursor:none}
   </div>
   <div id="banner"><div class="bt" id="bannerT"></div><div class="bs" id="bannerS"></div></div>
   <div id="stormTint"></div>
-  <div id="crosshair"><i></i><i></i><i></i><i></i></div>
+  <div id="crosshair"><i></i><i></i><i></i><i></i><b class="ring"></b></div>
   <div id="reloadArc" hidden><svg viewBox="0 0 100 100" aria-hidden="true"><path class="tr" d="M 68 81.2 A 36 36 0 0 0 68 18.8" pathLength="100"/><path class="fg" d="M 68 81.2 A 36 36 0 0 0 68 18.8" pathLength="100"/></svg></div>
   <div id="hitmarker"></div>
   <div id="dmgDir"></div>
@@ -726,6 +746,19 @@ body.pad{cursor:none}
     <div class="btn-row"><button class="btn pri" id="rLobbyBtn">Continue</button></div>
   </div>
 </div>
+<div id="skinFind" hidden>
+  <div class="tk-rays"></div>
+  <div class="tk-wrap">
+    <p class="tk-kicker">1 in 1,000 chest find</p>
+    <div class="tk-card sf-card">
+      <div class="tk-stub"><b>1</b><small>in</small><b>1000</b></div>
+      <div class="tk-main"><span class="tk-season">Mythic outfit</span><h2 id="sfName">Lil Play Carti</h2><span class="tk-no">Yours forever · Only one per player</span></div>
+      <i class="tk-shine"></i>
+    </div>
+    <p class="tk-desc">You found the rarest skin on the island. It is in your Locker now.</p>
+    <div class="sf-btns"><button id="sfEquip">Equip it</button><button id="sfBtn">Keep playing</button></div>
+  </div>
+</div>
 <div id="ticket" hidden>
   <div class="tk-rays"></div>
   <div class="tk-confetti" id="tkConf"></div>
@@ -745,7 +778,7 @@ body.pad{cursor:none}
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js"></script>
 <script async src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>
-const BUILD_ID = '1118-1528';
+const BUILD_ID = '1118-1544';
 'use strict';
 // =====================================================================
 //  FORTDAY — core utilities, data tables, profile, audio
@@ -813,13 +846,13 @@ const WEAPONS = {
   pistol: { name: 'Sidearm', short: 'PISTOL', type: 'pistol', dmg: 24, rate: 6.5, mag: 16, reload: 1.3, spread: 0.016, ads: 0.006, range: 140, ammo: 'light', auto: false, struct: 1, head: 1.75, minR: 0 },
   smg: { name: 'Buzzsaw SMG', short: 'SMG', type: 'smg', dmg: 16, rate: 11, mag: 30, reload: 2.0, spread: 0.038, ads: 0.024, range: 100, ammo: 'light', auto: true, struct: 1, head: 1.75, minR: 0 },
   ar: { name: 'Trailblazer AR', short: 'RIFLE', type: 'ar', dmg: 30, rate: 5.5, mag: 30, reload: 2.2, spread: 0.026, ads: 0.007, range: 220, ammo: 'medium', auto: true, struct: 1, head: 1.75, minR: 0 },
-  shotgun: { name: 'Brawler Pump', short: 'PUMP', type: 'shotgun', dmg: 9.5, pellets: 10, rate: 1.15, mag: 5, reload: 4.2, spread: 0.075, ads: 0.06, range: 42, ammo: 'shells', auto: false, struct: 0.8, head: 1.75, minR: 0 },
+  shotgun: { name: 'Brawler Pump', short: 'PUMP', type: 'shotgun', dmg: 9.5, pellets: 10, rate: 1.15, mag: 5, reload: 4.2, spread: 0.075, ads: 0.042, range: 42, ammo: 'shells', auto: false, struct: 0.8, head: 1.75, minR: 0 },
   sniper: { name: 'Longshot Bolt', short: 'SNIPER', type: 'sniper', dmg: 105, rate: 0.6, mag: 1, reload: 2.4, spread: 0.06, ads: 0.0, range: 450, ammo: 'heavy', auto: false, struct: 1.2, head: 2.5, scope: true, minR: 1 },
   rocket: { name: 'Thunderclap RPG', short: 'RPG', type: 'rocket', dmg: 95, rate: 0.8, mag: 1, reload: 3.0, spread: 0.012, ads: 0.004, range: 300, ammo: 'rockets', auto: false, proj: 70, splash: 5.5, struct: 5, head: 1, minR: 2 },
   stormcaller: { name: "Warden's Stormcaller", short: 'MYTHIC', type: 'ar', dmg: 38, rate: 7, mag: 40, reload: 1.8, spread: 0.018, ads: 0.004, range: 240, ammo: 'medium', auto: true, struct: 1.2, head: 1.8, mythic: true },
-  sledge: { name: "Foreman's Sledge", short: 'MYTHIC', type: 'shotgun', dmg: 11, pellets: 10, rate: 1.7, mag: 8, reload: 3.2, spread: 0.065, ads: 0.05, range: 48, ammo: 'shells', auto: false, struct: 1.5, head: 1.75, mythic: true },
+  sledge: { name: "Foreman's Sledge", short: 'MYTHIC', type: 'shotgun', dmg: 11, pellets: 10, rate: 1.7, mag: 8, reload: 3.2, spread: 0.065, ads: 0.036, range: 48, ammo: 'shells', auto: false, struct: 1.5, head: 1.75, mythic: true },
   frostbite: { name: 'Frostbite Rifle', short: 'EXOTIC', type: 'ar', dmg: 44, rate: 2.6, mag: 10, reload: 2.2, spread: 0.02, ads: 0.002, range: 300, ammo: 'heavy', auto: false, struct: 1, head: 2, slow: 2.5, exotic: true },
-  kicker: { name: 'Kinetic Kicker', short: 'EXOTIC', type: 'shotgun', dmg: 8, pellets: 10, rate: 1.3, mag: 6, reload: 3.4, spread: 0.07, ads: 0.06, range: 38, ammo: 'shells', auto: false, struct: 1, head: 1.6, knock: 17, exotic: true },
+  kicker: { name: 'Kinetic Kicker', short: 'EXOTIC', type: 'shotgun', dmg: 8, pellets: 10, rate: 1.3, mag: 6, reload: 3.4, spread: 0.07, ads: 0.04, range: 38, ammo: 'shells', auto: false, struct: 1, head: 1.6, knock: 17, exotic: true },
 };
 const GUN_SIZE = { pistol: [0.1, 0.18, 0.42], smg: [0.12, 0.2, 0.62], ar: [0.12, 0.2, 0.95], shotgun: [0.14, 0.18, 0.92], sniper: [0.11, 0.18, 1.35], rocket: [0.26, 0.26, 1.25] };
 const WEAPON_POOL = [{ w: 24, id: 'ar' }, { w: 20, id: 'shotgun' }, { w: 18, id: 'smg' }, { w: 16, id: 'pistol' }, { w: 9, id: 'sniper' }, { w: 5, id: 'rocket' }];
@@ -978,6 +1011,9 @@ const COS = {
       jacket: 0xffd84a, leather: true, studBelt: true, unlock: 'shop', price: 1500, music: true },
     { id: 'week', build: 'slim', name: 'The Week', r: 4, shirt: 0x17171c, pants: 0x17171c, skin: 0x6e4630, sleeve: 0x17171c, hair: 0x0e0b0a, shoes: 0x0c0c0e,
       hat: 'afro', afroSize: 0.8, lineup: true, hatC: 0x0e0b0a, suit: true, tieC: 0xb3121e, mustache: true, shades: 0x0a0a0c, personal: true, unlock: 'shop', price: 1500 },
+    // chest find only: a 1 in 1,000 roll on any chest you open, once per player (never sold in the Shop)
+    { id: 'lilcarti', build: 'slim', name: 'Lil Play Carti', r: 5, shirt: 0xa50f1c, jacket: 0x0c0c0e, pants: 0x0f0f12, skin: 0x5e3a26, sleeve: 0x0c0c0e, hair: 0x0b0b0d, shoes: 0x0b0b0d, boots: true,
+      hat: 'dreads', hatC: 0x0b0b0d, tip: 0xd0101e, hairSeed: 1717, leather: true, studBelt: true, cargo: true, shades: 0x0a0a0c, faceTats: true, personal: true, unlock: 'chest' },
   ],
   backpack: [
     { id: 'none', name: 'No Backpack', r: 0 },
@@ -1041,7 +1077,7 @@ async function redeemCode(raw) {
 }
 function itemPrice(c) { return c.price || RARITY_PRICE[c.r] || 0; }
 const COIN = 'FortBux';
-const PASS_TIERS = 30, XP_PER_TIER = 5000, XP_PER_LEVEL = 5000, LEVEL_COINS = 100, TICKET_CHANCE = 1 / 10000;
+const PASS_TIERS = 30, XP_PER_TIER = 5000, XP_PER_LEVEL = 5000, LEVEL_COINS = 50, WIN_COINS = 50, TICKET_CHANCE = 1 / 10000, CHEST_SKIN = 'lilcarti', CHEST_SKIN_CHANCE = 1 / 1000;
 // ---------------------------------------------------------------- seasons: 30 days each, the first is Music Festival 2026
 const SEASON_EPOCH = Date.UTC(2026, 10, 16), SEASON_DAYS = 30, SEASON_NAMES = ['Music Festival 2026'];
 const Season = {
@@ -1050,6 +1086,14 @@ const Season = {
   endsAt(id = this.id()) { return SEASON_EPOCH + (id + 1) * SEASON_DAYS * 864e5; },
   daysLeft() { return Math.max(0, Math.ceil((this.endsAt() - Date.now()) / 864e5)); },
 };
+// ranked points for one Battle Royale: top finishes gain, the bottom half loses more the worse you place,
+// and higher ranks lose more for a bad game. Each elimination is +10.
+function rankPoints(place, teams, kills, rankI) {
+  const f = place / Math.max(1, teams);
+  let rp = place === 1 ? 120 : f <= 0.05 ? 60 : f <= 0.1 ? 35 : f <= 0.25 ? 10 : f <= 0.5 ? -30 : f <= 0.75 ? -50 : -75;
+  if (rp < 0) rp = Math.round(rp * (1 + (rankI || 0) * 0.15));
+  return rp + (kills || 0) * 10;
+}
 const RANKS = [['Bronze', 0], ['Silver', 300], ['Gold', 700], ['Platinum', 1200], ['Diamond', 1800], ['Apex', 2600], ['Legend', 3500]];
 function cosById(cat, id) { return COS[cat].find(c => c.id === id) || COS[cat][0]; }
 function passRewards() {
@@ -1102,6 +1146,7 @@ const Profile = {
   unlocked(item) {
     const u = item.unlock; if (!u) return true;
     if (this.owns(item)) return true;
+    if (u === 'chest') return false;   // only by finding it in a chest
     if (this.ticket()) return true;   // Music Concert Ticket: the whole shop for the rest of the season
     if (u === 'win') return !!this.d.umbrella;
     if (u === 'shop') return !!this.d.owned[item.id];
@@ -4362,7 +4407,7 @@ function actorTick(a, dt) {
 // Build tiles in Fortnite-style proportions: 5.12 m wide and 3.84 m tall (wider than tall), ramps rise one storey per tile
 const T = 5.12, TH = 3.84, CONE_H = TH * 0.5;
 const Build = {
-  active: false, piece: 'wall', pieces: [], map: new Map(), ghosts: null, tgt: null, lastKey: null, placeCD: 0,
+  active: false, piece: 'wall', pieces: [], map: new Map(), ghosts: null, tgt: null, lastKey: null, lastCol: null, placeCD: 0,
   init() {
     this.ghosts = { wall: new THREE.Mesh(GEO.wall, MAT.ghost), floor: new THREE.Mesh(GEO.floor, MAT.ghost), rampX: new THREE.Mesh(GEO.rampX, MAT.ghost), rampZ: new THREE.Mesh(GEO.rampZ, MAT.ghost), cone: new THREE.Mesh(GEO.cone, MAT.ghost) };
     for (const k in this.ghosts) { this.ghosts[k].visible = false; this.ghosts[k].renderOrder = 6; scene.add(this.ghosts[k]); }
@@ -4447,8 +4492,11 @@ const Build = {
     const g = this.ghosts[this.geoKey(t)]; this.pose(t, g);
     const ok = !this.map.has(t.key) && MAT_ORDER.some(m => player.mats[m] >= 10);
     g.material = ok ? MAT.ghost : MAT.ghostBad; g.visible = true;
-    if (player.input.fire && this.placeCD <= 0 && ok && t.key !== this.lastKey) { if (this.place(player, t)) { this.lastKey = t.key; this.placeCD = 0.07; } }
-    if (!player.input.fire) this.lastKey = null;
+    // one click = one piece. While fire stays held you can keep building as you move or turn, but never a second
+    // piece of the same kind straight above / below the last one (a fresh ramp lifts you, which used to stack a twin)
+    const col = t.type + ':' + t.gx + ':' + t.gz + ':' + (t.dir || 0);
+    if (player.input.fire && this.placeCD <= 0 && ok && t.key !== this.lastKey && col !== this.lastCol) { if (this.place(player, t)) { this.lastKey = t.key; this.lastCol = col; this.placeCD = 0.25; } }
+    if (!player.input.fire) { this.lastKey = null; this.lastCol = null; this.placeCD = Math.min(this.placeCD, 0.05); }
   },
 };
 
@@ -4583,6 +4631,7 @@ function openChest(c, a) {
   if (Net.guest && !Net.applying) {   // the host opens it, so everyone sees the same loot
     if (c.asked > Match.time) return; c.asked = Match.time + 1.5; a.chests++; Net.emit({ k: 'chest', x: c.x, z: c.z });
     if (a === player && !Profile.ticket() && (Math.random() < TICKET_CHANCE || window.__forceTicket)) Ticket.found(c);
+    if (a === player) ChestSkin.roll(c);
     return;
   }
   c.opened = true; c.claim = null; if (!Net.applying) a.chests++;
@@ -4599,6 +4648,8 @@ function openChest(c, a) {
   if (a === player) HUD.dirty = true;
   // Music Concert Ticket: one per season, a tiny chance in any chest you open
   if (a === player && !Profile.ticket() && (Math.random() < TICKET_CHANCE || window.__forceTicket)) Ticket.found(c);
+  // Lil Play Carti: a 1 in 1,000 chest find, once per player
+  if (a === player) ChestSkin.roll(c);
 }
 function playerTakePickup(p) {
   const it = p.item, a = player;
@@ -4898,6 +4949,32 @@ const Vehicles = {
         }
       }
     }
+  },
+};
+
+// ---------------------------------------------------------------- the 1 in 1,000 chest skin
+const ChestSkin = {
+  roll(c) {
+    if (Match.mode === 'tutorial' || Profile.d.owned['outfit:' + CHEST_SKIN]) return;   // once per player
+    if (!(Math.random() < CHEST_SKIN_CHANCE || window.__forceSkin)) return;
+    window.__forceSkin = false;
+    Profile.d.owned['outfit:' + CHEST_SKIN] = true; Profile.d.chestSkinAt = Date.now(); Profile.save();
+    for (let i = 0; i < 4; i++) setTimeout(() => FX.burst(c.x, c.y + 1 + i * 0.4, c.z, i % 2 ? 0xd0101e : 0x111111, 26, 6, 1.1, 0.16, -2), i * 120);
+    HUD.banner('Something rare is inside...', '', 1.2);
+    setTimeout(() => this.show(), 800);
+  },
+  show() {
+    const it = cosById('outfit', CHEST_SKIN); $('sfName').textContent = it.name;
+    if (!$('ticket').hidden) { setTimeout(() => this.show(), 600); return; }   // never on top of the ticket reveal
+    if (Match.state === 'play') { Match.paused = true; if (document.pointerLockElement) document.exitPointerLock(); }
+    $('skinFind').hidden = false; Sfx.init();
+    [392, 466, 587, 698, 587, 784, 932].forEach((f, i) => Sfx.tone(f, i === 6 ? 0.8 : 0.2, 'sawtooth', 0.09, 0, 0.25 + i * 0.13));
+    [196, 233, 294].forEach(f => Sfx.tone(f, 1.3, 'sine', 0.08, 0, 1.1));
+  },
+  close(equip) {
+    if (equip) { Profile.d.eq.outfit = CHEST_SKIN; Profile.save(); }
+    $('skinFind').hidden = true; if (Match.state === 'play') Match.paused = false; HUD.dirty = true;
+    if (equip && Match.state === 'play') HUD.banner('Equipped', 'You will wear it from your next match', 2.2);
   },
 };
 
@@ -6055,15 +6132,15 @@ function botBuildCover(a, t) {
 // =====================================================================
 //  Match: storm, flying bus, live event, modes, endings, rewards
 // =====================================================================
-// tuned for the 530 m island: one more early circle, longer moves while the storm is large
+// tuned for the 530 m island: one more early circle, longer moves while the storm is large (moves ~30% slower)
 const PHASES = [
-  { wait: 70, shrink: 60, r: 400, dmg: 1 },
-  { wait: 60, shrink: 52, r: 250, dmg: 1 },
-  { wait: 52, shrink: 46, r: 150, dmg: 2 },
-  { wait: 45, shrink: 40, r: 85, dmg: 4 },
-  { wait: 40, shrink: 33, r: 45, dmg: 7 },
-  { wait: 32, shrink: 27, r: 20, dmg: 10 },
-  { wait: 24, shrink: 30, r: 0, dmg: 15 },
+  { wait: 70, shrink: 78, r: 400, dmg: 1 },
+  { wait: 60, shrink: 68, r: 250, dmg: 1 },
+  { wait: 52, shrink: 60, r: 150, dmg: 2 },
+  { wait: 45, shrink: 52, r: 85, dmg: 4 },
+  { wait: 40, shrink: 43, r: 45, dmg: 7 },
+  { wait: 32, shrink: 35, r: 20, dmg: 10 },
+  { wait: 24, shrink: 39, r: 0, dmg: 15 },
 ];
 const STORM_START = 900;
 const Storm = {
@@ -6416,11 +6493,11 @@ const Match = {
     if (r.win) d.wins++;
     if (place && place <= 10) d.top10++;
     let rpTxt = '';
-    if (this.ranked && place) { const rp = (place === 1 ? 120 : place <= 5 ? 60 : place <= 10 ? 35 : place <= 25 ? 10 : -10) + p.kills * 10; d.rp = Math.max(0, d.rp + rp); rpTxt = ' · ' + (rp >= 0 ? '+' : '') + rp + ' rank points (' + RANKS[Profile.rankIdx()][0] + ')'; }
+    if (this.ranked && place) { const rp = rankPoints(place, this.teamCount(), p.kills, Profile.rankIdx()); d.rp = Math.max(0, d.rp + rp); rpTxt = ' · ' + (rp >= 0 ? '+' : '') + rp + ' rank points (' + RANKS[Profile.rankIdx()][0] + ')'; }
     let newUmb = false;
     if (r.win && this.mode !== 'rumble' && !d.umbrella) { d.umbrella = true; newUmb = true; }
     const tier1 = lv.l1; const unl = lv.got.slice();
-    const winCoins = won ? 100 : 0, coins = winCoins + lv.coins;
+    const winCoins = won && place === 1 ? WIN_COINS : 0, coins = winCoins + lv.coins;
     d.coins += winCoins;
     Profile.save();
     if (newUmb) unl.push(cosById('glider', 'umbrella'));
@@ -7219,10 +7296,10 @@ const Input = {
   // menus: the D-pad or left stick moves a highlight between buttons, A presses it, B goes back, LB / RB change tab
   padMenu(dt) {
     const pd = this.pad; if (!pd.gp) return;
-    const root = ['settings', 'tutAsk', 'tutEnd', 'ticket', 'results', 'death', 'pause', 'mpPanel', 'lobby'].map(id => $(id)).find(el => el && !el.hidden); if (!root) return;
+    const root = ['settings', 'tutAsk', 'tutEnd', 'skinFind', 'ticket', 'results', 'death', 'pause', 'mpPanel', 'lobby'].map(id => $(id)).find(el => el && !el.hidden); if (!root) return;
     const els = [...root.querySelectorAll('button, [data-id], [data-mode], [data-isl], [data-f], [data-cat], [data-build], [data-body], input')].filter(el => el.offsetParent !== null && !el.disabled && el.getBoundingClientRect().width > 4);
     if (!els.length) return;
-    if (!pd.focus || !els.includes(pd.focus)) { if (pd.focus) pd.focus.classList.remove('padfocus'); pd.focus = els.find(el => /readyBtn|resumeBtn|rLobbyBtn|specBtn|tkBtn/.test(el.id)) || els[0]; if (pd.on) pd.focus.classList.add('padfocus'); }
+    if (!pd.focus || !els.includes(pd.focus)) { if (pd.focus) pd.focus.classList.remove('padfocus'); pd.focus = els.find(el => /readyBtn|resumeBtn|rLobbyBtn|specBtn|tkBtn|sfEquip/.test(el.id)) || els[0]; if (pd.on) pd.focus.classList.add('padfocus'); }
     let dx = 0, dy = 0; pd.navT -= dt;
     for (const i of pd.hit) { if (i === 12) dy = -1; if (i === 13) dy = 1; if (i === 14) dx = -1; if (i === 15) dx = 1; }
     if (!dx && !dy && pd.navT <= 0 && Math.hypot(pd.mx, pd.mz) > 0.6) { if (Math.abs(pd.mx) > Math.abs(pd.mz)) dx = Math.sign(pd.mx); else dy = -Math.sign(pd.mz); }
@@ -7461,7 +7538,7 @@ const Cam = {
     if (a.vehicle) { const lg = (a.vehicle.mesh.userData.halfLen || 2.25) > 3; dist = lg ? 13.5 : 10; side = 0; up = lg ? 1.6 : 1.0; py = 2.5; }
     else if (a.state === 'sky' || a.state === 'glide') { dist = 7.5; side = 0; up = 1.2; py = 1.5; }
     else if (this.scoped) { dist = 0; side = 0; up = 0; py = 1.72; }
-    else if (a === player && a.input.ads) { dist = 2.0; side = 0.72; up = 0.12; py = 1.62; }
+    else if (a === player && a.input.ads) { const w = a.inv[a.slot], sg = w && w.kind === 'weapon' && WEAPONS[w.wid].type === 'shotgun'; dist = sg ? 1.75 : 2.0; side = sg ? 0.78 : 0.72; up = sg ? 0.16 : 0.12; py = 1.62; }
     else { dist = 3.5; side = 0.82; up = 0.28; py = 1.62; }
     if (a.crawl && !a.vehicle && a.state === 'ground') { py = 0.6; dist = Math.max(dist, 3.2); up = 0.5; }
     if (innerHeight > innerWidth * 1.2 && !this.scoped) { dist *= 1.35; side *= 0.6; }
@@ -7483,7 +7560,7 @@ const Cam = {
     this.t0 = Math.max(0, (px - cx) * fx + (pyy - cy) * fy + (pz - cz) * fz);
     this.ready = a === player;
     const sprint = a.input.sprint && a.input.f > 0 && a.state === 'ground';
-    this.fov(dt, this.scoped ? 22 : (a === player && a.input.ads && !a.vehicle) ? 58 : sprint ? 80 : a.vehicle ? 80 : 75);
+    this.fov(dt, this.scoped ? 22 : (a === player && a.input.ads && !a.vehicle) ? (it && it.kind === 'weapon' && wstat(it).type === 'shotgun' ? 64 : 58) : sprint ? 80 : a.vehicle ? 80 : 75);
   },
   fov(dt, target) { if (Math.abs(camera.fov - target) > 0.1) { camera.fov = lerp(camera.fov, target, Math.min(1, dt * 12)); camera.updateProjectionMatrix(); } },
 };
@@ -7786,7 +7863,17 @@ const HUD = {
     // crosshair
     const ch = $('crosshair'); const isPick = !it || it.kind !== 'weapon' || Build.active;
     if (this.last.chp !== isPick) { this.last.chp = isPick; ch.classList.toggle('pick', isPick); }
-    if (it && it.kind === 'weapon') { const st = wstat(it); const moving = Math.hypot(a.vel.x, a.vel.z) > 1.5; const sp = (a.input.ads ? st.ads : st.spread) * (moving ? 1.35 : 1); const px = Math.round(4 + sp * 420); if (this.last.spr !== px) { this.last.spr = px; ch.style.setProperty('--spr', px + 'px'); } }
+    if (it && it.kind === 'weapon') {
+      // size the crosshair to the real bullet / pellet spread on screen (same rules as fireWeapon)
+      const st = wstat(it), sg = st.type === 'shotgun' && !Build.active, ads = !!a.input.ads;
+      const moving = Math.hypot(a.vel.x, a.vel.z) > 1.5;
+      let sp = (ads ? st.ads : st.spread) * (moving ? 1.35 : 1); if (!a.onGround && !a.inWater) sp *= 1.6;
+      const want = Math.tan(sp) / Math.tan(camera.fov * Math.PI / 360) * innerHeight / 2;
+      this.sprS = this.sprS == null ? want : lerp(this.sprS, want, Math.min(1, dt * 14));
+      const px = Math.round(sg ? Math.max(8, this.sprS) : 3 + this.sprS);
+      if (this.last.spr !== px) { this.last.spr = px; ch.style.setProperty('--spr', px + 'px'); }
+      if (this.last.chsg !== sg + '' + ads) { this.last.chsg = sg + '' + ads; ch.classList.toggle('sg', sg); ch.classList.toggle('ads', sg && ads); }
+    } else if (this.last.chsg !== 'no') { this.last.chsg = 'no'; ch.classList.remove('sg', 'ads'); }
     ch.style.display = Cam.scoped || v !== a || a.state === 'bus' ? 'none' : '';
     $('scope').hidden = !Cam.scoped;
     // prompt
@@ -8113,10 +8200,10 @@ const Lobby = {
     const total = COS_CATS.reduce((s, [k]) => s + COS[k].length, 0), have = COS_CATS.reduce((s, [k]) => s + COS[k].filter(owned).length, 0);
     $('lkCount').textContent = have + ' of ' + total + ' collected';
     $('lockerTitle').textContent = 'Locker';
-    const how = c => c.unlock === 'win' ? 'Win a match' : c.unlock === 'shop' ? 'Item Shop' : c.unlock && c.unlock.startsWith('tier:') ? 'Level ' + c.unlock.slice(5) : '';
+    const how = c => c.unlock === 'chest' ? '1 in 1,000 chests' : c.unlock === 'win' ? 'Win a match' : c.unlock === 'shop' ? 'Item Shop' : c.unlock && c.unlock.startsWith('tier:') ? 'Level ' + c.unlock.slice(5) : '';
     $('itemGrid').innerHTML = COS[cat].slice().sort((a, b) => owned(b) - owned(a) || a.r - b.r).map(c => {
       const own = owned(c), eq = d.eq[cat] === c.id, on = this.lockSel.id === c.id, rc = c.premium ? '#ffd23a' : RARITY[c.r].css;
-      const foot = eq ? '<span class="scard-foot eq">Equipped</span>' : own ? '<span class="scard-foot owned">Owned</span>' : `<span class="scard-foot lock"><svg class="lk" viewBox="0 0 24 24"><path d="M6 11h12v9H6z M8.5 11V8a3.5 3.5 0 0 1 7 0v3"/></svg><i class="coin"></i>${itemPrice(c).toLocaleString()}</span>`;
+      const foot = eq ? '<span class="scard-foot eq">Equipped</span>' : own ? '<span class="scard-foot owned">Owned</span>' : `<span class="scard-foot lock"><svg class="lk" viewBox="0 0 24 24"><path d="M6 11h12v9H6z M8.5 11V8a3.5 3.5 0 0 1 7 0v3"/></svg>${c.unlock === 'chest' ? 'Chest find' : '<i class="coin"></i>' + itemPrice(c).toLocaleString()}</span>`;
       return `<button class="scard ${on ? 'on' : ''} ${own ? '' : 'locked'}" data-id="${c.id}" style="--rc:${rc}">${c.premium ? '<span class="prem">PREMIUM</span>' : ''}${eq ? '<span class="eqb">EQUIPPED</span>' : ''}<span class="scard-art">${this.shopIcon(cat, c)}</span><span class="scard-body"><b>${esc(c.name)}</b><span>${c.premium ? 'Premium' : RARITY[c.r].name}</span></span>${foot}</button>`;
     }).join('');
     const it = cosById(cat, this.lockSel.id), own = owned(it), eq = d.eq[cat] === it.id, rc = it.premium ? '#ffd23a' : RARITY[it.r].css;
@@ -8125,12 +8212,12 @@ const Lobby = {
     $('lkTag').textContent = it.premium ? 'Premium' : RARITY[it.r].name;
     $('lkName').textContent = it.name;
     $('lkSub').textContent = catName + (own ? ' · In your collection' : ' · Not owned yet');
-    $('lkDesc').textContent = DESC[cat] + (own ? '' : ' Get it: ' + (how(it) ? how(it) + ', or ' : '') + 'buy it in the Item Shop for ' + itemPrice(it).toLocaleString() + ' ' + COIN + '.');
+    $('lkDesc').textContent = DESC[cat] + (own ? '' : it.unlock === 'chest' ? ' Get it: every chest you open has a 1 in 1,000 chance to hold it. Only one per player, and it is never sold in the Shop.' : ' Get it: ' + (how(it) ? how(it) + ', or ' : '') + 'buy it in the Item Shop for ' + itemPrice(it).toLocaleString() + ' ' + COIN + '.');
     $('lkState').textContent = eq ? 'Equipped' : own ? 'Owned' : 'Locked';
     $('lkState').className = 'sd-price' + (own ? ' owned' : '');
     const bodyOk = cat === 'outfit' && !it.personal; $('lkBody').hidden = !bodyOk;
     if (bodyOk) for (const b of $('lkBody').querySelectorAll('button')) { const on = (d.eq.body || 'woman') === b.dataset.body; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); }
-    const btn = $('lkBtn'); btn.textContent = eq ? 'Equipped' : own ? 'Equip' : 'Get it in the Shop'; btn.disabled = eq; btn.className = 'buy' + (eq ? ' owned' : own ? ' equip' : '');
+    const btn = $('lkBtn'); btn.textContent = eq ? 'Equipped' : own ? 'Equip' : it.unlock === 'chest' ? 'Find it in a chest' : 'Get it in the Shop'; btn.disabled = eq || (!own && it.unlock === 'chest'); btn.className = 'buy' + (eq ? ' owned' : own ? ' equip' : '');
   },
   shopIcon(cat, item) {
     const P = { outfit: 'M8 3l4 2 4-2 5 4-3 3-2-1v11H8V9l-2 1-3-3z', backpack: 'M7 9a5 5 0 0 1 10 0v11H7z M9 13h6 M10 4.5h4', pickaxe: 'M5 20L15 10 M8.5 6.5c4-2.5 8.5-1.5 11 2-3-1-6.5-.8-9 1.3', glider: 'M2 10l10-5 10 5-10 2z M6.5 11l5.5 8 5.5-8', wrap: 'M12 3.5c3 4 6 7 6 10.5a6 6 0 0 1-12 0c0-3.5 3-6.5 6-10.5z', emote: 'M9 17.5V6l10-2v11.5 M9 17.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z M19 15.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z', car: 'M3 15.5l2-5h14l2 5v3H3z M6.5 10.5L8.5 6h7l2 4.5 M7 18.5v1.5 M17 18.5v1.5' }[cat];
@@ -8148,7 +8235,7 @@ const Lobby = {
     if (this.tab === 'shop') {
       this.shopHero();
       $('shopBal').textContent = d.coins.toLocaleString();
-      const all = []; for (const [cat] of COS_CATS) for (const c of COS[cat]) all.push(c);
+      const all = []; for (const [cat] of COS_CATS) for (const c of COS[cat]) if (c.unlock !== 'chest') all.push(c);   // chest finds are never sold
       const featured = c => c.premium || c.music || c.r >= 4;
       const filters = [['all', 'All', all.length], ['featured', 'Featured', all.filter(featured).length], ...COS_CATS.map(([k, n]) => [k, n, COS[k].length])];
       $('shopFilters').innerHTML = filters.map(([k, n, c]) => `<button role="tab" aria-selected="${this.shopFilter === k}" class="${this.shopFilter === k ? 'on' : ''}" data-f="${k}">${n}<i>${c}</i></button>`).join('');
@@ -8212,6 +8299,7 @@ function boot() {
   Lobby.init();
   $('resumeBtn').addEventListener('click', () => togglePause());
   $('tkBtn').addEventListener('click', () => Ticket.close());
+  $('sfEquip').addEventListener('click', () => ChestSkin.close(true)); $('sfBtn').addEventListener('click', () => ChestSkin.close(false));
   $('quitBtn').addEventListener('click', () => { Match.paused = false; $('pause').hidden = true; if (!Match.hasWinner) { Match.recount(); if (player && player.alive && Match.mode !== 'rumble' && !player.placement) player.placement = Math.max(2, Match.teamsAlive); Match.result = { win: false, left: true }; } Match.showResults(); });
   $('specBtn').addEventListener('click', () => { $('death').hidden = true; });
   $('dLobbyBtn').addEventListener('click', () => { Match.showResults(); });
@@ -8298,7 +8386,7 @@ setInterval(() => {
 function step(now) {
   let dt = Math.min(0.05, Math.max(0.0005, (now - lastFrame) / 1000)); lastFrame = now;
   Input.pollPad();
-  if (Match.state !== 'play' || Match.paused || !$('death').hidden || !$('results').hidden || !$('ticket').hidden || !$('tutEnd').hidden) Input.padMenu(dt);
+  if (Match.state !== 'play' || Match.paused || !$('death').hidden || !$('results').hidden || !$('ticket').hidden || !$('skinFind').hidden || !$('tutEnd').hidden) Input.padMenu(dt);
   if (Match.state === 'lobby' || Match.state === 'loading') { Lobby.render(dt); return; }
   if (Match.paused && !Net.inMatch) { renderer.render(scene, camera); return; }   // a shared match keeps running while you are in the menu
   gameTime += dt;

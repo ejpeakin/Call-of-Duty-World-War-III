@@ -109,7 +109,17 @@ const HUD = {
     // crosshair
     const ch = $('crosshair'); const isPick = !it || it.kind !== 'weapon' || Build.active;
     if (this.last.chp !== isPick) { this.last.chp = isPick; ch.classList.toggle('pick', isPick); }
-    if (it && it.kind === 'weapon') { const st = wstat(it); const moving = Math.hypot(a.vel.x, a.vel.z) > 1.5; const sp = (a.input.ads ? st.ads : st.spread) * (moving ? 1.35 : 1); const px = Math.round(4 + sp * 420); if (this.last.spr !== px) { this.last.spr = px; ch.style.setProperty('--spr', px + 'px'); } }
+    if (it && it.kind === 'weapon') {
+      // size the crosshair to the real bullet / pellet spread on screen (same rules as fireWeapon)
+      const st = wstat(it), sg = st.type === 'shotgun' && !Build.active, ads = !!a.input.ads;
+      const moving = Math.hypot(a.vel.x, a.vel.z) > 1.5;
+      let sp = (ads ? st.ads : st.spread) * (moving ? 1.35 : 1); if (!a.onGround && !a.inWater) sp *= 1.6;
+      const want = Math.tan(sp) / Math.tan(camera.fov * Math.PI / 360) * innerHeight / 2;
+      this.sprS = this.sprS == null ? want : lerp(this.sprS, want, Math.min(1, dt * 14));
+      const px = Math.round(sg ? Math.max(8, this.sprS) : 3 + this.sprS);
+      if (this.last.spr !== px) { this.last.spr = px; ch.style.setProperty('--spr', px + 'px'); }
+      if (this.last.chsg !== sg + '' + ads) { this.last.chsg = sg + '' + ads; ch.classList.toggle('sg', sg); ch.classList.toggle('ads', sg && ads); }
+    } else if (this.last.chsg !== 'no') { this.last.chsg = 'no'; ch.classList.remove('sg', 'ads'); }
     ch.style.display = Cam.scoped || v !== a || a.state === 'bus' ? 'none' : '';
     $('scope').hidden = !Cam.scoped;
     // prompt

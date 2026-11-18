@@ -65,13 +65,13 @@ const WEAPONS = {
   pistol: { name: 'Sidearm', short: 'PISTOL', type: 'pistol', dmg: 24, rate: 6.5, mag: 16, reload: 1.3, spread: 0.016, ads: 0.006, range: 140, ammo: 'light', auto: false, struct: 1, head: 1.75, minR: 0 },
   smg: { name: 'Buzzsaw SMG', short: 'SMG', type: 'smg', dmg: 16, rate: 11, mag: 30, reload: 2.0, spread: 0.038, ads: 0.024, range: 100, ammo: 'light', auto: true, struct: 1, head: 1.75, minR: 0 },
   ar: { name: 'Trailblazer AR', short: 'RIFLE', type: 'ar', dmg: 30, rate: 5.5, mag: 30, reload: 2.2, spread: 0.026, ads: 0.007, range: 220, ammo: 'medium', auto: true, struct: 1, head: 1.75, minR: 0 },
-  shotgun: { name: 'Brawler Pump', short: 'PUMP', type: 'shotgun', dmg: 9.5, pellets: 10, rate: 1.15, mag: 5, reload: 4.2, spread: 0.075, ads: 0.06, range: 42, ammo: 'shells', auto: false, struct: 0.8, head: 1.75, minR: 0 },
+  shotgun: { name: 'Brawler Pump', short: 'PUMP', type: 'shotgun', dmg: 9.5, pellets: 10, rate: 1.15, mag: 5, reload: 4.2, spread: 0.075, ads: 0.042, range: 42, ammo: 'shells', auto: false, struct: 0.8, head: 1.75, minR: 0 },
   sniper: { name: 'Longshot Bolt', short: 'SNIPER', type: 'sniper', dmg: 105, rate: 0.6, mag: 1, reload: 2.4, spread: 0.06, ads: 0.0, range: 450, ammo: 'heavy', auto: false, struct: 1.2, head: 2.5, scope: true, minR: 1 },
   rocket: { name: 'Thunderclap RPG', short: 'RPG', type: 'rocket', dmg: 95, rate: 0.8, mag: 1, reload: 3.0, spread: 0.012, ads: 0.004, range: 300, ammo: 'rockets', auto: false, proj: 70, splash: 5.5, struct: 5, head: 1, minR: 2 },
   stormcaller: { name: "Warden's Stormcaller", short: 'MYTHIC', type: 'ar', dmg: 38, rate: 7, mag: 40, reload: 1.8, spread: 0.018, ads: 0.004, range: 240, ammo: 'medium', auto: true, struct: 1.2, head: 1.8, mythic: true },
-  sledge: { name: "Foreman's Sledge", short: 'MYTHIC', type: 'shotgun', dmg: 11, pellets: 10, rate: 1.7, mag: 8, reload: 3.2, spread: 0.065, ads: 0.05, range: 48, ammo: 'shells', auto: false, struct: 1.5, head: 1.75, mythic: true },
+  sledge: { name: "Foreman's Sledge", short: 'MYTHIC', type: 'shotgun', dmg: 11, pellets: 10, rate: 1.7, mag: 8, reload: 3.2, spread: 0.065, ads: 0.036, range: 48, ammo: 'shells', auto: false, struct: 1.5, head: 1.75, mythic: true },
   frostbite: { name: 'Frostbite Rifle', short: 'EXOTIC', type: 'ar', dmg: 44, rate: 2.6, mag: 10, reload: 2.2, spread: 0.02, ads: 0.002, range: 300, ammo: 'heavy', auto: false, struct: 1, head: 2, slow: 2.5, exotic: true },
-  kicker: { name: 'Kinetic Kicker', short: 'EXOTIC', type: 'shotgun', dmg: 8, pellets: 10, rate: 1.3, mag: 6, reload: 3.4, spread: 0.07, ads: 0.06, range: 38, ammo: 'shells', auto: false, struct: 1, head: 1.6, knock: 17, exotic: true },
+  kicker: { name: 'Kinetic Kicker', short: 'EXOTIC', type: 'shotgun', dmg: 8, pellets: 10, rate: 1.3, mag: 6, reload: 3.4, spread: 0.07, ads: 0.04, range: 38, ammo: 'shells', auto: false, struct: 1, head: 1.6, knock: 17, exotic: true },
 };
 const GUN_SIZE = { pistol: [0.1, 0.18, 0.42], smg: [0.12, 0.2, 0.62], ar: [0.12, 0.2, 0.95], shotgun: [0.14, 0.18, 0.92], sniper: [0.11, 0.18, 1.35], rocket: [0.26, 0.26, 1.25] };
 const WEAPON_POOL = [{ w: 24, id: 'ar' }, { w: 20, id: 'shotgun' }, { w: 18, id: 'smg' }, { w: 16, id: 'pistol' }, { w: 9, id: 'sniper' }, { w: 5, id: 'rocket' }];
@@ -230,6 +230,9 @@ const COS = {
       jacket: 0xffd84a, leather: true, studBelt: true, unlock: 'shop', price: 1500, music: true },
     { id: 'week', build: 'slim', name: 'The Week', r: 4, shirt: 0x17171c, pants: 0x17171c, skin: 0x6e4630, sleeve: 0x17171c, hair: 0x0e0b0a, shoes: 0x0c0c0e,
       hat: 'afro', afroSize: 0.8, lineup: true, hatC: 0x0e0b0a, suit: true, tieC: 0xb3121e, mustache: true, shades: 0x0a0a0c, personal: true, unlock: 'shop', price: 1500 },
+    // chest find only: a 1 in 1,000 roll on any chest you open, once per player (never sold in the Shop)
+    { id: 'lilcarti', build: 'slim', name: 'Lil Play Carti', r: 5, shirt: 0xa50f1c, jacket: 0x0c0c0e, pants: 0x0f0f12, skin: 0x5e3a26, sleeve: 0x0c0c0e, hair: 0x0b0b0d, shoes: 0x0b0b0d, boots: true,
+      hat: 'dreads', hatC: 0x0b0b0d, tip: 0xd0101e, hairSeed: 1717, leather: true, studBelt: true, cargo: true, shades: 0x0a0a0c, faceTats: true, personal: true, unlock: 'chest' },
   ],
   backpack: [
     { id: 'none', name: 'No Backpack', r: 0 },
@@ -293,7 +296,7 @@ async function redeemCode(raw) {
 }
 function itemPrice(c) { return c.price || RARITY_PRICE[c.r] || 0; }
 const COIN = 'FortBux';
-const PASS_TIERS = 30, XP_PER_TIER = 5000, XP_PER_LEVEL = 5000, LEVEL_COINS = 100, TICKET_CHANCE = 1 / 10000;
+const PASS_TIERS = 30, XP_PER_TIER = 5000, XP_PER_LEVEL = 5000, LEVEL_COINS = 50, WIN_COINS = 50, TICKET_CHANCE = 1 / 10000, CHEST_SKIN = 'lilcarti', CHEST_SKIN_CHANCE = 1 / 1000;
 // ---------------------------------------------------------------- seasons: 30 days each, the first is Music Festival 2026
 const SEASON_EPOCH = Date.UTC(2026, 10, 16), SEASON_DAYS = 30, SEASON_NAMES = ['Music Festival 2026'];
 const Season = {
@@ -302,6 +305,14 @@ const Season = {
   endsAt(id = this.id()) { return SEASON_EPOCH + (id + 1) * SEASON_DAYS * 864e5; },
   daysLeft() { return Math.max(0, Math.ceil((this.endsAt() - Date.now()) / 864e5)); },
 };
+// ranked points for one Battle Royale: top finishes gain, the bottom half loses more the worse you place,
+// and higher ranks lose more for a bad game. Each elimination is +10.
+function rankPoints(place, teams, kills, rankI) {
+  const f = place / Math.max(1, teams);
+  let rp = place === 1 ? 120 : f <= 0.05 ? 60 : f <= 0.1 ? 35 : f <= 0.25 ? 10 : f <= 0.5 ? -30 : f <= 0.75 ? -50 : -75;
+  if (rp < 0) rp = Math.round(rp * (1 + (rankI || 0) * 0.15));
+  return rp + (kills || 0) * 10;
+}
 const RANKS = [['Bronze', 0], ['Silver', 300], ['Gold', 700], ['Platinum', 1200], ['Diamond', 1800], ['Apex', 2600], ['Legend', 3500]];
 function cosById(cat, id) { return COS[cat].find(c => c.id === id) || COS[cat][0]; }
 function passRewards() {
@@ -354,6 +365,7 @@ const Profile = {
   unlocked(item) {
     const u = item.unlock; if (!u) return true;
     if (this.owns(item)) return true;
+    if (u === 'chest') return false;   // only by finding it in a chest
     if (this.ticket()) return true;   // Music Concert Ticket: the whole shop for the rest of the season
     if (u === 'win') return !!this.d.umbrella;
     if (u === 'shop') return !!this.d.owned[item.id];

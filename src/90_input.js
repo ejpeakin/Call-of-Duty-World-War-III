@@ -26,10 +26,10 @@ const Input = {
   // menus: the D-pad or left stick moves a highlight between buttons, A presses it, B goes back, LB / RB change tab
   padMenu(dt) {
     const pd = this.pad; if (!pd.gp) return;
-    const root = ['settings', 'tutAsk', 'tutEnd', 'ticket', 'results', 'death', 'pause', 'mpPanel', 'lobby'].map(id => $(id)).find(el => el && !el.hidden); if (!root) return;
+    const root = ['settings', 'tutAsk', 'tutEnd', 'skinFind', 'ticket', 'results', 'death', 'pause', 'mpPanel', 'lobby'].map(id => $(id)).find(el => el && !el.hidden); if (!root) return;
     const els = [...root.querySelectorAll('button, [data-id], [data-mode], [data-isl], [data-f], [data-cat], [data-build], [data-body], input')].filter(el => el.offsetParent !== null && !el.disabled && el.getBoundingClientRect().width > 4);
     if (!els.length) return;
-    if (!pd.focus || !els.includes(pd.focus)) { if (pd.focus) pd.focus.classList.remove('padfocus'); pd.focus = els.find(el => /readyBtn|resumeBtn|rLobbyBtn|specBtn|tkBtn/.test(el.id)) || els[0]; if (pd.on) pd.focus.classList.add('padfocus'); }
+    if (!pd.focus || !els.includes(pd.focus)) { if (pd.focus) pd.focus.classList.remove('padfocus'); pd.focus = els.find(el => /readyBtn|resumeBtn|rLobbyBtn|specBtn|tkBtn|sfEquip/.test(el.id)) || els[0]; if (pd.on) pd.focus.classList.add('padfocus'); }
     let dx = 0, dy = 0; pd.navT -= dt;
     for (const i of pd.hit) { if (i === 12) dy = -1; if (i === 13) dy = 1; if (i === 14) dx = -1; if (i === 15) dx = 1; }
     if (!dx && !dy && pd.navT <= 0 && Math.hypot(pd.mx, pd.mz) > 0.6) { if (Math.abs(pd.mx) > Math.abs(pd.mz)) dx = Math.sign(pd.mx); else dy = -Math.sign(pd.mz); }
@@ -268,7 +268,7 @@ const Cam = {
     if (a.vehicle) { const lg = (a.vehicle.mesh.userData.halfLen || 2.25) > 3; dist = lg ? 13.5 : 10; side = 0; up = lg ? 1.6 : 1.0; py = 2.5; }
     else if (a.state === 'sky' || a.state === 'glide') { dist = 7.5; side = 0; up = 1.2; py = 1.5; }
     else if (this.scoped) { dist = 0; side = 0; up = 0; py = 1.72; }
-    else if (a === player && a.input.ads) { dist = 2.0; side = 0.72; up = 0.12; py = 1.62; }
+    else if (a === player && a.input.ads) { const w = a.inv[a.slot], sg = w && w.kind === 'weapon' && WEAPONS[w.wid].type === 'shotgun'; dist = sg ? 1.75 : 2.0; side = sg ? 0.78 : 0.72; up = sg ? 0.16 : 0.12; py = 1.62; }
     else { dist = 3.5; side = 0.82; up = 0.28; py = 1.62; }
     if (a.crawl && !a.vehicle && a.state === 'ground') { py = 0.6; dist = Math.max(dist, 3.2); up = 0.5; }
     if (innerHeight > innerWidth * 1.2 && !this.scoped) { dist *= 1.35; side *= 0.6; }
@@ -290,7 +290,7 @@ const Cam = {
     this.t0 = Math.max(0, (px - cx) * fx + (pyy - cy) * fy + (pz - cz) * fz);
     this.ready = a === player;
     const sprint = a.input.sprint && a.input.f > 0 && a.state === 'ground';
-    this.fov(dt, this.scoped ? 22 : (a === player && a.input.ads && !a.vehicle) ? 58 : sprint ? 80 : a.vehicle ? 80 : 75);
+    this.fov(dt, this.scoped ? 22 : (a === player && a.input.ads && !a.vehicle) ? (it && it.kind === 'weapon' && wstat(it).type === 'shotgun' ? 64 : 58) : sprint ? 80 : a.vehicle ? 80 : 75);
   },
   fov(dt, target) { if (Math.abs(camera.fov - target) > 0.1) { camera.fov = lerp(camera.fov, target, Math.min(1, dt * 12)); camera.updateProjectionMatrix(); } },
 };

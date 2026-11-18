@@ -196,6 +196,16 @@ button:focus-visible{outline:2px solid var(--sun-2);outline-offset:2px}
 .tk-shine{position:absolute;inset:0;background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.75) 50%,transparent 65%);transform:translateX(-120%);animation:tkShine 2.6s ease-in-out 1.1s infinite}
 .tk-desc{margin:0;max-width:520px;font-size:16px;line-height:1.45;font-weight:600;color:#f3e8ff;animation:tkPop .6s .9s both}
 #tkBtn{font-family:var(--f-display);font-weight:900;font-style:italic;text-transform:uppercase;font-size:24px;letter-spacing:.04em;padding:12px 34px;border:0;border-radius:14px;color:#2a1200;background:linear-gradient(180deg,#ffe36a,#ffb02e);box-shadow:0 6px 0 #b86a10,0 12px 30px rgba(255,170,40,.4);animation:tkPop .6s 1.1s both}
+#skinFind{position:fixed;inset:0;z-index:61;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at 50% 45%,#5a0a12 0%,#1a0306 60%,#060102 100%);animation:tkIn .5s ease-out}
+#skinFind .tk-rays{background:repeating-conic-gradient(from 0deg,rgba(255,40,50,.16) 0 8deg,transparent 8deg 20deg)}
+#skinFind .tk-kicker{color:#ff6a6a}
+.sf-card{color:#fff;background:linear-gradient(115deg,#1a0204 0%,#5e0710 35%,#b00e1c 70%,#ff3b30 100%);box-shadow:0 0 0 3px rgba(255,255,255,.35) inset,0 30px 80px rgba(200,10,30,.5),0 0 120px rgba(255,40,50,.3)}
+.sf-card .tk-stub{border-right-color:rgba(255,255,255,.35);background:rgba(0,0,0,.25);align-items:center}
+.sf-card .tk-stub small{font-size:13px;opacity:.8}
+.sf-btns{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;animation:tkPop .6s 1.1s both}
+.sf-btns button{font-family:var(--f-display);font-weight:900;font-style:italic;text-transform:uppercase;font-size:22px;letter-spacing:.04em;padding:12px 30px;border:0;border-radius:14px;cursor:pointer}
+#sfEquip{color:#fff;background:linear-gradient(180deg,#ff4a3a,#b00e1c);box-shadow:0 6px 0 #5e0710,0 12px 30px rgba(255,40,50,.4)}
+#sfBtn{color:#fff;background:rgba(255,255,255,.14);box-shadow:0 0 0 2px rgba(255,255,255,.4) inset}
 @keyframes tkIn{from{opacity:0}to{opacity:1}}
 @keyframes tkSpin{to{transform:translate(-50%,-50%) rotate(360deg)}}
 @keyframes tkCard{from{opacity:0;transform:scale(.2) rotate(-18deg)}to{opacity:1;transform:scale(1) rotate(0)}}
@@ -249,6 +259,16 @@ button:focus-visible{outline:2px solid var(--sun-2);outline-offset:2px}
 #crosshair i:nth-child(3){width:8px;height:2px;top:-1px;left:calc(-8px - var(--spr,6px))}
 #crosshair i:nth-child(4){width:8px;height:2px;top:-1px;left:var(--spr,6px)}
 #crosshair.pick i{opacity:.0}
+#crosshair .ring{display:none;position:absolute;box-sizing:border-box;width:calc(var(--spr,20px)*2);height:calc(var(--spr,20px)*2);left:calc(var(--spr,20px)*-1);top:calc(var(--spr,20px)*-1);border:2px solid rgba(255,255,255,.9);border-radius:50%;box-shadow:0 0 2px #000,inset 0 0 2px #000}
+#crosshair.sg .ring{display:block}
+#crosshair.sg i{height:6px;width:2px}
+#crosshair.sg i:nth-child(1){top:calc(-3px - var(--spr,20px))}
+#crosshair.sg i:nth-child(2){top:calc(var(--spr,20px) - 3px)}
+#crosshair.sg i:nth-child(3),#crosshair.sg i:nth-child(4){width:6px;height:2px}
+#crosshair.sg i:nth-child(3){left:calc(-3px - var(--spr,20px))}
+#crosshair.sg i:nth-child(4){left:calc(var(--spr,20px) - 3px)}
+#crosshair.sg::before{content:"";position:absolute;width:4px;height:4px;border-radius:50%;left:-2px;top:-2px;background:#fff;box-shadow:0 0 2px #000}
+#crosshair.sg.ads .ring{border-color:#9fe3ff}
 #stormTint{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .7s;background:radial-gradient(ellipse at 50% 55%,rgba(40,10,85,.28) 0%,rgba(30,6,66,.55) 55%,rgba(14,2,34,.85) 100%)}
 #stormTint.on{opacity:1}
 #reloadArc{position:absolute;left:50%;top:50%;width:110px;height:110px;transform:translate(-50%,-50%);pointer-events:none;filter:drop-shadow(0 0 2px rgba(0,0,0,.7))}

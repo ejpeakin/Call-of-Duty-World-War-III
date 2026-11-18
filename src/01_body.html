@@ -122,7 +122,7 @@
         <p class="sd-msg" id="shopMsg" role="status"></p>
       </article>
       <div class="shop-cards" id="shopGrid"></div>
-      <p class="hint">Every match pays FortBux: 40 for playing, 15 per elimination, plus 200 for a win, 60 for a top-10 finish or 25 for top 25. Each new Pass tier adds 100 more. Everything in the shop is cosmetic only.</p>
+      <p class="hint">FortBux are hard to earn: 50 for every new level and 50 for winning a Battle Royale (1st place). Nothing else pays FortBux. Everything in the shop is cosmetic only.</p>
     </section>
 
     <section class="panel" id="tab-career" hidden>
@@ -160,7 +160,7 @@
   </div>
   <div id="banner"><div class="bt" id="bannerT"></div><div class="bs" id="bannerS"></div></div>
   <div id="stormTint"></div>
-  <div id="crosshair"><i></i><i></i><i></i><i></i></div>
+  <div id="crosshair"><i></i><i></i><i></i><i></i><b class="ring"></b></div>
   <div id="reloadArc" hidden><svg viewBox="0 0 100 100" aria-hidden="true"><path class="tr" d="M 68 81.2 A 36 36 0 0 0 68 18.8" pathLength="100"/><path class="fg" d="M 68 81.2 A 36 36 0 0 0 68 18.8" pathLength="100"/></svg></div>
   <div id="hitmarker"></div>
   <div id="dmgDir"></div>
@@ -246,6 +246,19 @@
     </div>
     <div class="unl" id="rUnlocks"></div>
     <div class="btn-row"><button class="btn pri" id="rLobbyBtn">Continue</button></div>
+  </div>
+</div>
+<div id="skinFind" hidden>
+  <div class="tk-rays"></div>
+  <div class="tk-wrap">
+    <p class="tk-kicker">1 in 1,000 chest find</p>
+    <div class="tk-card sf-card">
+      <div class="tk-stub"><b>1</b><small>in</small><b>1000</b></div>
+      <div class="tk-main"><span class="tk-season">Mythic outfit</span><h2 id="sfName">Lil Play Carti</h2><span class="tk-no">Yours forever · Only one per player</span></div>
+      <i class="tk-shine"></i>
+    </div>
+    <p class="tk-desc">You found the rarest skin on the island. It is in your Locker now.</p>
+    <div class="sf-btns"><button id="sfEquip">Equip it</button><button id="sfBtn">Keep playing</button></div>
   </div>
 </div>
 <div id="ticket" hidden>

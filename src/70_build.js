@@ -4,7 +4,7 @@
 // Build tiles in Fortnite-style proportions: 5.12 m wide and 3.84 m tall (wider than tall), ramps rise one storey per tile
 const T = 5.12, TH = 3.84, CONE_H = TH * 0.5;
 const Build = {
-  active: false, piece: 'wall', pieces: [], map: new Map(), ghosts: null, tgt: null, lastKey: null, placeCD: 0,
+  active: false, piece: 'wall', pieces: [], map: new Map(), ghosts: null, tgt: null, lastKey: null, lastCol: null, placeCD: 0,
   init() {
     this.ghosts = { wall: new THREE.Mesh(GEO.wall, MAT.ghost), floor: new THREE.Mesh(GEO.floor, MAT.ghost), rampX: new THREE.Mesh(GEO.rampX, MAT.ghost), rampZ: new THREE.Mesh(GEO.rampZ, MAT.ghost), cone: new THREE.Mesh(GEO.cone, MAT.ghost) };
     for (const k in this.ghosts) { this.ghosts[k].visible = false; this.ghosts[k].renderOrder = 6; scene.add(this.ghosts[k]); }
@@ -89,7 +89,10 @@ const Build = {
     const g = this.ghosts[this.geoKey(t)]; this.pose(t, g);
     const ok = !this.map.has(t.key) && MAT_ORDER.some(m => player.mats[m] >= 10);
     g.material = ok ? MAT.ghost : MAT.ghostBad; g.visible = true;
-    if (player.input.fire && this.placeCD <= 0 && ok && t.key !== this.lastKey) { if (this.place(player, t)) { this.lastKey = t.key; this.placeCD = 0.07; } }
-    if (!player.input.fire) this.lastKey = null;
+    // one click = one piece. While fire stays held you can keep building as you move or turn, but never a second
+    // piece of the same kind straight above / below the last one (a fresh ramp lifts you, which used to stack a twin)
+    const col = t.type + ':' + t.gx + ':' + t.gz + ':' + (t.dir || 0);
+    if (player.input.fire && this.placeCD <= 0 && ok && t.key !== this.lastKey && col !== this.lastCol) { if (this.place(player, t)) { this.lastKey = t.key; this.lastCol = col; this.placeCD = 0.25; } }
+    if (!player.input.fire) { this.lastKey = null; this.lastCol = null; this.placeCD = Math.min(this.placeCD, 0.05); }
   },
 };

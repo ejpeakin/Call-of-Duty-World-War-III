@@ -14,6 +14,7 @@ function boot() {
   Lobby.init();
   $('resumeBtn').addEventListener('click', () => togglePause());
   $('tkBtn').addEventListener('click', () => Ticket.close());
+  $('sfEquip').addEventListener('click', () => ChestSkin.close(true)); $('sfBtn').addEventListener('click', () => ChestSkin.close(false));
   $('quitBtn').addEventListener('click', () => { Match.paused = false; $('pause').hidden = true; if (!Match.hasWinner) { Match.recount(); if (player && player.alive && Match.mode !== 'rumble' && !player.placement) player.placement = Math.max(2, Match.teamsAlive); Match.result = { win: false, left: true }; } Match.showResults(); });
   $('specBtn').addEventListener('click', () => { $('death').hidden = true; });
   $('dLobbyBtn').addEventListener('click', () => { Match.showResults(); });
@@ -100,7 +101,7 @@ setInterval(() => {
 function step(now) {
   let dt = Math.min(0.05, Math.max(0.0005, (now - lastFrame) / 1000)); lastFrame = now;
   Input.pollPad();
-  if (Match.state !== 'play' || Match.paused || !$('death').hidden || !$('results').hidden || !$('ticket').hidden || !$('tutEnd').hidden) Input.padMenu(dt);
+  if (Match.state !== 'play' || Match.paused || !$('death').hidden || !$('results').hidden || !$('ticket').hidden || !$('skinFind').hidden || !$('tutEnd').hidden) Input.padMenu(dt);
   if (Match.state === 'lobby' || Match.state === 'loading') { Lobby.render(dt); return; }
   if (Match.paused && !Net.inMatch) { renderer.render(scene, camera); return; }   // a shared match keeps running while you are in the menu
   gameTime += dt;
