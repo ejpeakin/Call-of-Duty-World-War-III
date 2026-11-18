@@ -11,7 +11,13 @@ const NET_RANGE = 350;
 // this relay instead. Fill in ONE of these from the TURN provider (see README "Multiplayer on school networks"):
 //  - credentialsUrl: an address that returns the current list of relay servers (Metered gives one), or
 //  - servers: the list itself, e.g. [{ urls: 'turns:relay.example.com:443?transport=tcp', username: '...', credential: '...' }]
-const NET_TURN = { credentialsUrl: '', servers: [] };
+// Metered relay for this game. The password's 13th character reads as O or 0 in the dashboard font, so both are listed;
+// the relay accepts the right one and the other is simply ignored.
+const NET_TURN = { credentialsUrl: '', servers: [
+  { urls: 'stun:stun.relay.metered.ca:80' },
+  { urls: ['turn:global.relay.metered.ca:80', 'turn:global.relay.metered.ca:80?transport=tcp', 'turn:global.relay.metered.ca:443', 'turns:global.relay.metered.ca:443?transport=tcp'], username: 'efedb6974b3774c110dc20dc', credential: 'TSTL9rZq6cBJOT7X' },
+  { urls: ['turn:global.relay.metered.ca:80', 'turn:global.relay.metered.ca:80?transport=tcp', 'turn:global.relay.metered.ca:443', 'turns:global.relay.metered.ca:443?transport=tcp'], username: 'efedb6974b3774c110dc20dc', credential: 'TSTL9rZq6cBJ0T7X' },
+] };
 // Free public relays that need no account, tried as a fallback. They are best effort: shared with everyone, and may be slow or offline.
 const NET_PUBLIC_TURN = [
   { urls: ['turn:freeturn.net:3478', 'turn:freeturn.net:3478?transport=tcp', 'turns:freeturn.tel:5349'], username: 'free', credential: 'free' },
