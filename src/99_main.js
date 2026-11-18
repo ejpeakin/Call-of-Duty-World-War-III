@@ -11,7 +11,7 @@ function boot() {
   try { CharModel.load(); } catch (e) { console.warn(e); }
   HUD.init();
   Input.init(); Settings.init(); Tutorial.init(); Inv.init();
-  Lobby.init();
+  Lobby.init(); Track.init(); Players.init();
   // back from the $1 checkout: ?bp=CODE in the address unlocks the Battle Pass, then the code is removed from the address
   (async () => {
     let q; try { q = new URLSearchParams(location.search); } catch (e) { return; }

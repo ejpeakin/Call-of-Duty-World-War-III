@@ -26,6 +26,7 @@
       <button data-tab="locker" title="Change your skin, back bling, glider and more">Locker</button>
       <button data-tab="pass" title="Season levels and the rewards you unlock">Pass</button>
       <button data-tab="career" title="Your stats and rank">Career</button>
+      <button data-tab="players" id="tabPlayers" title="Only on your computer: who played and for how long" hidden>Players</button>
       <button data-tab="shop" class="shop-tab" title="Buy skins and items with FortBux">Shop</button>
     </nav>
     <div class="lb-tier"><span id="tierLbl" class="num">Tier 1</span><div class="mini-bar"><i id="tierFill"></i></div></div>
@@ -43,6 +44,7 @@
           <li>Press <b>PLAY</b>. Be the last one standing to win.</li>
         </ol>
       </div>
+      <label class="name-row"><span>Your player name</span><input id="nameIn" maxlength="16" placeholder="Type a name" autocomplete="off" spellcheck="false"></label>
       <button class="tut-card" id="tutBtn" type="button"><span class="tut-badge" id="tutBadge" hidden>Recommended for new players</span><b>Tutorial</b><span>Learn to move, build, loot and fight in a few minutes</span></button>
       <h3 class="step"><i>1</i>Pick a mode</h3>
       <div class="opt-grid" id="modeGrid">
@@ -123,6 +125,12 @@
       <div class="hint" id="passInfo"></div>
       <div class="thank"><div><b>Thank the maker</b><span id="thankTxt">Say thanks to the person who made FortDay. +1,000 XP, once per season.</span></div><button id="thankBtn" class="buy equip">Thank you!</button></div>
       <div class="pass-track" id="passTrack"></div>
+    </section>
+
+    <section class="panel" id="tab-players" hidden>
+      <div class="pl-head"><h2>Players</h2><span class="hint">Only on this computer</span></div>
+      <div class="pl-acts"><button class="buy equip" id="plRefresh" type="button">Refresh</button><button class="buy" id="plLink" type="button">Sheet link</button></div>
+      <div id="plBody"></div>
     </section>
 
     <section class="panel shop" id="tab-shop" hidden>
@@ -240,6 +248,15 @@
   </div>
 </div>
 
+<div class="overlay" id="owner" hidden>
+  <div class="card">
+    <h2>Who played</h2>
+    <p class="hint">Paste the CSV link of your FortDay Google Sheet (File → Share → Publish to web → the responses sheet as CSV). It is saved only in this browser, so the Players tab shows up only here.</p>
+    <input id="ownIn" type="url" placeholder="https://docs.google.com/spreadsheets/d/e/…/pub?output=csv" autocomplete="off" spellcheck="false">
+    <div class="hint" id="ownMsg"></div>
+    <div class="pl-acts"><button class="buy equip" id="ownBtn" type="button">Save</button><button class="buy" id="ownOff" type="button" hidden>Remove</button><button class="buy" id="ownClose" type="button">Close</button></div>
+  </div>
+</div>
 <div class="overlay" id="settings" hidden>
   <div class="card set-card">
     <h2>Settings</h2>

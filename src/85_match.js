@@ -194,7 +194,7 @@ const Match = {
   state: 'lobby', mode: 'solo', build: true, ranked: false, theme: 'greenvale', time: 0, aliveCount: 0, teamsAlive: 0,
   score: [0, 0], ending: false, endT: 0, spectate: null, paused: false, result: null, deathShown: false, hasWinner: false,
   start(o) {
-    Object.assign(this, o); if (this.mode !== 'tutorial') MapRotation.began();   // the 30-day island timer starts with a player's first match
+    Object.assign(this, o); if (this.mode !== 'tutorial') { MapRotation.began(); Track.matches++; }   // the 30-day island timer starts with a player's first match
     this.state = 'loading'; $('loading').hidden = false; $('lobby').hidden = true; $('ldFill').style.width = '15%';
     $('ldMsg').textContent = 'Raising ' + THEMES[this.theme].name + '…';
     Sfx.init();

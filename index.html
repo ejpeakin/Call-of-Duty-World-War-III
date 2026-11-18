@@ -553,6 +553,32 @@ details.ctl .hint{margin-top:8px}
 .ctl-grid > span:nth-child(odd){color:var(--mute)}
 .ctl-grid kbd{font-family:var(--f-body);font-size:11.5px;font-weight:700;background:rgba(255,255,255,.1);border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:1px 6px;margin-right:2px;color:var(--ink)}
 .hint.credit{font-size:11px;opacity:.7}
+.name-row{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:700;color:var(--mute)}
+.name-row input,#ownIn{flex:1;min-width:0;background:rgba(5,14,36,.6);border:1px solid rgba(150,195,255,.3);border-radius:8px;color:var(--ink);font:700 14px var(--f-body);padding:8px 10px}
+.pl-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.pl-acts{display:flex;gap:8px;flex-wrap:wrap}
+.pl-acts .buy{padding:7px 14px;font-size:13px}
+.pl-tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pl-err{color:#ffb3b8}
+.pl-wrap{position:relative}
+.pl-chart{width:100%;height:auto;display:block;overflow:visible}
+.pl-chart .pl-grid{stroke:rgba(150,195,255,.12);stroke-width:1}
+.pl-chart .pl-base{stroke:rgba(150,195,255,.45);stroke-width:1}
+.pl-chart .pl-ax{fill:var(--mute);font:600 10px var(--f-body)}
+.pl-chart .pl-bar{fill:#3987e5}
+.pl-chart .pl-hit{fill:transparent;cursor:default}
+.pl-chart .pl-hit:hover{fill:rgba(150,195,255,.08)}
+.pl-tip{position:absolute;pointer-events:none;display:flex;flex-direction:column;gap:2px;min-width:120px;padding:7px 10px;border-radius:8px;background:#06122c;border:1px solid var(--line);font-size:12px;color:var(--ink);box-shadow:0 6px 18px rgba(0,0,0,.4)}
+.pl-tip span{color:var(--mute)}
+.pl-top{display:flex;flex-direction:column;gap:6px}
+.pl-row{display:grid;grid-template-columns:minmax(70px,34%) 1fr auto;align-items:center;gap:8px;font-size:13px}
+.pl-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}
+.pl-track{height:10px;border-radius:0 4px 4px 0;background:rgba(150,195,255,.08);overflow:hidden}
+.pl-track i{display:block;height:100%;background:#3987e5;border-radius:0 4px 4px 0}
+.pl-row b{font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--ink)}
+.pl-table{width:100%;border-collapse:collapse;font-size:12.5px}
+.pl-table th{text-align:left;color:var(--mute);font-weight:700;padding:4px 6px;border-bottom:1px solid var(--line)}
+.pl-table td{padding:5px 6px;border-bottom:1px solid rgba(150,195,255,.08);font-variant-numeric:tabular-nums}
 .perf-row{align-items:flex-start;padding:10px 12px;border-radius:12px;border:1px solid rgba(126,240,160,.4);background:rgba(126,240,160,.08)}
 .perf-row > span{display:flex;flex-direction:column;gap:2px}
 .perf-row .hint{font-size:12px}
@@ -599,6 +625,7 @@ details.ctl .hint{margin-top:8px}
       <button data-tab="locker" title="Change your skin, back bling, glider and more">Locker</button>
       <button data-tab="pass" title="Season levels and the rewards you unlock">Pass</button>
       <button data-tab="career" title="Your stats and rank">Career</button>
+      <button data-tab="players" id="tabPlayers" title="Only on your computer: who played and for how long" hidden>Players</button>
       <button data-tab="shop" class="shop-tab" title="Buy skins and items with FortBux">Shop</button>
     </nav>
     <div class="lb-tier"><span id="tierLbl" class="num">Tier 1</span><div class="mini-bar"><i id="tierFill"></i></div></div>
@@ -616,6 +643,7 @@ details.ctl .hint{margin-top:8px}
           <li>Press <b>PLAY</b>. Be the last one standing to win.</li>
         </ol>
       </div>
+      <label class="name-row"><span>Your player name</span><input id="nameIn" maxlength="16" placeholder="Type a name" autocomplete="off" spellcheck="false"></label>
       <button class="tut-card" id="tutBtn" type="button"><span class="tut-badge" id="tutBadge" hidden>Recommended for new players</span><b>Tutorial</b><span>Learn to move, build, loot and fight in a few minutes</span></button>
       <h3 class="step"><i>1</i>Pick a mode</h3>
       <div class="opt-grid" id="modeGrid">
@@ -696,6 +724,12 @@ details.ctl .hint{margin-top:8px}
       <div class="hint" id="passInfo"></div>
       <div class="thank"><div><b>Thank the maker</b><span id="thankTxt">Say thanks to the person who made FortDay. +1,000 XP, once per season.</span></div><button id="thankBtn" class="buy equip">Thank you!</button></div>
       <div class="pass-track" id="passTrack"></div>
+    </section>
+
+    <section class="panel" id="tab-players" hidden>
+      <div class="pl-head"><h2>Players</h2><span class="hint">Only on this computer</span></div>
+      <div class="pl-acts"><button class="buy equip" id="plRefresh" type="button">Refresh</button><button class="buy" id="plLink" type="button">Sheet link</button></div>
+      <div id="plBody"></div>
     </section>
 
     <section class="panel shop" id="tab-shop" hidden>
@@ -813,6 +847,15 @@ details.ctl .hint{margin-top:8px}
   </div>
 </div>
 
+<div class="overlay" id="owner" hidden>
+  <div class="card">
+    <h2>Who played</h2>
+    <p class="hint">Paste the CSV link of your FortDay Google Sheet (File → Share → Publish to web → the responses sheet as CSV). It is saved only in this browser, so the Players tab shows up only here.</p>
+    <input id="ownIn" type="url" placeholder="https://docs.google.com/spreadsheets/d/e/…/pub?output=csv" autocomplete="off" spellcheck="false">
+    <div class="hint" id="ownMsg"></div>
+    <div class="pl-acts"><button class="buy equip" id="ownBtn" type="button">Save</button><button class="buy" id="ownOff" type="button" hidden>Remove</button><button class="buy" id="ownClose" type="button">Close</button></div>
+  </div>
+</div>
 <div class="overlay" id="settings" hidden>
   <div class="card set-card">
     <h2>Settings</h2>
@@ -884,7 +927,7 @@ details.ctl .hint{margin-top:8px}
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js"></script>
 <script async src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>
-const BUILD_ID = '1118-2333';
+const BUILD_ID = '1118-2355';
 'use strict';
 // =====================================================================
 //  FORTDAY — core utilities, data tables, profile, audio
@@ -6789,7 +6832,7 @@ const Match = {
   state: 'lobby', mode: 'solo', build: true, ranked: false, theme: 'greenvale', time: 0, aliveCount: 0, teamsAlive: 0,
   score: [0, 0], ending: false, endT: 0, spectate: null, paused: false, result: null, deathShown: false, hasWinner: false,
   start(o) {
-    Object.assign(this, o); if (this.mode !== 'tutorial') MapRotation.began();   // the 30-day island timer starts with a player's first match
+    Object.assign(this, o); if (this.mode !== 'tutorial') { MapRotation.began(); Track.matches++; }   // the 30-day island timer starts with a player's first match
     this.state = 'loading'; $('loading').hidden = false; $('lobby').hidden = true; $('ldFill').style.width = '15%';
     $('ldMsg').textContent = 'Raising ' + THEMES[this.theme].name + '…';
     Sfx.init();
@@ -8548,6 +8591,147 @@ const Waypoints = {
 
 
 // =====================================================================
+//  Who played: each play session sends one row to the maker's Google Form (fill in TRACK_FORM).
+//  The maker's own lobby gets a private Players tab that charts the Form's Google Sheet. Only a
+//  browser that has the Sheet's published link saved (pasted once via ?owner) shows that tab.
+// =====================================================================
+// From the Form's "Get pre-filled link": the formResponse address and each question's entry id.
+const TRACK_FORM = { url: '', f: { name: '', device: '', session: '', started: '', minutes: '', matches: '', build: '' } };
+const Track = {
+  t0: Date.now(), active: 0, last: performance.now(), sentMin: -1, matches: 0, sid: Math.random().toString(36).slice(2, 10),
+  device() { let d = Profile.d.dev; if (!d) { d = Profile.d.dev = Math.random().toString(36).slice(2, 10); Profile.save(); } return d; },
+  tick() { const now = performance.now(); if (!document.hidden) this.active += Math.min(6000, now - this.last); this.last = now; },
+  // minutes the game was on screen this visit; rows repeat the session id, so the chart keeps the longest
+  send(final) {
+    if (!TRACK_FORM.url || navigator.webdriver) return;
+    this.tick(); const min = Math.round(this.active / 6000) / 10;
+    if (this.active < 20000 || min - this.sentMin < (final ? 0.5 : 10)) return;
+    this.sentMin = min; const f = TRACK_FORM.f, p = new URLSearchParams();
+    p.set(f.name, (Profile.d.name || 'Player').slice(0, 24)); p.set(f.device, this.device()); p.set(f.session, this.sid);
+    p.set(f.started, new Date(this.t0).toISOString()); p.set(f.minutes, String(min)); p.set(f.matches, String(this.matches)); p.set(f.build, BUILD_ID);
+    try { if (!(navigator.sendBeacon && navigator.sendBeacon(TRACK_FORM.url, p))) fetch(TRACK_FORM.url, { method: 'POST', mode: 'no-cors', body: p, keepalive: true }).catch(() => {}); } catch (e) { /* offline */ }
+  },
+  init() {
+    setInterval(() => { this.tick(); this.send(false); }, 5000);
+    document.addEventListener('visibilitychange', () => { this.tick(); if (document.hidden) this.send(true); else this.last = performance.now(); });
+    addEventListener('pagehide', () => this.send(true));
+  },
+};
+
+// ---------------------------------------------------------------- the maker's private Players tab
+const Players = {
+  rows: null, err: '', loading: false, at: 0,
+  link() { return Profile.d.ownerCsv || ''; },
+  // ?owner in the address opens the box where the maker pastes the Sheet's published CSV link
+  init() {
+    $('ownBtn').addEventListener('click', () => this.saveLink());
+    $('ownOff').addEventListener('click', () => { delete Profile.d.ownerCsv; Profile.save(); $('ownIn').value = ''; $('ownMsg').textContent = 'Removed from this browser. The Players tab is gone.'; Lobby.tab = 'play'; Lobby.refresh(); });
+    $('ownClose').addEventListener('click', () => { $('owner').hidden = true; });
+    $('ownIn').addEventListener('keydown', e => { if (e.key === 'Enter') this.saveLink(); e.stopPropagation(); });
+    $('plRefresh').addEventListener('click', () => this.load(true));
+    $('plLink').addEventListener('click', () => this.openSetup());
+    let q; try { q = new URLSearchParams(location.search); } catch (e) { return; }
+    if (q.has('owner')) { q.delete('owner'); try { history.replaceState(null, '', location.pathname + (q.toString() ? '?' + q : '') + location.hash); } catch (e) { /* sandboxed */ } this.openSetup(); }
+  },
+  openSetup() { $('ownIn').value = this.link(); $('ownMsg').textContent = ''; $('ownOff').hidden = !this.link(); $('owner').hidden = false; },
+  saveLink() {
+    const v = $('ownIn').value.trim();
+    if (!/^https:\/\/docs\.google\.com\/spreadsheets\/.+(output=csv|format=csv)/.test(v)) { $('ownMsg').textContent = 'Paste the CSV link from File → Share → Publish to web (it ends with output=csv).'; return; }
+    Profile.d.ownerCsv = v; Profile.save(); this.rows = null; $('owner').hidden = true; Lobby.tab = 'players'; Lobby.refresh();
+  },
+  async load(force) {
+    if (!this.link() || this.loading || (!force && this.rows && Date.now() - this.at < 60000)) return;
+    this.loading = true; this.err = ''; this.render();
+    try {
+      const r = await fetch(this.link() + (this.link().includes('?') ? '&' : '?') + 't=' + Date.now(), { cache: 'no-store' });
+      if (!r.ok) throw new Error('the Sheet answered ' + r.status);
+      this.rows = this.parse(await r.text()); this.at = Date.now();
+    } catch (e) { this.err = 'Could not read your Sheet (' + (e.message || e) + '). Check that it is still published to the web as CSV.'; }
+    this.loading = false; this.render();
+  },
+  csv(text) {
+    const out = []; let row = [], cell = '', q = false;
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (q) { if (ch === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else q = false; } else cell += ch; }
+      else if (ch === '"') q = true;
+      else if (ch === ',') { row.push(cell); cell = ''; }
+      else if (ch === '\n' || ch === '\r') { if (ch === '\r' && text[i + 1] === '\n') i++; row.push(cell); out.push(row); row = []; cell = ''; }
+      else cell += ch;
+    }
+    if (cell || row.length) { row.push(cell); out.push(row); }
+    return out;
+  },
+  // one entry per session (the longest row wins)
+  parse(text) {
+    const t = this.csv(text); if (!t.length) return [];
+    const H = t[0].map(h => h.trim().toLowerCase()), col = k => H.findIndex(h => h.startsWith(k));
+    const ci = { name: col('player'), device: col('device'), session: col('session'), started: col('started'), minutes: col('minutes'), matches: col('matches'), ts: col('timestamp') };
+    const by = new Map();
+    for (const r of t.slice(1)) {
+      if (!r.length || r.every(c => !c)) continue;
+      const g = k => (ci[k] >= 0 ? (r[ci[k]] || '').trim() : '');
+      let when = new Date(g('started')); if (isNaN(when)) when = new Date(g('ts')); if (isNaN(when)) continue;
+      const s = { name: g('name') || 'Player', device: g('device'), session: g('session') || Math.random().toString(36), when, min: Math.max(0, parseFloat(g('minutes')) || 0), matches: parseInt(g('matches'), 10) || 0 };
+      const o = by.get(s.session); if (!o || s.min >= o.min) by.set(s.session, s);
+    }
+    return [...by.values()].sort((a, b) => b.when - a.when);
+  },
+  fmtMin(m) { return m < 60 ? Math.round(m) + ' min' : (m / 60).toFixed(m < 600 ? 1 : 0) + ' h'; },
+  render() {
+    const box = $('plBody'); if (!box) return;
+    if (this.loading && !this.rows) { box.innerHTML = '<div class="hint">Loading your Sheet…</div>'; return; }
+    if (this.err) { box.innerHTML = '<div class="hint pl-err">' + esc(this.err) + '</div>'; if (!this.rows) return; }
+    const R = this.rows || [];
+    if (!R.length) { box.innerHTML = (this.err ? '<div class="hint pl-err">' + esc(this.err) + '</div>' : '') + '<div class="hint">No sessions yet. They show up here after people play on the website for at least 20 seconds.</div>'; return; }
+    const me = Profile.d.dev, who = s => s.name + (s.device && s.device === me ? ' (you)' : '');
+    const now = Date.now(), day = 864e5, week = R.filter(s => now - s.when < 7 * day);
+    const people = new Set(R.map(s => s.device || s.name)).size, total = R.reduce((a, s) => a + s.min, 0), wk = week.reduce((a, s) => a + s.min, 0);
+    // last 14 days, minutes per day
+    const days = []; const d0 = new Date(); d0.setHours(0, 0, 0, 0);
+    for (let i = 13; i >= 0; i--) { const d = new Date(d0.getTime() - i * day); days.push({ d, min: 0, n: 0, who: new Set() }); }
+    for (const s of R) { const k = Math.floor((new Date(s.when).setHours(0, 0, 0, 0) - days[0].d.getTime()) / day); if (k >= 0 && k < 14) { days[k].min += s.min; days[k].n++; days[k].who.add(s.name); } }
+    const W = 400, Hh = 150, padL = 34, padB = 22, padT = 10, bw = Math.min(18, (W - padL) / 14 - 6), maxM = Math.max(10, ...days.map(x => x.min));
+    const step = maxM <= 30 ? 10 : maxM <= 60 ? 20 : maxM <= 150 ? 50 : maxM <= 300 ? 100 : Math.ceil(maxM / 300) * 100, top = Math.ceil(maxM / step) * step;
+    const y = v => padT + (Hh - padT - padB) * (1 - v / top), x = i => padL + (i + 0.5) * (W - padL) / 14;
+    let svg = `<svg class="pl-chart" viewBox="0 0 ${W} ${Hh}" role="img" aria-label="Minutes played per day, last 14 days">`;
+    for (let v = 0; v <= top; v += step) svg += `<line x1="${padL}" x2="${W}" y1="${y(v)}" y2="${y(v)}" class="pl-grid"/><text x="${padL - 6}" y="${y(v) + 3.5}" class="pl-ax" text-anchor="end">${v}</text>`;
+    days.forEach((b, i) => {
+      const h = Math.max(0, y(0) - y(b.min)), r = Math.min(4, h), x0 = x(i) - bw / 2, y0 = y(0);
+      if (h > 0.5) svg += `<path class="pl-bar" d="M${x0},${y0} V${y0 - h + r} Q${x0},${y0 - h} ${x0 + r},${y0 - h} H${x0 + bw - r} Q${x0 + bw},${y0 - h} ${x0 + bw},${y0 - h + r} V${y0} Z"/>`;
+      svg += `<rect class="pl-hit" x="${x(i) - (W - padL) / 28}" y="${padT}" width="${(W - padL) / 14}" height="${Hh - padT - padB}" data-i="${i}"/>`;
+      if (i % 2 === 1 || i === 13) svg += `<text x="${x(i)}" y="${Hh - 6}" class="pl-ax" text-anchor="middle">${i === 13 ? 'Today' : b.d.toLocaleDateString(undefined, { month: 'numeric', day: 'numeric' })}</text>`;
+    });
+    svg += `<line x1="${padL}" x2="${W}" y1="${y(0)}" y2="${y(0)}" class="pl-base"/></svg>`;
+    // top players by total time
+    const tot = new Map(); for (const s of R) { const k = s.device || s.name; const o = tot.get(k) || { name: who(s), min: 0, n: 0, last: s.when }; o.min += s.min; o.n++; if (s.when > o.last) o.last = s.when; tot.set(k, o); }
+    const tops = [...tot.values()].sort((a, b) => b.min - a.min).slice(0, 8), tmax = Math.max(1, tops[0] ? tops[0].min : 1);
+    const when = d => { const t = new Date(d), today = new Date(); const sameDay = t.toDateString() === today.toDateString(); return (sameDay ? 'Today' : t.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })) + ', ' + t.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }); };
+    box.innerHTML = (this.err ? '<div class="hint pl-err">' + esc(this.err) + '</div>' : '') + `
+      <div class="pl-tiles">
+        <div class="stat"><b>${people}</b><span>Players</span></div>
+        <div class="stat"><b>${R.length}</b><span>Sessions</span></div>
+        <div class="stat"><b>${this.fmtMin(total)}</b><span>Total play time</span></div>
+        <div class="stat"><b>${this.fmtMin(wk)}</b><span>Last 7 days</span></div>
+      </div>
+      <h3>Minutes played per day</h3>
+      <div class="pl-wrap">${svg}<div class="pl-tip" id="plTip" hidden></div></div>
+      <h3>Most time played</h3>
+      <div class="pl-top">${tops.map(p => `<div class="pl-row"><span class="pl-name">${esc(p.name)}</span><span class="pl-track"><i style="width:${(p.min / tmax * 100).toFixed(1)}%"></i></span><b>${this.fmtMin(p.min)}</b></div>`).join('')}</div>
+      <h3>Recent sessions</h3>
+      <table class="pl-table"><thead><tr><th>Player</th><th>When</th><th>How long</th><th>Matches</th></tr></thead><tbody>${R.slice(0, 30).map(s => `<tr><td>${esc(who(s))}</td><td>${esc(when(s.when))}</td><td>${this.fmtMin(s.min)}</td><td>${s.matches}</td></tr>`).join('')}</tbody></table>`;
+    const tip = $('plTip'), wrap = box.querySelector('.pl-wrap');
+    wrap.addEventListener('mousemove', e => {
+      const t = e.target.closest('.pl-hit'); if (!t) { tip.hidden = true; return; }
+      const b = days[+t.dataset.i], r = wrap.getBoundingClientRect();
+      tip.innerHTML = `<b>${b.d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</b><span>${Math.round(b.min)} min · ${b.n} session${b.n === 1 ? '' : 's'}</span>${b.who.size ? '<span>' + esc([...b.who].slice(0, 4).join(', ') + (b.who.size > 4 ? ' +' + (b.who.size - 4) : '')) + '</span>' : ''}`;
+      tip.hidden = false; tip.style.left = Math.min(r.width - 150, Math.max(0, e.clientX - r.left - 60)) + 'px'; tip.style.top = Math.max(0, e.clientY - r.top - 70) + 'px';
+    });
+    wrap.addEventListener('mouseleave', () => { tip.hidden = true; });
+  },
+};
+
+// =====================================================================
 //  Lobby: 3D character stage, play options, locker, pass, career
 // =====================================================================
 const Lobby = {
@@ -8630,6 +8814,8 @@ const Lobby = {
     $('modeGrid').addEventListener('click', e => { const b = e.target.closest('[data-mode]'); if (!b) return; Profile.d.mode = b.dataset.mode; Profile.save(); this.refresh(); });
     $('buildSeg').addEventListener('click', e => { const b = e.target.closest('[data-build]'); if (!b) return; Profile.d.build = b.dataset.build === '1'; Profile.save(); this.refresh(); });
     $('islGrid').addEventListener('click', e => { const b = e.target.closest('[data-isl]'); if (!b) return; if (b.dataset.isl !== MapRotation.current()) { Sfx.init(); $('islNote').textContent = THEMES[b.dataset.isl].name + ' is locked. Only ' + THEMES[MapRotation.current()].name + ' is open right now.'; return; } Profile.d.theme = b.dataset.isl; Profile.save(); this.refresh(); });
+    $('nameIn').addEventListener('input', e => { Profile.d.name = e.target.value.trim().slice(0, 16); Profile.save(); const m = $('mpName'); if (m) m.value = Profile.d.name; });
+    $('nameIn').addEventListener('keydown', e => e.stopPropagation());
     $('rankedChk').addEventListener('change', e => { Profile.d.ranked = e.target.checked; Profile.save(); this.refresh(); });
     $('catRow').addEventListener('click', e => { const b = e.target.closest('[data-cat]'); if (!b) return; this.cat = b.dataset.cat; this.refresh(); });
     $('itemGrid').addEventListener('click', e => {
@@ -8766,7 +8952,11 @@ const Lobby = {
       $('welcome').hidden = !fresh; $('tutBadge').hidden = !newish; $('tutBtn').classList.toggle('new', newish); $('tutBtn').classList.toggle('small', !newish); }
     $('coinLbl').textContent = d.coins.toLocaleString();
     [...$('tabs').children].forEach(b => b.classList.toggle('on', b.dataset.tab === this.tab));
-    for (const t of ['play', 'locker', 'pass', 'career', 'shop']) $('tab-' + t).hidden = t !== this.tab;
+    if (this.tab === 'players' && !Players.link()) this.tab = 'play';
+    $('tabPlayers').hidden = !Players.link();   // only the maker's browser has the Sheet link
+    for (const t of ['play', 'locker', 'pass', 'career', 'shop', 'players']) $('tab-' + t).hidden = t !== this.tab;
+    if (this.tab === 'players') { Players.render(); Players.load(false); }
+    if (document.activeElement !== $('nameIn')) $('nameIn').value = Profile.d.name || '';
     $('lobby').classList.toggle('shop-wide', this.tab === 'shop' || this.tab === 'locker');
     if (this.tab === 'shop') {
       this.shopHero();
@@ -8841,7 +9031,7 @@ function boot() {
   try { CharModel.load(); } catch (e) { console.warn(e); }
   HUD.init();
   Input.init(); Settings.init(); Tutorial.init(); Inv.init();
-  Lobby.init();
+  Lobby.init(); Track.init(); Players.init();
   // back from the $1 checkout: ?bp=CODE in the address unlocks the Battle Pass, then the code is removed from the address
   (async () => {
     let q; try { q = new URLSearchParams(location.search); } catch (e) { return; }

@@ -81,6 +81,8 @@ const Lobby = {
     $('modeGrid').addEventListener('click', e => { const b = e.target.closest('[data-mode]'); if (!b) return; Profile.d.mode = b.dataset.mode; Profile.save(); this.refresh(); });
     $('buildSeg').addEventListener('click', e => { const b = e.target.closest('[data-build]'); if (!b) return; Profile.d.build = b.dataset.build === '1'; Profile.save(); this.refresh(); });
     $('islGrid').addEventListener('click', e => { const b = e.target.closest('[data-isl]'); if (!b) return; if (b.dataset.isl !== MapRotation.current()) { Sfx.init(); $('islNote').textContent = THEMES[b.dataset.isl].name + ' is locked. Only ' + THEMES[MapRotation.current()].name + ' is open right now.'; return; } Profile.d.theme = b.dataset.isl; Profile.save(); this.refresh(); });
+    $('nameIn').addEventListener('input', e => { Profile.d.name = e.target.value.trim().slice(0, 16); Profile.save(); const m = $('mpName'); if (m) m.value = Profile.d.name; });
+    $('nameIn').addEventListener('keydown', e => e.stopPropagation());
     $('rankedChk').addEventListener('change', e => { Profile.d.ranked = e.target.checked; Profile.save(); this.refresh(); });
     $('catRow').addEventListener('click', e => { const b = e.target.closest('[data-cat]'); if (!b) return; this.cat = b.dataset.cat; this.refresh(); });
     $('itemGrid').addEventListener('click', e => {
@@ -217,7 +219,11 @@ const Lobby = {
       $('welcome').hidden = !fresh; $('tutBadge').hidden = !newish; $('tutBtn').classList.toggle('new', newish); $('tutBtn').classList.toggle('small', !newish); }
     $('coinLbl').textContent = d.coins.toLocaleString();
     [...$('tabs').children].forEach(b => b.classList.toggle('on', b.dataset.tab === this.tab));
-    for (const t of ['play', 'locker', 'pass', 'career', 'shop']) $('tab-' + t).hidden = t !== this.tab;
+    if (this.tab === 'players' && !Players.link()) this.tab = 'play';
+    $('tabPlayers').hidden = !Players.link();   // only the maker's browser has the Sheet link
+    for (const t of ['play', 'locker', 'pass', 'career', 'shop', 'players']) $('tab-' + t).hidden = t !== this.tab;
+    if (this.tab === 'players') { Players.render(); Players.load(false); }
+    if (document.activeElement !== $('nameIn')) $('nameIn').value = Profile.d.name || '';
     $('lobby').classList.toggle('shop-wide', this.tab === 'shop' || this.tab === 'locker');
     if (this.tab === 'shop') {
       this.shopHero();
