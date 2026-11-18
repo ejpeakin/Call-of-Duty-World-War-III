@@ -103,7 +103,7 @@ const Lobby = {
     };
     $('codeBtn').addEventListener('click', redeem);
     $('codeIn').addEventListener('keydown', e => { if (e.key === 'Enter') redeem(); e.stopPropagation(); });
-    // Battle Pass: 5,000 FortBux (tap twice to confirm), or a code bought for $1
+    // Battle Pass: 5,000 FortBux (tap twice to confirm), or $1 on the payment site (it sends you back with ?bp=)
     $('bpBtn').addEventListener('click', () => {
       Sfx.init(); const b = $('bpBtn');
       if (Profile.hasPass()) {
@@ -111,22 +111,12 @@ const Lobby = {
         const first = COS.outfit.find(c => Profile.canClaim(c)); this.tab = 'shop'; this.shopFilter = 'outfit'; if (first) this.shopSel = { cat: 'outfit', id: first.id };
         this.refresh(); $('tab-shop').scrollTop = 0; $('shopMsg').textContent = 'Battle Pass: pick any skin and press Claim free. You get one per season.'; return;
       }
-      if (Profile.d.coins < PASS_PRICE) { $('bpMsg').textContent = 'You need ' + (PASS_PRICE - Profile.d.coins).toLocaleString() + ' more ' + COIN + ', or use the $1 option below.'; return; }
+      if (Profile.d.coins < PASS_PRICE) { $('bpMsg').textContent = 'You need ' + (PASS_PRICE - Profile.d.coins).toLocaleString() + ' more ' + COIN + (PASS_PAY_URL ? ', or pay $1 online below.' : '.'); return; }
       if (!b.dataset.confirm) { b.dataset.confirm = '1'; b.textContent = 'Tap again to spend ' + PASS_PRICE.toLocaleString(); clearTimeout(this.bpT); this.bpT = setTimeout(() => { delete b.dataset.confirm; this.refresh(); }, 3500); return; }
       delete b.dataset.confirm; clearTimeout(this.bpT);
       const r = Profile.buyPass(); if (r.ok) Sfx.chest();
       this.refresh(); $('bpMsg').textContent = r.err || 'Battle Pass unlocked! You are now ' + RANKS[Profile.rankIdx()][0] + '. Press Pick your free skin.';
     });
-    const bpRedeem = async () => {
-      const inp = $('bpCode'), msg = $('bpMsg'); Sfx.init(); msg.textContent = 'Checking…';
-      let r; try { r = await redeemCode(inp.value); } catch (e) { r = { err: 'Could not check that code.' }; }
-      if (r.err) { msg.textContent = r.err; return; }
-      if (!r.pass) { msg.textContent = 'That is a skin code, so ' + r.it.name + ' is now unlocked and equipped. Battle Pass codes come from the $1 option.'; this.refresh(); return; }
-      inp.value = ''; Sfx.chest(); this.refresh();
-      msg.textContent = r.had ? 'You already have the Battle Pass this season.' : 'Battle Pass unlocked! You are now ' + RANKS[Profile.rankIdx()][0] + '. Press Pick your free skin.';
-    };
-    $('bpRedeem').addEventListener('click', bpRedeem);
-    $('bpCode').addEventListener('keydown', e => { if (e.key === 'Enter') bpRedeem(); e.stopPropagation(); });
     $('thankBtn').addEventListener('click', () => {
       const d = Profile.d; if (d.thankSeason === Season.id()) return;
       d.thankSeason = Season.id(); const lv = Profile.addXp(1000); Profile.save(); Sfx.init();
@@ -267,7 +257,7 @@ const Lobby = {
         $('bpNote').textContent = has ? 'Active for ' + Season.name() + ' · ' + dtx + ' left. Get it again next season for another free skin.' : 'Lasts until ' + Season.name() + ' ends (' + dtx + '). Get it again each season for another free skin.';
         const b = $('bpBtn'); if (!b.dataset.confirm) { b.textContent = has ? (left ? 'Pick your free skin' : 'Free skin claimed ✓') : 'Buy for ' + PASS_PRICE.toLocaleString() + ' ' + COIN; b.disabled = has && !left; b.className = 'buy' + (has ? (left ? ' equip' : ' owned') : ''); }
         $('bpUsd').hidden = has; $('bpPay').hidden = !PASS_PAY_URL; if (PASS_PAY_URL) $('bpPay').href = PASS_PAY_URL;
-        $('bpPayNote').textContent = PASS_PAY_URL ? 'Pay securely on the checkout page. When you finish, you come straight back here and the pass unlocks by itself. Have a Battle Pass code instead? Enter it below.' : 'Online checkout is being set up. Check back soon. If you were given a Battle Pass code, enter it below.'; }
+        $('bpPayNote').textContent = PASS_PAY_URL ? 'Pay on the secure checkout page. When you finish, you come straight back here and the Battle Pass unlocks by itself.' : 'Online checkout is coming soon.'; }
       $('passLvl').textContent = 'Level ' + tier; $('passXp').textContent = (d.seasonXp % XP_PER_LEVEL).toLocaleString() + ' / ' + XP_PER_LEVEL.toLocaleString() + ' XP';
       $('passInfo').textContent = `Every level takes ${XP_PER_LEVEL.toLocaleString()} XP and pays ${LEVEL_COINS} ${COIN}. Bonus XP: 1st place +2,500 · each shark you defeat +2,000 · first to land +500 · your first game +5,000 · thanking the maker +1,000 once a season. Levels start over each season; anything you unlock stays yours.`;
       $('passFill').style.width = ((d.seasonXp % XP_PER_LEVEL) / XP_PER_LEVEL * 100) + '%';
