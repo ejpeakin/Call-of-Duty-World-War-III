@@ -884,7 +884,7 @@ details.ctl .hint{margin-top:8px}
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js"></script>
 <script async src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>
-const BUILD_ID = '1118-2257';
+const BUILD_ID = '1118-2324';
 'use strict';
 // =====================================================================
 //  FORTDAY — core utilities, data tables, profile, audio
@@ -3773,6 +3773,18 @@ function buildCharacter(eq, skinned) {
     const h = M(new THREE.ShapeGeometry(heart), ink, 0.072, -0.032, 0.117, head); h.rotation.y = 0.55;
     for (let i = 0; i < 3; i++) { const d = M(new THREE.CircleGeometry(0.0034, 8), ink, -0.04 - (i % 2) * 0.012, -0.004 - (i === 2 ? 0.01 : 0), 0.131, head); d.rotation.y = -0.3; }
     const dm = M(new THREE.CircleGeometry(0.008, 4), ink, 0, 0.06, 0.137, head); dm.rotation.z = Math.PI / 4;
+    // more ink, laid onto the curve of the face: a star on the temple, a cross on the other cheekbone, lines beside the
+    // eye, a lightning bolt on the jaw, small script under the eye, a dotted line along the jaw and a ring on the chin
+    const at = (m, x, y, dz = 0.0025) => { const z = Math.sqrt(Math.max(1e-4, 0.0196 - x * x - y * y * 0.75)) + dz; m.position.set(x, y, z); m.rotation.set(-Math.atan2(y, z) * 0.7, Math.atan2(x, z), m.rotation.z); return m; };
+    const star = new THREE.Shape(); for (let i = 0; i < 10; i++) { const a = i / 10 * TAU - Math.PI / 2, r = i % 2 ? 0.0045 : 0.011; i ? star.lineTo(Math.cos(a) * r, Math.sin(a) * r) : star.moveTo(Math.cos(a) * r, Math.sin(a) * r); }
+    at(M(new THREE.ShapeGeometry(star), ink, 0, 0, 0, head), 0.084, 0.046);
+    for (const [w, h2] of [[0.0035, 0.018], [0.012, 0.0035]]) at(M(new THREE.PlaneGeometry(w, h2), ink, 0, 0, 0, head), -0.078, -0.026);
+    for (let i = 0; i < 3; i++) { const l = at(M(new THREE.PlaneGeometry(0.012, 0.003), ink, 0, 0, 0, head), -0.09, 0.034 - i * 0.008); l.rotation.z = 0.25; }   // three lines beside the eye
+    const bolt = new THREE.Shape(); bolt.moveTo(0.003, 0.014); bolt.lineTo(-0.006, 0.0); bolt.lineTo(0.0, 0.0); bolt.lineTo(-0.004, -0.014); bolt.lineTo(0.007, 0.003); bolt.lineTo(0.001, 0.003); bolt.lineTo(0.006, 0.014);
+    at(M(new THREE.ShapeGeometry(bolt), ink, 0, 0, 0, head), 0.066, -0.074);
+    for (let i = 0; i < 5; i++) at(M(new THREE.PlaneGeometry(0.0022, i % 2 ? 0.0065 : 0.0045), ink, 0, 0, 0, head), 0.03 + i * 0.0065, -0.008 - (i % 2) * 0.001);
+    for (let i = 0; i < 4; i++) at(M(new THREE.CircleGeometry(0.0026, 6), ink, 0, 0, 0, head), -0.056 - i * 0.009, -0.066 - i * 0.008);
+    at(M(new THREE.RingGeometry(0.0045, 0.0072, 14), ink, 0, 0, 0, head), 0, -0.104, 0.004);
   } else if (o.faceTats && !boxHead) {
     const ink = new THREE.MeshLambertMaterial({ color: 0x15101a });
     const drop = new THREE.Shape(); drop.moveTo(0, 0.012); drop.bezierCurveTo(0.006, 0.002, 0.008, -0.006, 0, -0.01); drop.bezierCurveTo(-0.008, -0.006, -0.006, 0.002, 0, 0.012);
