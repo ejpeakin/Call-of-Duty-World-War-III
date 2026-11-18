@@ -1,11 +1,12 @@
 // =====================================================================
 //  Building: walls, ramps, floors on a 4m grid (wood / brick / metal)
 // =====================================================================
-const T = 4;
+// Build tiles in Fortnite-style proportions: 5.12 m wide and 3.84 m tall (wider than tall), ramps rise one storey per tile
+const T = 5.12, TH = 3.84, CONE_H = TH * 0.5;
 const Build = {
   active: false, piece: 'wall', pieces: [], map: new Map(), ghosts: null, tgt: null, lastKey: null, placeCD: 0,
   init() {
-    this.ghosts = { wall: new THREE.Mesh(GEO.wall, MAT.ghost), floor: new THREE.Mesh(GEO.floor, MAT.ghost), rampX: new THREE.Mesh(GEO.rampX, MAT.ghost), rampZ: new THREE.Mesh(GEO.rampZ, MAT.ghost) };
+    this.ghosts = { wall: new THREE.Mesh(GEO.wall, MAT.ghost), floor: new THREE.Mesh(GEO.floor, MAT.ghost), rampX: new THREE.Mesh(GEO.rampX, MAT.ghost), rampZ: new THREE.Mesh(GEO.rampZ, MAT.ghost), cone: new THREE.Mesh(GEO.cone, MAT.ghost) };
     for (const k in this.ghosts) { this.ghosts[k].visible = false; this.ghosts[k].renderOrder = 6; scene.add(this.ghosts[k]); }
   },
   clear() {
@@ -15,7 +16,7 @@ const Build = {
   hideGhost() { if (this.ghosts) for (const k in this.ghosts) this.ghosts[k].visible = false; },
   compute(a, type) {
     const fx = Math.sin(a.yaw), fz = Math.cos(a.yaw), p = a.pitch;
-    let gy = Math.floor((a.pos.y + 1.2) / T);
+    let gy = Math.floor((a.pos.y + 1.2) / TH);
     if (type === 'wall') {
       if (p > 0.75) gy += 1;
       const cx = Math.floor(a.pos.x / T), cz = Math.floor(a.pos.z / T);
@@ -23,19 +24,20 @@ const Build = {
       const ez = fz > 0 ? cz + 1 : cz; return { type, gx: cx, gy, gz: ez, dir: 0, key: 'w0:' + cx + ':' + gy + ':' + ez };
     }
     let gx = Math.floor((a.pos.x + fx * T * 0.7) / T), gz = Math.floor((a.pos.z + fz * T * 0.7) / T);
-    if (type === 'floor') {
-      if (p > 0.6) gy += 1; else if (p < -0.75) { gx = Math.floor(a.pos.x / T); gz = Math.floor(a.pos.z / T); }
-      return { type, gx, gy, gz, dir: 0, key: 'f:' + gx + ':' + gy + ':' + gz };
+    if (type === 'floor' || type === 'cone') {
+      if (p > 0.6 || (type === 'cone' && p > 0.25)) gy += 1; else if (p < -0.75) { gx = Math.floor(a.pos.x / T); gz = Math.floor(a.pos.z / T); }
+      if (type === 'cone' && p > 0.25) { gx = Math.floor(a.pos.x / T); gz = Math.floor(a.pos.z / T); }   // looking up: a roof over your own tile
+      return { type, gx, gy, gz, dir: 0, key: (type === 'cone' ? 'c:' : 'f:') + gx + ':' + gy + ':' + gz };
     }
     const dir = Math.abs(fx) > Math.abs(fz) ? (fx > 0 ? 0 : 1) : (fz > 0 ? 2 : 3);
     return { type: 'ramp', gx, gy, gz, dir, key: 'r:' + gx + ':' + gy + ':' + gz };
   },
   pose(t, m) {
-    const y0 = t.gy * T;
+    const y0 = t.gy * TH, ang = Math.atan2(TH, T);
     m.rotation.set(0, 0, 0);
-    if (t.type === 'wall') { if (t.dir === 0) m.position.set((t.gx + 0.5) * T, y0 + T / 2, t.gz * T); else { m.position.set(t.gx * T, y0 + T / 2, (t.gz + 0.5) * T); m.rotation.y = Math.PI / 2; } }
-    else if (t.type === 'floor') m.position.set((t.gx + 0.5) * T, y0, (t.gz + 0.5) * T);
-    else { m.position.set((t.gx + 0.5) * T, y0 + T / 2, (t.gz + 0.5) * T); if (t.dir === 0) m.rotation.z = Math.PI / 4; else if (t.dir === 1) m.rotation.z = -Math.PI / 4; else if (t.dir === 2) m.rotation.x = -Math.PI / 4; else m.rotation.x = Math.PI / 4; }
+    if (t.type === 'wall') { if (t.dir === 0) m.position.set((t.gx + 0.5) * T, y0 + TH / 2, t.gz * T); else { m.position.set(t.gx * T, y0 + TH / 2, (t.gz + 0.5) * T); m.rotation.y = Math.PI / 2; } }
+    else if (t.type === 'floor' || t.type === 'cone') m.position.set((t.gx + 0.5) * T, y0, (t.gz + 0.5) * T);
+    else { m.position.set((t.gx + 0.5) * T, y0 + TH / 2, (t.gz + 0.5) * T); if (t.dir === 0) m.rotation.z = ang; else if (t.dir === 1) m.rotation.z = -ang; else if (t.dir === 2) m.rotation.x = -ang; else m.rotation.x = ang; }
   },
   geoKey(t) { return t.type === 'ramp' ? (t.dir < 2 ? 'rampX' : 'rampZ') : t.type; },
   canAfford(a) { return a.mats[a.mat] >= 10; },
@@ -49,10 +51,11 @@ const Build = {
     a.mats[a.mat] -= 10;
     const k = this.geoKey(t), mesh = new THREE.Mesh(GEO[k], MAT[a.mat]); this.pose(t, mesh);
     mesh.castShadow = true; mesh.receiveShadow = true; mesh.scale.setScalar(0.4); scene.add(mesh);
-    const y0 = t.gy * T; let col;
-    if (t.type === 'wall') col = t.dir === 0 ? { minX: t.gx * T, maxX: (t.gx + 1) * T, minZ: t.gz * T - 0.15, maxZ: t.gz * T + 0.15, minY: y0, maxY: y0 + T } : { minX: t.gx * T - 0.15, maxX: t.gx * T + 0.15, minZ: t.gz * T, maxZ: (t.gz + 1) * T, minY: y0, maxY: y0 + T };
+    const y0 = t.gy * TH; let col;
+    if (t.type === 'wall') col = t.dir === 0 ? { minX: t.gx * T, maxX: (t.gx + 1) * T, minZ: t.gz * T - 0.15, maxZ: t.gz * T + 0.15, minY: y0, maxY: y0 + TH } : { minX: t.gx * T - 0.15, maxX: t.gx * T + 0.15, minZ: t.gz * T, maxZ: (t.gz + 1) * T, minY: y0, maxY: y0 + TH };
     else if (t.type === 'floor') col = { minX: t.gx * T, maxX: (t.gx + 1) * T, minZ: t.gz * T, maxZ: (t.gz + 1) * T, minY: y0 - 0.12, maxY: y0 + 0.12 };
-    else col = { kind: 'ramp', minX: t.gx * T, maxX: (t.gx + 1) * T, minZ: t.gz * T, maxZ: (t.gz + 1) * T, minY: y0, maxY: y0 + T, y0, rise: T, dir: t.dir };
+    else if (t.type === 'cone') col = { kind: 'ramp', cone: true, minX: t.gx * T, maxX: (t.gx + 1) * T, minZ: t.gz * T, maxZ: (t.gz + 1) * T, minY: y0, maxY: y0 + CONE_H, y0, rise: CONE_H, dir: 0 };   // walkable like a ramp, sloping up to the middle
+    else col = { kind: 'ramp', minX: t.gx * T, maxX: (t.gx + 1) * T, minZ: t.gz * T, maxZ: (t.gz + 1) * T, minY: y0, maxY: y0 + TH, y0, rise: TH, dir: t.dir };
     col.kind = col.kind || 'piece'; col.mat = a.mat;
     const p = { type: t.type, key: t.key, mat: a.mat, hp: MATS[a.mat].hp, maxHp: MATS[a.mat].hp, mesh, col, owner: a, anim: 0.14, x: mesh.position.x, y: mesh.position.y, z: mesh.position.z };
     col.piece = p; Grid.add(col);

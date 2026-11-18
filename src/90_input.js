@@ -2,6 +2,8 @@
 //  Input (keyboard, mouse, touch), camera, player control
 // =====================================================================
 const Input = {
+  mouseSeen: false,
+  get coarse() { return IS_TOUCH && !this.mouseSeen; },   // a touch device that has not used a mouse or trackpad
   keys: {}, pressed: new Set(), mdx: 0, mdy: 0, lmb: false, rmb: false, wheel: 0, locked: false,
   touch: { on: false, mx: 0, mz: 0, fire: false, ads: false, jump: false, stickId: null, lookId: null, sx: 0, sy: 0, lx: 0, ly: 0 },
   // game controller (standard layout): sticks move and look, triggers aim and fire, face buttons act
@@ -48,21 +50,23 @@ const Input = {
   init() {
     const cv = $('fdView');
     addEventListener('keydown', e => {
-      this.padOff();
+      this.padOff(); if (this.touchOff && !e.repeat && !/^(Tab|Escape|Shift|Control|Alt|Meta)/.test(e.code)) { this.mouseSeen = true; this.touchOff(); }
       if (Match.state !== 'play') return;
       if (!this.keys[e.code]) this.press(e.code);
       this.keys[e.code] = true;
       if (Keys.bound(e.code) || ['Space', 'Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
-      if (e.code === 'Escape' && !IS_TOUCH && !this.locked) togglePause();
+      if (e.code === 'Escape' && Inv.on) { Inv.close(); return; }
+      if (e.code === 'Escape' && !this.coarse && !this.locked) togglePause();
     });
     addEventListener('keyup', e => { this.keys[e.code] = false; });
     addEventListener('blur', () => { this.keys = {}; this.lmb = this.rmb = false; });
     addEventListener('mousemove', e => { if (Match.state === 'play' && !Match.paused && (this.locked || this.lmb || this.rmb || this.free)) { this.mdx += e.movementX || 0; this.mdy += e.movementY || 0; } });
     cv.addEventListener('mousedown', e => {
       this.padOff();
+      if (Inv.on) { Inv.close(); return; }   // clicking the world closes the inventory instead of firing
       if (Match.state !== 'play' || Match.paused) return;
       Sfx.init();
-      if (!this.locked && !IS_TOUCH) this.requestLock();
+      if (!this.locked && !this.coarse) this.requestLock();
       if (e.button === 0) this.lmb = true; if (e.button === 2) this.rmb = true;
       const mc = 'Mouse' + e.button; if (!this.keys[mc]) this.press(mc); this.keys[mc] = true;
       if (!player || !player.alive) this.pressed.add('Click');
@@ -73,8 +77,8 @@ const Input = {
     cv.addEventListener('wheel', e => { if (Match.state === 'play') { this.wheel += Math.sign(e.deltaY); e.preventDefault(); } }, { passive: false });
     document.addEventListener('pointerlockchange', () => {
       this.locked = document.pointerLockElement === cv;
-      $('clickHint').hidden = this.locked || IS_TOUCH || Match.state !== 'play' || Match.paused || !$('death').hidden || !$('tutEnd').hidden;
-      if (!this.locked && Match.state === 'play' && !Match.paused && !IS_TOUCH && $('death').hidden && $('results').hidden && $('tutEnd').hidden && !Match.ending) togglePause(true);
+      $('clickHint').hidden = this.locked || this.coarse || this.touch.on || Match.state !== 'play' || Match.paused || !$('death').hidden || !$('tutEnd').hidden;
+      if (!this.locked && Match.state === 'play' && !Match.paused && !this.coarse && !this.touch.on && $('death').hidden && $('results').hidden && $('tutEnd').hidden && !Inv.on && !Match.ending) togglePause(true);
     });
     document.addEventListener('pointerlockerror', () => { this.free = true; $('clickHint').hidden = true; });
     this.initTouch();
@@ -82,15 +86,22 @@ const Input = {
   // a key or mouse button went down: queue the actions bound to it (under each action's default key name)
   press(code) { for (const a of Keys.actionsFor(code)) this.pressed.add(Keys.token(a)); },
   requestLock() {
-    if (IS_TOUCH || this.touch.on || this.pad.on) return;
+    if (this.coarse || this.touch.on || this.pad.on) return;
     const cv = $('fdView');
     try { const p = cv.requestPointerLock(); if (p && p.catch) p.catch(() => { this.free = true; }); } catch (e) { this.free = true; }
     setTimeout(() => { if (!this.locked && Match.state === 'play' && !Match.paused && !this.free && $('tutEnd').hidden) $('clickHint').hidden = false; }, 400);
   },
   initTouch() {
     const t = this.touch, ui = $('touchUI'), stick = $('stick'), knob = stick.querySelector('i');
-    const enable = () => { if (t.on) return; t.on = true; ui.hidden = false; };
+    const enable = () => { if (t.on) return; t.on = true; ui.hidden = false; HUD.dirty = true; HUD.last = {}; };
     if (IS_TOUCH) enable();
+    // touchscreen laptops (Chromebooks): touching the screen shows the phone controls; a trackpad or mouse click, or a key, hides them again
+    this.touchOff = () => {
+      if (!t.on) return;
+      t.on = false; ui.hidden = true; t.mx = t.mz = 0; t.fire = t.ads = t.jump = false; t.stickId = t.lookId = null; stick.style.display = 'none'; knob.style.transform = '';
+      $('tAim').style.background = ''; HUD.dirty = true; HUD.last = {};
+    };
+    addEventListener('pointerdown', e => { if (e.pointerType === 'mouse') this.mouseSeen = true; if (e.pointerType === 'mouse' && t.on) { this.touchOff(); if (Match.state === 'play' && !Match.paused && !Inv.on) this.requestLock(); } }, true);
     addEventListener('touchstart', () => { if (Match.state === 'play') enable(); }, { passive: true });
     const cv = $('fdView');
     cv.addEventListener('touchstart', e => {
@@ -175,6 +186,61 @@ const Settings = {
     $('setDone').addEventListener('click', () => this.close());
     $('setBtn').addEventListener('click', () => { Sfx.init(); this.open(); });
     $('pauseSetBtn').addEventListener('click', () => this.open());
+  },
+};
+
+// ---------------------------------------------------------------- inventory: move items between slots 2-6
+// Opens with the inventory key: the mouse is freed, then drag an item onto another slot (or click one slot, then another).
+const Inv = {
+  on: false, pick: -1, drag: null,
+  toggle() { if (this.on) this.close(); else this.open(); },
+  open() {
+    if (!player || !player.alive || Match.state !== 'play') return;
+    this.on = true; this.pick = -1; Build.active = false; $('hotbar').classList.add('inv'); $('invHint').hidden = false;
+    $('invHint').textContent = 'Drag an item to another slot, or click two slots to swap them · ' + Keys.of('inventory') + ' or Esc to close';
+    if (document.pointerLockElement) document.exitPointerLock(); $('clickHint').hidden = true; HUD.dirty = true;
+  },
+  close() {
+    if (!this.on) return; this.on = false; this.pick = -1; this.endDrag();
+    $('hotbar').classList.remove('inv'); $('invHint').hidden = true; for (const s of HUD.slots) s.classList.remove('pick', 'drop');
+    if (Match.state === 'play' && !Match.paused && player && player.alive) Input.requestLock();
+  },
+  swap(i, j) {
+    const a = player; if (!a || i === j || i < 1 || j < 1 || i > 5 || j > 5) return;
+    const t = a.inv[i]; a.inv[i] = a.inv[j]; a.inv[j] = t;
+    if (a.slot === i) a.slot = j; else if (a.slot === j) a.slot = i;
+    if (a.useT > 0 && (a.useSlot === i || a.useSlot === j)) a.useT = 0;
+    Sfx.tone(700, 0.06, 'triangle', 0.1, 0, 0); HUD.dirty = true; for (const s of HUD.slots) s._k = null;
+  },
+  slotAt(x, y) { const el = document.elementFromPoint(x, y), s = el && el.closest && el.closest('.slot'); return s ? HUD.slots.indexOf(s) : -1; },
+  down(i, e) {
+    if (!this.on || i < 1 || !player.inv[i]) return false;
+    const src = HUD.slots[i], r = src.getBoundingClientRect(), g = src.cloneNode(true);
+    g.classList.add('ghost'); g.style.left = r.left + 'px'; g.style.top = r.top + 'px'; document.body.appendChild(g);
+    this.drag = { i, g, x0: e.clientX, y0: e.clientY, dx: e.clientX - r.left, dy: e.clientY - r.top, moved: false };
+    return true;
+  },
+  move(e) {
+    const d = this.drag; if (!d) return;
+    if (Math.hypot(e.clientX - d.x0, e.clientY - d.y0) > 6) d.moved = true;
+    d.g.style.left = (e.clientX - d.dx) + 'px'; d.g.style.top = (e.clientY - d.dy) + 'px';
+    const j = this.slotAt(e.clientX, e.clientY); HUD.slots.forEach((s, k) => s.classList.toggle('drop', d.moved && k === j && k >= 1 && k !== d.i));
+  },
+  up(e) {
+    const d = this.drag; if (!d) return; this.endDrag();
+    const j = this.slotAt(e.clientX, e.clientY);
+    if (d.moved) { if (j >= 1) this.swap(d.i, j); this.pick = -1; }
+    else if (this.pick < 0) this.pick = d.i;                      // first click picks the item up
+    else { this.swap(this.pick, d.i); this.pick = -1; }           // second click puts it there
+    HUD.slots.forEach((s, k) => { s.classList.toggle('pick', k === this.pick); s.classList.remove('drop'); });
+  },
+  endDrag() { if (this.drag) { this.drag.g.remove(); this.drag = null; } },
+  init() {
+    HUD.slots.forEach((s, i) => s.addEventListener('mousedown', e => {
+      if (!this.on) return; e.preventDefault(); e.stopImmediatePropagation();
+      if (!this.down(i, e) && this.pick >= 1 && i >= 1) { this.swap(this.pick, i); this.pick = -1; HUD.slots.forEach(q => q.classList.remove('pick')); }
+    }, true));
+    addEventListener('mousemove', e => this.move(e)); addEventListener('mouseup', e => this.up(e));
   },
 };
 
@@ -286,6 +352,7 @@ function updatePlayer(dt) {
     }
   }
   if (P.has('KeyM')) $('bigmap').hidden = !$('bigmap').hidden;
+  if (P.has('Tab')) Inv.toggle();
   if (!a.alive) {
     Input.scoped = false;
     inp.f = inp.r = 0; inp.fire = inp.jump = inp.ads = false;
@@ -315,9 +382,10 @@ function updatePlayer(dt) {
   if (P.has('KeyZ')) setBuildPiece('wall');
   if (P.has('KeyX')) setBuildPiece('ramp');
   if (P.has('KeyC')) setBuildPiece('floor');
-  if (a.crawl) { P.delete('KeyQ'); P.delete('KeyZ'); P.delete('KeyX'); P.delete('KeyC'); P.delete('TouchBuild'); P.delete('KeyB'); }
+  if (P.has('KeyF')) setBuildPiece('cone');
+  if (a.crawl) { P.delete('KeyQ'); P.delete('KeyZ'); P.delete('KeyX'); P.delete('KeyC'); P.delete('KeyF'); P.delete('TouchBuild'); P.delete('KeyB'); }
   if (P.has('KeyQ') && Match.build) { Build.active = !Build.active; HUD.dirty = true; }
-  if (P.has('TouchBuild')) { if (!Build.active) setBuildPiece('wall'); else if (Build.piece === 'wall') setBuildPiece('ramp'); else if (Build.piece === 'ramp') setBuildPiece('floor'); else { Build.active = false; HUD.dirty = true; } }
+  if (P.has('TouchBuild')) { if (!Build.active) setBuildPiece('wall'); else if (Build.piece === 'wall') setBuildPiece('ramp'); else if (Build.piece === 'ramp') setBuildPiece('floor'); else if (Build.piece === 'floor') setBuildPiece('cone'); else { Build.active = false; HUD.dirty = true; } }
   if (P.has('KeyG') && Match.build) { const i = MAT_ORDER.indexOf(a.mat); a.mat = MAT_ORDER[(i + 1) % 3]; HUD.dirty = true; }
   if (P.has('KeyB') && a.state === 'ground' && !a.vehicle) { a.emote = Profile.d.eq.emote; a.emoteT = 0; Build.active = false; }
   P.clear(); Input.wheel = 0;

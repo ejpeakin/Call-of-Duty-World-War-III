@@ -318,6 +318,20 @@ button:focus-visible{outline:2px solid var(--sun-2);outline-offset:2px}
 #downVig b{font:900 italic 34px var(--f-display);text-transform:uppercase;color:#ff5a6a;text-shadow:0 2px 12px rgba(0,0,0,.7)}
 #downVig span{font:700 14px var(--f-body);color:#ffe0e4;text-shadow:0 1px 6px rgba(0,0,0,.8)}
 @keyframes downPulse{50%{opacity:.75}}
+#wps{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.wp{position:absolute;left:0;top:0;display:flex;flex-direction:column;align-items:center;gap:1px;margin:-12px 0 0 -60px;width:120px;text-align:center;--wc:#ffb84a;transition:opacity .2s}
+.wp.mate{--wc:#5ff0a0}
+.wp i{width:14px;height:14px;background:var(--wc);transform:rotate(45deg);border:2px solid #0b1430;box-shadow:0 0 8px var(--wc)}
+.wp b{font:800 12px var(--f-body);color:#fff;text-shadow:0 1px 3px #000,0 0 2px #000;white-space:nowrap;margin-top:3px}
+.wp span{font:700 11px var(--f-body);color:var(--wc);text-shadow:0 1px 3px #000}
+.wp.off i{width:12px;height:12px}
+#invHint{position:absolute;right:max(14px,var(--sr));bottom:calc(96px + var(--sb));max-width:430px;text-align:right;font:700 13px var(--f-body);color:#fff;background:rgba(6,16,40,.85);border:1px solid rgba(150,195,255,.35);border-radius:10px;padding:8px 12px}
+#hotbar.inv{pointer-events:auto}
+#hotbar.inv .slot{cursor:grab;outline:2px dashed rgba(255,255,255,.35);outline-offset:2px}
+#hotbar.inv .slot:first-child{cursor:not-allowed;opacity:.6}
+#hotbar .slot.pick{outline:3px solid #ffd23a}
+#hotbar .slot.drop{outline:3px solid #5ff0a0;transform:translateY(-6px)}
+.slot.ghost{position:fixed;z-index:80;pointer-events:none;opacity:.85;transform:scale(1.08);margin:0}
 #hurtVig{position:absolute;inset:0;opacity:0;background:radial-gradient(ellipse at center,transparent 45%,rgba(220,20,40,.6) 100%)}
 #specBar{position:absolute;left:50%;bottom:calc(120px + var(--sb));transform:translateX(-50%);background:rgba(6,18,46,.8);border-radius:10px;padding:8px 16px;font-weight:600;font-size:14px;text-align:center}
 #eventTag{position:absolute;left:50%;top:calc(52px + var(--st));transform:translateX(-50%);background:linear-gradient(90deg,#2fe0d0,#9b4dff);color:#100826;border-radius:999px;padding:4px 14px;font-weight:800;font-size:12px;letter-spacing:.12em;text-transform:uppercase}

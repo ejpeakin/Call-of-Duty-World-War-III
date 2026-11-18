@@ -322,6 +322,20 @@ button:focus-visible{outline:2px solid var(--sun-2);outline-offset:2px}
 #downVig b{font:900 italic 34px var(--f-display);text-transform:uppercase;color:#ff5a6a;text-shadow:0 2px 12px rgba(0,0,0,.7)}
 #downVig span{font:700 14px var(--f-body);color:#ffe0e4;text-shadow:0 1px 6px rgba(0,0,0,.8)}
 @keyframes downPulse{50%{opacity:.75}}
+#wps{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.wp{position:absolute;left:0;top:0;display:flex;flex-direction:column;align-items:center;gap:1px;margin:-12px 0 0 -60px;width:120px;text-align:center;--wc:#ffb84a;transition:opacity .2s}
+.wp.mate{--wc:#5ff0a0}
+.wp i{width:14px;height:14px;background:var(--wc);transform:rotate(45deg);border:2px solid #0b1430;box-shadow:0 0 8px var(--wc)}
+.wp b{font:800 12px var(--f-body);color:#fff;text-shadow:0 1px 3px #000,0 0 2px #000;white-space:nowrap;margin-top:3px}
+.wp span{font:700 11px var(--f-body);color:var(--wc);text-shadow:0 1px 3px #000}
+.wp.off i{width:12px;height:12px}
+#invHint{position:absolute;right:max(14px,var(--sr));bottom:calc(96px + var(--sb));max-width:430px;text-align:right;font:700 13px var(--f-body);color:#fff;background:rgba(6,16,40,.85);border:1px solid rgba(150,195,255,.35);border-radius:10px;padding:8px 12px}
+#hotbar.inv{pointer-events:auto}
+#hotbar.inv .slot{cursor:grab;outline:2px dashed rgba(255,255,255,.35);outline-offset:2px}
+#hotbar.inv .slot:first-child{cursor:not-allowed;opacity:.6}
+#hotbar .slot.pick{outline:3px solid #ffd23a}
+#hotbar .slot.drop{outline:3px solid #5ff0a0;transform:translateY(-6px)}
+.slot.ghost{position:fixed;z-index:80;pointer-events:none;opacity:.85;transform:scale(1.08);margin:0}
 #hurtVig{position:absolute;inset:0;opacity:0;background:radial-gradient(ellipse at center,transparent 45%,rgba(220,20,40,.6) 100%)}
 #specBar{position:absolute;left:50%;bottom:calc(120px + var(--sb));transform:translateX(-50%);background:rgba(6,18,46,.8);border-radius:10px;padding:8px 16px;font-weight:600;font-size:14px;text-align:center}
 #eventTag{position:absolute;left:50%;top:calc(52px + var(--st));transform:translateX(-50%);background:linear-gradient(90deg,#2fe0d0,#9b4dff);color:#100826;border-radius:999px;padding:4px 14px;font-weight:800;font-size:12px;letter-spacing:.12em;text-transform:uppercase}
@@ -505,6 +519,7 @@ body.pad{cursor:none}
       <h3>Mode</h3>
       <div class="opt-grid" id="modeGrid">
         <button class="opt" data-mode="solo"><b>Battle Royale · Solo</b><span>100 players, one survivor. Bus drop, loot, storm.</span></button>
+        <button class="opt" data-mode="duos"><b>Battle Royale · Duos</b><span>50 teams of 2. You and a partner, a friend from your room or a bot.</span></button>
         <button class="opt" data-mode="squads"><b>Battle Royale · Squads</b><span>25 squads of 4. You lead three bot teammates.</span></button>
         <button class="opt" data-mode="rumble"><b>Storm Rumble</b><span>16 vs 16 with respawns. First team to 40 eliminations.</span></button>
       </div>
@@ -602,6 +617,8 @@ body.pad{cursor:none}
 
 <!-- ================= HUD ================= -->
 <div id="hud" hidden>
+  <div id="wps"></div>
+  <div id="invHint" hidden></div>
   <div id="tutBox" hidden><span id="tutStep"></span><b id="tutTitle"></b><p id="tutText"></p><div id="tutBar"><i id="tutFill"></i></div><button id="tutSkip" type="button">Skip tutorial</button></div>
   <div id="tutEnd" class="overlay" hidden><div class="card"><h2>You are ready!</h2><p class="hint">That is everything you need for a real match: drop from the bus, loot chests, build when you need cover, and stay ahead of the storm.</p><div class="btn-row"><button class="btn pri" id="tutDone" type="button">Back to the lobby</button></div></div></div>
   <div id="stormVig"></div>
@@ -728,7 +745,7 @@ body.pad{cursor:none}
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js"></script>
 <script async src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>
-const BUILD_ID = '1118-1507';
+const BUILD_ID = '1118-1528';
 'use strict';
 // =====================================================================
 //  FORTDAY — core utilities, data tables, profile, audio
@@ -889,8 +906,8 @@ const KEY_ACTIONS = [
   ['jump', 'Jump / leave bus / glider', 'Space'], ['sprint', 'Sprint', 'ShiftLeft'],
   ['fire', 'Fire / harvest / build', 'Mouse0'], ['ads', 'Aim / scope (hold)', 'Mouse2'], ['scope', 'Scope in / out (press)', 'KeyV'], ['reload', 'Reload', 'KeyR'], ['use', 'Pick up / open / drive', 'KeyE'],
   ['slot1', 'Harvesting tool', 'Digit1'], ['slot2', 'Slot 2', 'Digit2'], ['slot3', 'Slot 3', 'Digit3'], ['slot4', 'Slot 4', 'Digit4'], ['slot5', 'Slot 5', 'Digit5'], ['slot6', 'Slot 6', 'Digit6'],
-  ['build', 'Build mode on / off', 'KeyQ'], ['wall', 'Build wall', 'KeyZ'], ['ramp', 'Build ramp', 'KeyX'], ['floor', 'Build floor', 'KeyC'], ['material', 'Switch material', 'KeyG'],
-  ['emote', 'Emote', 'KeyB'], ['map', 'Full map', 'KeyM'],
+  ['build', 'Build mode on / off', 'KeyQ'], ['wall', 'Build wall', 'KeyZ'], ['ramp', 'Build ramp', 'KeyX'], ['floor', 'Build floor', 'KeyC'], ['cone', 'Build cone (roof)', 'KeyF'], ['material', 'Switch material', 'KeyG'],
+  ['emote', 'Emote', 'KeyB'], ['map', 'Full map', 'KeyM'], ['inventory', 'Inventory (move items between slots)', 'Tab'],
 ];
 const KEY_DEF = Object.fromEntries(KEY_ACTIONS.map(k => [k[0], k[2]]));
 const Keys = {
@@ -1279,11 +1296,12 @@ function initEngine() {
     MAT.terrain = new THREE.MeshLambertMaterial({ vertexColors: true, map: t }); }
   MAT.beam = {}; for (let r = 0; r < RARITY.length; r++) MAT.beam[r] = new THREE.MeshBasicMaterial({ color: RARITY[r].hex, transparent: true, opacity: 0.45, depthWrite: false, blending: THREE.AdditiveBlending });
 
-  const S2 = Math.SQRT2 * 4;
-  GEO.wall = new THREE.BoxGeometry(4, 4, 0.3);
-  GEO.floor = new THREE.BoxGeometry(4, 0.25, 4);
-  GEO.rampX = new THREE.BoxGeometry(S2, 0.25, 4);
-  GEO.rampZ = new THREE.BoxGeometry(4, 0.25, S2);
+  const S2 = Math.hypot(T, TH);   // build pieces follow the tile size in 70_build.js
+  GEO.wall = new THREE.BoxGeometry(T, TH, 0.3);
+  GEO.floor = new THREE.BoxGeometry(T, 0.25, T);
+  GEO.rampX = new THREE.BoxGeometry(S2, 0.25, T);
+  GEO.rampZ = new THREE.BoxGeometry(T, 0.25, S2);
+  GEO.cone = new THREE.ConeGeometry(T / Math.SQRT2, CONE_H, 4, 1).rotateY(Math.PI / 4).translate(0, CONE_H / 2, 0); GEO.cone.computeVertexNormals();
   GEO.unit = new THREE.BoxGeometry(1, 1, 1);
   GEO.beam = new THREE.CylinderGeometry(0.05, 0.05, 3.2, 6).translate(0, 1.6, 0);
   GEO.ring = new THREE.RingGeometry(0.35, 0.55, 18).rotateX(-Math.PI / 2);
@@ -3744,6 +3762,7 @@ const GRAV = 28, JUMP = 9.4, STEP = 0.6;
 const _cands = [], _cands2 = [], _cands3 = [];
 
 function rampY(c, x, z) {
+  if (c.cone) { const h = (c.maxX - c.minX) / 2, m = Math.max(Math.abs(x - (c.minX + c.maxX) / 2), Math.abs(z - (c.minZ + c.maxZ) / 2)) / h; return c.y0 + clamp(1 - m, 0, 1) * c.rise; }   // pyramid
   let p;
   if (c.dir === 0) p = (x - c.minX) / (c.maxX - c.minX);
   else if (c.dir === 1) p = (c.maxX - x) / (c.maxX - c.minX);
@@ -3947,6 +3966,18 @@ function rayAABB(c, ox, oy, oz, ix, iy, iz) {
   return tmin;
 }
 function rayRamp(c, ox, oy, oz, dx, dy, dz) {
+  if (c.cone) {   // pyramid: step through its box until the ray dips below the surface, then narrow it down
+    let t0 = 0, t1 = 1e9;
+    for (const [o, d, lo, hi] of [[ox, dx, c.minX, c.maxX], [oy, dy, c.minY, c.maxY], [oz, dz, c.minZ, c.maxZ]]) {
+      if (Math.abs(d) < 1e-9) { if (o < lo || o > hi) return -1; continue; }
+      let a = (lo - o) / d, b = (hi - o) / d; if (a > b) { const q = a; a = b; b = q; } t0 = Math.max(t0, a); t1 = Math.min(t1, b);
+    }
+    if (t0 > t1) return -1;
+    const under = t => { const y = oy + dy * t; return y <= rampY(c, ox + dx * t, oz + dz * t); };
+    let prev = t0; if (under(t0)) return t0;
+    for (let i = 1; i <= 16; i++) { const t = t0 + (t1 - t0) * i / 16; if (under(t)) { let a = prev, b = t; for (let k = 0; k < 6; k++) { const m = (a + b) / 2; if (under(m)) b = m; else a = m; } return b; } prev = t; }
+    return -1;
+  }
   const k = c.rise / (c.dir < 2 ? (c.maxX - c.minX) : (c.maxZ - c.minZ));
   let u0, ux = 0, uz = 0;
   if (c.dir === 0) { u0 = -c.minX; ux = 1; } else if (c.dir === 1) { u0 = c.maxX; ux = -1; } else if (c.dir === 2) { u0 = -c.minZ; uz = 1; } else { u0 = c.maxZ; uz = -1; }
@@ -4328,11 +4359,12 @@ function actorTick(a, dt) {
 // =====================================================================
 //  Building: walls, ramps, floors on a 4m grid (wood / brick / metal)
 // =====================================================================
-const T = 4;
+// Build tiles in Fortnite-style proportions: 5.12 m wide and 3.84 m tall (wider than tall), ramps rise one storey per tile
+const T = 5.12, TH = 3.84, CONE_H = TH * 0.5;
 const Build = {
   active: false, piece: 'wall', pieces: [], map: new Map(), ghosts: null, tgt: null, lastKey: null, placeCD: 0,
   init() {
-    this.ghosts = { wall: new THREE.Mesh(GEO.wall, MAT.ghost), floor: new THREE.Mesh(GEO.floor, MAT.ghost), rampX: new THREE.Mesh(GEO.rampX, MAT.ghost), rampZ: new THREE.Mesh(GEO.rampZ, MAT.ghost) };
+    this.ghosts = { wall: new THREE.Mesh(GEO.wall, MAT.ghost), floor: new THREE.Mesh(GEO.floor, MAT.ghost), rampX: new THREE.Mesh(GEO.rampX, MAT.ghost), rampZ: new THREE.Mesh(GEO.rampZ, MAT.ghost), cone: new THREE.Mesh(GEO.cone, MAT.ghost) };
     for (const k in this.ghosts) { this.ghosts[k].visible = false; this.ghosts[k].renderOrder = 6; scene.add(this.ghosts[k]); }
   },
   clear() {
@@ -4342,7 +4374,7 @@ const Build = {
   hideGhost() { if (this.ghosts) for (const k in this.ghosts) this.ghosts[k].visible = false; },
   compute(a, type) {
     const fx = Math.sin(a.yaw), fz = Math.cos(a.yaw), p = a.pitch;
-    let gy = Math.floor((a.pos.y + 1.2) / T);
+    let gy = Math.floor((a.pos.y + 1.2) / TH);
     if (type === 'wall') {
       if (p > 0.75) gy += 1;
       const cx = Math.floor(a.pos.x / T), cz = Math.floor(a.pos.z / T);
@@ -4350,19 +4382,20 @@ const Build = {
       const ez = fz > 0 ? cz + 1 : cz; return { type, gx: cx, gy, gz: ez, dir: 0, key: 'w0:' + cx + ':' + gy + ':' + ez };
     }
     let gx = Math.floor((a.pos.x + fx * T * 0.7) / T), gz = Math.floor((a.pos.z + fz * T * 0.7) / T);
-    if (type === 'floor') {
-      if (p > 0.6) gy += 1; else if (p < -0.75) { gx = Math.floor(a.pos.x / T); gz = Math.floor(a.pos.z / T); }
-      return { type, gx, gy, gz, dir: 0, key: 'f:' + gx + ':' + gy + ':' + gz };
+    if (type === 'floor' || type === 'cone') {
+      if (p > 0.6 || (type === 'cone' && p > 0.25)) gy += 1; else if (p < -0.75) { gx = Math.floor(a.pos.x / T); gz = Math.floor(a.pos.z / T); }
+      if (type === 'cone' && p > 0.25) { gx = Math.floor(a.pos.x / T); gz = Math.floor(a.pos.z / T); }   // looking up: a roof over your own tile
+      return { type, gx, gy, gz, dir: 0, key: (type === 'cone' ? 'c:' : 'f:') + gx + ':' + gy + ':' + gz };
     }
     const dir = Math.abs(fx) > Math.abs(fz) ? (fx > 0 ? 0 : 1) : (fz > 0 ? 2 : 3);
     return { type: 'ramp', gx, gy, gz, dir, key: 'r:' + gx + ':' + gy + ':' + gz };
   },
   pose(t, m) {
-    const y0 = t.gy * T;
+    const y0 = t.gy * TH, ang = Math.atan2(TH, T);
     m.rotation.set(0, 0, 0);
-    if (t.type === 'wall') { if (t.dir === 0) m.position.set((t.gx + 0.5) * T, y0 + T / 2, t.gz * T); else { m.position.set(t.gx * T, y0 + T / 2, (t.gz + 0.5) * T); m.rotation.y = Math.PI / 2; } }
-    else if (t.type === 'floor') m.position.set((t.gx + 0.5) * T, y0, (t.gz + 0.5) * T);
-    else { m.position.set((t.gx + 0.5) * T, y0 + T / 2, (t.gz + 0.5) * T); if (t.dir === 0) m.rotation.z = Math.PI / 4; else if (t.dir === 1) m.rotation.z = -Math.PI / 4; else if (t.dir === 2) m.rotation.x = -Math.PI / 4; else m.rotation.x = Math.PI / 4; }
+    if (t.type === 'wall') { if (t.dir === 0) m.position.set((t.gx + 0.5) * T, y0 + TH / 2, t.gz * T); else { m.position.set(t.gx * T, y0 + TH / 2, (t.gz + 0.5) * T); m.rotation.y = Math.PI / 2; } }
+    else if (t.type === 'floor' || t.type === 'cone') m.position.set((t.gx + 0.5) * T, y0, (t.gz + 0.5) * T);
+    else { m.position.set((t.gx + 0.5) * T, y0 + TH / 2, (t.gz + 0.5) * T); if (t.dir === 0) m.rotation.z = ang; else if (t.dir === 1) m.rotation.z = -ang; else if (t.dir === 2) m.rotation.x = -ang; else m.rotation.x = ang; }
   },
   geoKey(t) { return t.type === 'ramp' ? (t.dir < 2 ? 'rampX' : 'rampZ') : t.type; },
   canAfford(a) { return a.mats[a.mat] >= 10; },
@@ -4376,10 +4409,11 @@ const Build = {
     a.mats[a.mat] -= 10;
     const k = this.geoKey(t), mesh = new THREE.Mesh(GEO[k], MAT[a.mat]); this.pose(t, mesh);
     mesh.castShadow = true; mesh.receiveShadow = true; mesh.scale.setScalar(0.4); scene.add(mesh);
-    const y0 = t.gy * T; let col;
-    if (t.type === 'wall') col = t.dir === 0 ? { minX: t.gx * T, maxX: (t.gx + 1) * T, minZ: t.gz * T - 0.15, maxZ: t.gz * T + 0.15, minY: y0, maxY: y0 + T } : { minX: t.gx * T - 0.15, maxX: t.gx * T + 0.15, minZ: t.gz * T, maxZ: (t.gz + 1) * T, minY: y0, maxY: y0 + T };
+    const y0 = t.gy * TH; let col;
+    if (t.type === 'wall') col = t.dir === 0 ? { minX: t.gx * T, maxX: (t.gx + 1) * T, minZ: t.gz * T - 0.15, maxZ: t.gz * T + 0.15, minY: y0, maxY: y0 + TH } : { minX: t.gx * T - 0.15, maxX: t.gx * T + 0.15, minZ: t.gz * T, maxZ: (t.gz + 1) * T, minY: y0, maxY: y0 + TH };
     else if (t.type === 'floor') col = { minX: t.gx * T, maxX: (t.gx + 1) * T, minZ: t.gz * T, maxZ: (t.gz + 1) * T, minY: y0 - 0.12, maxY: y0 + 0.12 };
-    else col = { kind: 'ramp', minX: t.gx * T, maxX: (t.gx + 1) * T, minZ: t.gz * T, maxZ: (t.gz + 1) * T, minY: y0, maxY: y0 + T, y0, rise: T, dir: t.dir };
+    else if (t.type === 'cone') col = { kind: 'ramp', cone: true, minX: t.gx * T, maxX: (t.gx + 1) * T, minZ: t.gz * T, maxZ: (t.gz + 1) * T, minY: y0, maxY: y0 + CONE_H, y0, rise: CONE_H, dir: 0 };   // walkable like a ramp, sloping up to the middle
+    else col = { kind: 'ramp', minX: t.gx * T, maxX: (t.gx + 1) * T, minZ: t.gz * T, maxZ: (t.gz + 1) * T, minY: y0, maxY: y0 + TH, y0, rise: TH, dir: t.dir };
     col.kind = col.kind || 'piece'; col.mat = a.mat;
     const p = { type: t.type, key: t.key, mat: a.mat, hp: MATS[a.mat].hp, maxHp: MATS[a.mat].hp, mesh, col, owner: a, anim: 0.14, x: mesh.position.x, y: mesh.position.y, z: mesh.position.z };
     col.piece = p; Grid.add(col);
@@ -6234,12 +6268,12 @@ const Match = {
     actors.push(player);
     const N = this.mode === 'tutorial' ? 1 : this.mode === 'rumble' ? 32 : 100;
     for (let i = 1; i < N; i++) {
-      const team = this.mode === 'solo' ? i : this.mode === 'squads' ? Math.floor(i / 4) : (i < 16 ? 0 : 1);
+      const team = this.mode === 'solo' ? i : this.mode === 'squads' ? Math.floor(i / 4) : this.mode === 'duos' ? Math.floor(i / 2) : (i < 16 ? 0 : 1);
       const hm = Net.hosting ? Net.slotMember(i, this.mode) : null;
-      if (hm) { const h = newActor({ name: hm.name, team, ri: i - 1, look: Net.lookFromEq(hm.eq), remote: true, human: hm.id }); BotRig.setLook(h.ri, h.look); actors.push(h); Net.humans.set(hm.id, h); continue; }   // a friend takes this spot
+      if (hm) { const h = newActor({ name: hm.name, team, ri: i - 1, look: Net.lookFromEq(hm.eq), remote: true, human: hm.id, friend: true }); BotRig.setLook(h.ri, h.look); actors.push(h); Net.humans.set(hm.id, h); continue; }   // a friend takes this spot
       const b = newActor({ name: botName(), team, ri: i - 1, look: randomLook() });
       initBotAI(b, clamp(rnd(0.15, 0.85) + (this.ranked ? 0.18 : 0), 0, 1));
-      if (this.mode === 'squads' && team === 0) b.leader = player;
+      if ((this.mode === 'squads' || this.mode === 'duos') && team === 0) b.leader = player;
       BotRig.setLook(b.ri, b.look); actors.push(b);
     }
     if (this.mode !== 'rumble' && this.mode !== 'tutorial') for (const v of W.vaults) this.spawnVault(v);
@@ -6278,7 +6312,7 @@ const Match = {
     $('loading').hidden = true; HUD.startMatch();
     Input.requestLock();
     if (this.mode === 'tutorial') { /* the step box explains everything */ }
-    else if (this.mode !== 'rumble') HUD.banner('Welcome aboard the Sky Coach', Input.pad.on ? 'Press A to jump out' : IS_TOUCH ? 'Tap JUMP to leave the bus' : 'Press ' + Keys.of('jump').toUpperCase() + ' to jump out', 4);
+    else if (this.mode !== 'rumble') HUD.banner('Welcome aboard the Sky Coach', Input.pad.on ? 'Press A to jump out' : Input.touch.on ? 'Tap JUMP to leave the bus' : 'Press ' + Keys.of('jump').toUpperCase() + ' to jump out', 4);
     else HUD.banner('Storm Rumble', 'First team to 40 eliminations wins. You respawn.', 4);
   },
   spawnVault(v) {
@@ -6312,6 +6346,7 @@ const Match = {
     if (a === player) HUD.dirty = true;
     void z;
   },
+  teamCount() { return this.mode === 'squads' ? 25 : this.mode === 'duos' ? 50 : 100; },
   recount() { const s = new Set(); let n = 0; for (const a of actors) if (a.alive && !a.npc) { n++; s.add(a.team); } this.aliveCount = n; this.teamsAlive = s.size; },
   teamAlive(t) { return actors.some(a => a.alive && !a.npc && a.team === t); },
   onElim(t, src, o = {}) {
@@ -6332,8 +6367,8 @@ const Match = {
   },
   showDeath(src, o = {}) {
     if (document.pointerLockElement) document.exitPointerLock();
-    $('dPlace').innerHTML = '#' + player.placement + ' <small>of ' + (this.mode === 'squads' ? 25 : 100) + '</small>';
-    $('dTitle').textContent = this.mode === 'squads' ? 'Squad eliminated' : 'Eliminated';
+    $('dPlace').innerHTML = '#' + player.placement + ' <small>of ' + this.teamCount() + '</small>';
+    $('dTitle').textContent = this.mode === 'squads' ? 'Squad eliminated' : this.mode === 'duos' ? 'Duo eliminated' : 'Eliminated';
     $('dSub').textContent = src && src !== player ? 'Taken out by ' + src.name + '. ' + player.kills + ' elimination' + (player.kills === 1 ? '' : 's') + ' this match.' : 'Taken out by ' + (o.shark ? 'a shark' : o.storm ? 'the storm' : o.fall ? 'a long fall' : 'the island') + '. ' + player.kills + ' elimination' + (player.kills === 1 ? '' : 's') + ' this match.';
     $('death').hidden = false;
   },
@@ -6344,7 +6379,7 @@ const Match = {
     if (this.mode !== 'rumble') { if (win) player.placement = 1; }
     this.result = { win, winTeam };
     if (win) {
-      Sfx.win(); HUD.banner(this.mode === 'rumble' ? 'Your team wins the Rumble' : '#1 · Last one standing', this.mode === 'squads' ? 'Your squad survived the storm' : 'You outlasted every other player', 4);
+      Sfx.win(); HUD.banner(this.mode === 'rumble' ? 'Your team wins the Rumble' : '#1 · Last one standing', this.mode === 'squads' ? 'Your squad survived the storm' : this.mode === 'duos' ? 'You and your partner survived the storm' : 'You outlasted every other player', 4);
       if (player.alive && player.state === 'ground') { player.emote = Profile.d.eq.emote; player.emoteT = 0; }
     } else {
       const w = actors.find(a => a.alive && !a.npc && a.team === winTeam);
@@ -6368,7 +6403,8 @@ const Match = {
     if (document.pointerLockElement) document.exitPointerLock();
     const r = this.result || { win: false }, p = player, d = Profile.d;
     Profile.syncSeason();
-    const place = this.mode === 'rumble' ? null : (p.placement || 1), won = place === 1 || (!place && r.win);
+    // leaving while still in the match counts as being out right then, never as a win
+    const place = this.mode === 'rumble' ? null : (p.placement || (r.win ? 1 : Math.max(2, this.teamsAlive))), won = (place === 1 && r.win !== false) || (!place && r.win);
     const lines = [['Match performance', 100 + Math.round(p.aliveTime * 2.5) + p.kills * 150 + p.chests * 30]];
     if (place === 1) lines.push(['1st place', 2500]); else if (place) { const pb = place <= 5 ? 500 : place <= 10 ? 300 : place <= 25 ? 120 : 0; if (pb) lines.push(['Top ' + (place <= 5 ? 5 : place <= 10 ? 10 : 25) + ' finish', pb]); }
     else if (r.win) lines.push(['Rumble won', 600]);
@@ -6388,9 +6424,9 @@ const Match = {
     d.coins += winCoins;
     Profile.save();
     if (newUmb) unl.push(cosById('glider', 'umbrella'));
-    $('rPlace').innerHTML = place ? '#' + place + ' <small>of ' + (this.mode === 'squads' ? 25 : 100) + '</small>' : (this.score[0] + ' – ' + this.score[1]);
+    $('rPlace').innerHTML = place ? '#' + place + ' <small>of ' + this.teamCount() + '</small>' : (this.score[0] + ' – ' + this.score[1]);
     $('rTitle').textContent = r.win ? (this.mode === 'rumble' ? 'Rumble won' : 'Last one standing') : (this.mode === 'rumble' ? 'Rumble lost' : 'Match complete');
-    $('rSub').textContent = THEMES[this.theme].name + ' · ' + { solo: 'Solo', squads: 'Squads', rumble: 'Storm Rumble' }[this.mode] + ' · ' + (this.build ? 'Build' : 'No-Build');
+    $('rSub').textContent = THEMES[this.theme].name + ' · ' + { solo: 'Solo', duos: 'Duos', squads: 'Squads', rumble: 'Storm Rumble', tutorial: 'Tutorial' }[this.mode] + ' · ' + (this.build ? 'Build' : 'No-Build');
     $('rStats').innerHTML = [['Eliminations', p.kills], ['Damage dealt', p.dmgDealt], ['Survived', fmtTime(p.aliveTime)]].map(s => `<div class="stat"><b>${s[1]}</b><span>${s[0]}</span></div>`).join('');
     $('rXp').innerHTML = lines.map(l => `<span class="xpl"><span>${esc(l[0])}</span><b>+${l[1].toLocaleString()} XP</b></span>`).join('')
       + (winCoins ? `<span class="xpl gold"><span>Victory reward</span><b>+${winCoins} ${COIN}</b></span>` : '')
@@ -6809,7 +6845,7 @@ const Net = {
   hostStart() {
     const r1 = v => Math.round(v * 10) / 10;
     this.ids.clear(); for (const a of actors) this.ids.set(a.id, a);
-    const roster = actors.map(a => [a.id, a === player ? (Profile.d.name || 'Host').slice(0, 16) : a.name, a.team, (a.npc ? 1 : 0) | (a.boss ? 2 : 0), a.scale, a.maxHp, a === player ? this.lookFromEq(Profile.d.eq) : a.look, a.state, r1(a.pos.x), r1(a.pos.y), r1(a.pos.z)]);
+    const roster = actors.map(a => [a.id, a === player ? (Profile.d.name || 'Host').slice(0, 16) : a.name, a.team, (a.npc ? 1 : 0) | (a.boss ? 2 : 0) | (a === player || a.human ? 4 : 0), a.scale, a.maxHp, a === player ? this.lookFromEq(Profile.d.eq) : a.look, a.state, r1(a.pos.x), r1(a.pos.y), r1(a.pos.z)]);
     const pk = Pickups.list.filter(p => p.alive).map(p => [p.id, p.item, r1(p.x), r1(p.y), r1(p.z)]);
     const base = { k: 'start', cfg: { theme: Match.theme, mode: Match.mode, build: Match.build }, roster, pk, storm: this.stormState(), time: Match.time,
       bus: { x: Bus.start.x, y: Bus.start.y, z: Bus.start.z, dx: Bus.dir.x, dz: Bus.dir.z, dur: Bus.dur, t: Bus.t, on: Bus.active } };
@@ -6821,6 +6857,7 @@ const Net = {
       nextId = id; const mine = id === d.you;
       const a = newActor({ name: mine ? 'You' : String(name).slice(0, 24), team, npc: !!(fl & 1), boss: !!(fl & 2), scale: +scale || 1, hp: maxHp, maxHp, look: look || {}, state: st === 'ground' || st === 'sky' ? st : 'bus' });
       a.pos.set(x, y, z);
+      if (fl & 4) a.friend = true;   // a player from the room, not a bot
       if (mine) { a.isPlayer = true; player = a; }
       else { a.remote = true; a.ri = ri++; BotRig.setLook(a.ri, a.look); a.net = { x, y, z, yaw: 0, pitch: 0, vx: 0, vy: 0, vz: 0, t: 0, fresh: true, ic: 0 }; }
       actors.push(a); this.ids.set(id, a); maxId = Math.max(maxId, id);
@@ -6930,7 +6967,7 @@ const Net = {
       if (from !== this.hostId || this.isHost) return;
       if (Match.state !== 'lobby') { this.inMatch = false; Match.toLobby(); }
       this.startData = d; this.inMatch = true; Sfx.init();
-      Match.start({ mode: ['solo', 'squads', 'rumble'].includes(d.cfg.mode) ? d.cfg.mode : 'solo', build: !!d.cfg.build, ranked: false, theme: THEMES[d.cfg.theme] ? d.cfg.theme : 'greenvale' });
+      Match.start({ mode: ['solo', 'duos', 'squads', 'rumble'].includes(d.cfg.mode) ? d.cfg.mode : 'solo', build: !!d.cfg.build, ranked: false, theme: THEMES[d.cfg.theme] ? d.cfg.theme : 'greenvale' });
       return;
     }
     if (!this.inMatch || Match.state === 'lobby') return;
@@ -6971,7 +7008,7 @@ const Net = {
     try {
       const A = id => this.ids.get(id) || null, V = a => Array.isArray(a) && a.length >= 3 && a.every(Number.isFinite);
       if (d.k === 'elim') { const t = A(d.id); if (t && t.alive && t !== player) eliminate(t, A(d.src), d.o || {}); }
-      else if (d.k === 'bp') { const t = d.t; if (t && ['wall', 'floor', 'ramp'].includes(t.type) && [t.gx, t.gy, t.gz, t.dir].every(Number.isInteger) && typeof t.key === 'string' && t.key.length < 40) Build.place({ mats: { wood: 99, brick: 99, metal: 99 }, mat: MATS[d.mat] ? d.mat : 'wood', remote: true }, { type: t.type, gx: t.gx, gy: t.gy, gz: t.gz, dir: t.dir, key: t.key }); }
+      else if (d.k === 'bp') { const t = d.t; if (t && ['wall', 'floor', 'ramp', 'cone'].includes(t.type) && [t.gx, t.gy, t.gz, t.dir].every(Number.isInteger) && typeof t.key === 'string' && t.key.length < 40) Build.place({ mats: { wood: 99, brick: 99, metal: 99 }, mat: MATS[d.mat] ? d.mat : 'wood', remote: true }, { type: t.type, gx: t.gx, gy: t.gy, gz: t.gz, dir: t.dir, key: t.key }); }
       else if (d.k === 'bd') { const p = Build.map.get(d.key); if (p) Build.damage(p, clamp(+d.dmg || 0, 0, 2000), null); }
       else if (d.k === 'hv') { let best = null, bd = 4; for (const hv of W.harv) { if (hv.dead || hv.vehicle) continue; const q = (hv.x - d.x) ** 2 + (hv.z - d.z) ** 2; if (q < bd) { bd = q; best = hv; } } if (best) destroyHarv(best); }
       else if (d.k === 'shot') {
@@ -7158,6 +7195,8 @@ const Tutorial = {
 //  Input (keyboard, mouse, touch), camera, player control
 // =====================================================================
 const Input = {
+  mouseSeen: false,
+  get coarse() { return IS_TOUCH && !this.mouseSeen; },   // a touch device that has not used a mouse or trackpad
   keys: {}, pressed: new Set(), mdx: 0, mdy: 0, lmb: false, rmb: false, wheel: 0, locked: false,
   touch: { on: false, mx: 0, mz: 0, fire: false, ads: false, jump: false, stickId: null, lookId: null, sx: 0, sy: 0, lx: 0, ly: 0 },
   // game controller (standard layout): sticks move and look, triggers aim and fire, face buttons act
@@ -7204,21 +7243,23 @@ const Input = {
   init() {
     const cv = $('fdView');
     addEventListener('keydown', e => {
-      this.padOff();
+      this.padOff(); if (this.touchOff && !e.repeat && !/^(Tab|Escape|Shift|Control|Alt|Meta)/.test(e.code)) { this.mouseSeen = true; this.touchOff(); }
       if (Match.state !== 'play') return;
       if (!this.keys[e.code]) this.press(e.code);
       this.keys[e.code] = true;
       if (Keys.bound(e.code) || ['Space', 'Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
-      if (e.code === 'Escape' && !IS_TOUCH && !this.locked) togglePause();
+      if (e.code === 'Escape' && Inv.on) { Inv.close(); return; }
+      if (e.code === 'Escape' && !this.coarse && !this.locked) togglePause();
     });
     addEventListener('keyup', e => { this.keys[e.code] = false; });
     addEventListener('blur', () => { this.keys = {}; this.lmb = this.rmb = false; });
     addEventListener('mousemove', e => { if (Match.state === 'play' && !Match.paused && (this.locked || this.lmb || this.rmb || this.free)) { this.mdx += e.movementX || 0; this.mdy += e.movementY || 0; } });
     cv.addEventListener('mousedown', e => {
       this.padOff();
+      if (Inv.on) { Inv.close(); return; }   // clicking the world closes the inventory instead of firing
       if (Match.state !== 'play' || Match.paused) return;
       Sfx.init();
-      if (!this.locked && !IS_TOUCH) this.requestLock();
+      if (!this.locked && !this.coarse) this.requestLock();
       if (e.button === 0) this.lmb = true; if (e.button === 2) this.rmb = true;
       const mc = 'Mouse' + e.button; if (!this.keys[mc]) this.press(mc); this.keys[mc] = true;
       if (!player || !player.alive) this.pressed.add('Click');
@@ -7229,8 +7270,8 @@ const Input = {
     cv.addEventListener('wheel', e => { if (Match.state === 'play') { this.wheel += Math.sign(e.deltaY); e.preventDefault(); } }, { passive: false });
     document.addEventListener('pointerlockchange', () => {
       this.locked = document.pointerLockElement === cv;
-      $('clickHint').hidden = this.locked || IS_TOUCH || Match.state !== 'play' || Match.paused || !$('death').hidden || !$('tutEnd').hidden;
-      if (!this.locked && Match.state === 'play' && !Match.paused && !IS_TOUCH && $('death').hidden && $('results').hidden && $('tutEnd').hidden && !Match.ending) togglePause(true);
+      $('clickHint').hidden = this.locked || this.coarse || this.touch.on || Match.state !== 'play' || Match.paused || !$('death').hidden || !$('tutEnd').hidden;
+      if (!this.locked && Match.state === 'play' && !Match.paused && !this.coarse && !this.touch.on && $('death').hidden && $('results').hidden && $('tutEnd').hidden && !Inv.on && !Match.ending) togglePause(true);
     });
     document.addEventListener('pointerlockerror', () => { this.free = true; $('clickHint').hidden = true; });
     this.initTouch();
@@ -7238,15 +7279,22 @@ const Input = {
   // a key or mouse button went down: queue the actions bound to it (under each action's default key name)
   press(code) { for (const a of Keys.actionsFor(code)) this.pressed.add(Keys.token(a)); },
   requestLock() {
-    if (IS_TOUCH || this.touch.on || this.pad.on) return;
+    if (this.coarse || this.touch.on || this.pad.on) return;
     const cv = $('fdView');
     try { const p = cv.requestPointerLock(); if (p && p.catch) p.catch(() => { this.free = true; }); } catch (e) { this.free = true; }
     setTimeout(() => { if (!this.locked && Match.state === 'play' && !Match.paused && !this.free && $('tutEnd').hidden) $('clickHint').hidden = false; }, 400);
   },
   initTouch() {
     const t = this.touch, ui = $('touchUI'), stick = $('stick'), knob = stick.querySelector('i');
-    const enable = () => { if (t.on) return; t.on = true; ui.hidden = false; };
+    const enable = () => { if (t.on) return; t.on = true; ui.hidden = false; HUD.dirty = true; HUD.last = {}; };
     if (IS_TOUCH) enable();
+    // touchscreen laptops (Chromebooks): touching the screen shows the phone controls; a trackpad or mouse click, or a key, hides them again
+    this.touchOff = () => {
+      if (!t.on) return;
+      t.on = false; ui.hidden = true; t.mx = t.mz = 0; t.fire = t.ads = t.jump = false; t.stickId = t.lookId = null; stick.style.display = 'none'; knob.style.transform = '';
+      $('tAim').style.background = ''; HUD.dirty = true; HUD.last = {};
+    };
+    addEventListener('pointerdown', e => { if (e.pointerType === 'mouse') this.mouseSeen = true; if (e.pointerType === 'mouse' && t.on) { this.touchOff(); if (Match.state === 'play' && !Match.paused && !Inv.on) this.requestLock(); } }, true);
     addEventListener('touchstart', () => { if (Match.state === 'play') enable(); }, { passive: true });
     const cv = $('fdView');
     cv.addEventListener('touchstart', e => {
@@ -7331,6 +7379,61 @@ const Settings = {
     $('setDone').addEventListener('click', () => this.close());
     $('setBtn').addEventListener('click', () => { Sfx.init(); this.open(); });
     $('pauseSetBtn').addEventListener('click', () => this.open());
+  },
+};
+
+// ---------------------------------------------------------------- inventory: move items between slots 2-6
+// Opens with the inventory key: the mouse is freed, then drag an item onto another slot (or click one slot, then another).
+const Inv = {
+  on: false, pick: -1, drag: null,
+  toggle() { if (this.on) this.close(); else this.open(); },
+  open() {
+    if (!player || !player.alive || Match.state !== 'play') return;
+    this.on = true; this.pick = -1; Build.active = false; $('hotbar').classList.add('inv'); $('invHint').hidden = false;
+    $('invHint').textContent = 'Drag an item to another slot, or click two slots to swap them · ' + Keys.of('inventory') + ' or Esc to close';
+    if (document.pointerLockElement) document.exitPointerLock(); $('clickHint').hidden = true; HUD.dirty = true;
+  },
+  close() {
+    if (!this.on) return; this.on = false; this.pick = -1; this.endDrag();
+    $('hotbar').classList.remove('inv'); $('invHint').hidden = true; for (const s of HUD.slots) s.classList.remove('pick', 'drop');
+    if (Match.state === 'play' && !Match.paused && player && player.alive) Input.requestLock();
+  },
+  swap(i, j) {
+    const a = player; if (!a || i === j || i < 1 || j < 1 || i > 5 || j > 5) return;
+    const t = a.inv[i]; a.inv[i] = a.inv[j]; a.inv[j] = t;
+    if (a.slot === i) a.slot = j; else if (a.slot === j) a.slot = i;
+    if (a.useT > 0 && (a.useSlot === i || a.useSlot === j)) a.useT = 0;
+    Sfx.tone(700, 0.06, 'triangle', 0.1, 0, 0); HUD.dirty = true; for (const s of HUD.slots) s._k = null;
+  },
+  slotAt(x, y) { const el = document.elementFromPoint(x, y), s = el && el.closest && el.closest('.slot'); return s ? HUD.slots.indexOf(s) : -1; },
+  down(i, e) {
+    if (!this.on || i < 1 || !player.inv[i]) return false;
+    const src = HUD.slots[i], r = src.getBoundingClientRect(), g = src.cloneNode(true);
+    g.classList.add('ghost'); g.style.left = r.left + 'px'; g.style.top = r.top + 'px'; document.body.appendChild(g);
+    this.drag = { i, g, x0: e.clientX, y0: e.clientY, dx: e.clientX - r.left, dy: e.clientY - r.top, moved: false };
+    return true;
+  },
+  move(e) {
+    const d = this.drag; if (!d) return;
+    if (Math.hypot(e.clientX - d.x0, e.clientY - d.y0) > 6) d.moved = true;
+    d.g.style.left = (e.clientX - d.dx) + 'px'; d.g.style.top = (e.clientY - d.dy) + 'px';
+    const j = this.slotAt(e.clientX, e.clientY); HUD.slots.forEach((s, k) => s.classList.toggle('drop', d.moved && k === j && k >= 1 && k !== d.i));
+  },
+  up(e) {
+    const d = this.drag; if (!d) return; this.endDrag();
+    const j = this.slotAt(e.clientX, e.clientY);
+    if (d.moved) { if (j >= 1) this.swap(d.i, j); this.pick = -1; }
+    else if (this.pick < 0) this.pick = d.i;                      // first click picks the item up
+    else { this.swap(this.pick, d.i); this.pick = -1; }           // second click puts it there
+    HUD.slots.forEach((s, k) => { s.classList.toggle('pick', k === this.pick); s.classList.remove('drop'); });
+  },
+  endDrag() { if (this.drag) { this.drag.g.remove(); this.drag = null; } },
+  init() {
+    HUD.slots.forEach((s, i) => s.addEventListener('mousedown', e => {
+      if (!this.on) return; e.preventDefault(); e.stopImmediatePropagation();
+      if (!this.down(i, e) && this.pick >= 1 && i >= 1) { this.swap(this.pick, i); this.pick = -1; HUD.slots.forEach(q => q.classList.remove('pick')); }
+    }, true));
+    addEventListener('mousemove', e => this.move(e)); addEventListener('mouseup', e => this.up(e));
   },
 };
 
@@ -7442,6 +7545,7 @@ function updatePlayer(dt) {
     }
   }
   if (P.has('KeyM')) $('bigmap').hidden = !$('bigmap').hidden;
+  if (P.has('Tab')) Inv.toggle();
   if (!a.alive) {
     Input.scoped = false;
     inp.f = inp.r = 0; inp.fire = inp.jump = inp.ads = false;
@@ -7471,9 +7575,10 @@ function updatePlayer(dt) {
   if (P.has('KeyZ')) setBuildPiece('wall');
   if (P.has('KeyX')) setBuildPiece('ramp');
   if (P.has('KeyC')) setBuildPiece('floor');
-  if (a.crawl) { P.delete('KeyQ'); P.delete('KeyZ'); P.delete('KeyX'); P.delete('KeyC'); P.delete('TouchBuild'); P.delete('KeyB'); }
+  if (P.has('KeyF')) setBuildPiece('cone');
+  if (a.crawl) { P.delete('KeyQ'); P.delete('KeyZ'); P.delete('KeyX'); P.delete('KeyC'); P.delete('KeyF'); P.delete('TouchBuild'); P.delete('KeyB'); }
   if (P.has('KeyQ') && Match.build) { Build.active = !Build.active; HUD.dirty = true; }
-  if (P.has('TouchBuild')) { if (!Build.active) setBuildPiece('wall'); else if (Build.piece === 'wall') setBuildPiece('ramp'); else if (Build.piece === 'ramp') setBuildPiece('floor'); else { Build.active = false; HUD.dirty = true; } }
+  if (P.has('TouchBuild')) { if (!Build.active) setBuildPiece('wall'); else if (Build.piece === 'wall') setBuildPiece('ramp'); else if (Build.piece === 'ramp') setBuildPiece('floor'); else if (Build.piece === 'floor') setBuildPiece('cone'); else { Build.active = false; HUD.dirty = true; } }
   if (P.has('KeyG') && Match.build) { const i = MAT_ORDER.indexOf(a.mat); a.mat = MAT_ORDER[(i + 1) % 3]; HUD.dirty = true; }
   if (P.has('KeyB') && a.state === 'ground' && !a.vehicle) { a.emote = Profile.d.eq.emote; a.emoteT = 0; Build.active = false; }
   P.clear(); Input.wheel = 0;
@@ -7593,7 +7698,7 @@ const HUD = {
     $('hud').hidden = false; $('killfeed').innerHTML = ''; this.dirty = true; this.last = {};
     $('scoreBox').hidden = Match.mode !== 'rumble'; $('aliveLbl').textContent = Match.mode === 'rumble' ? 'to win' : 'left';
     $('mats').style.display = Match.build ? '' : 'none'; $('buildbar').style.display = Match.build && !Input.touch.on ? '' : 'none';
-    $('teamList').style.display = Match.mode === 'squads' ? '' : 'none';
+    $('teamList').style.display = Match.mode === 'squads' || Match.mode === 'duos' ? '' : 'none';
     $('death').hidden = true; $('results').hidden = true; $('pause').hidden = true; $('bigmap').hidden = true;
     for (const n of this.nums) { n.t = 0; n.el.style.display = 'none'; }
   },
@@ -7668,7 +7773,7 @@ const HUD = {
       const mk = MAT_ORDER.map(m => v.mats[m]).join(',') + v.mat;
       if (this.last.mats !== mk) { this.last.mats = mk; [...$('mats').children].forEach(el => { const m = el.dataset.m; el.querySelector('span').textContent = v.mats[m]; el.classList.toggle('on', m === v.mat); }); }
       const bk = Build.active + Build.piece + Input.pad.on;
-      if (this.last.bb !== bk) { this.last.bb = bk; const pad = Input.pad.on; $('buildbar').innerHTML = [['wall', Keys.of('wall'), 'Wall'], ['ramp', Keys.of('ramp'), 'Ramp'], ['floor', Keys.of('floor'), 'Floor']].map(([p, k, n]) => `<div class="${Build.active && Build.piece === p ? 'on' : ''}">${pad ? '' : '<kbd>' + k + '</kbd>'}${n}</div>`).join('') + (pad ? '<div><kbd>B</kbd>Build</div><div><kbd>RB</kbd>Piece</div><div><kbd>LB</kbd>Material</div>' : '<div><kbd>' + esc(Keys.of('material')) + '</kbd>Material</div>'); }
+      if (this.last.bb !== bk) { this.last.bb = bk; const pad = Input.pad.on; $('buildbar').innerHTML = [['wall', Keys.of('wall'), 'Wall'], ['ramp', Keys.of('ramp'), 'Ramp'], ['floor', Keys.of('floor'), 'Floor'], ['cone', Keys.of('cone'), 'Cone']].map(([p, k, n]) => `<div class="${Build.active && Build.piece === p ? 'on' : ''}">${pad ? '' : '<kbd>' + k + '</kbd>'}${n}</div>`).join('') + (pad ? '<div><kbd>B</kbd>Build</div><div><kbd>RB</kbd>Piece</div><div><kbd>LB</kbd>Material</div>' : '<div><kbd>' + esc(Keys.of('material')) + '</kbd>Material</div>'); }
     }
     // dark purple tint while standing in the storm
     { const inS = v.alive && v.state !== 'bus' && Storm.state !== 'idle' && Storm.outside(v.pos.x, v.pos.z); const st = $('stormTint'); if (st.classList.contains('on') !== inS) st.classList.toggle('on', inS); }
@@ -7686,7 +7791,7 @@ const HUD = {
     $('scope').hidden = !Cam.scoped;
     // prompt
     const pr = $('prompt'), c = Interact.cur;
-    if (a.alive && a.state === 'bus') { pr.style.display = 'block'; pr.innerHTML = '<kbd>' + (Input.pad.on ? 'A' : IS_TOUCH || Input.touch.on ? 'JUMP' : esc(Keys.of('jump')).toUpperCase()) + '</kbd>Jump from the bus'; pr.style.setProperty('--pc', '#4fb0ff'); }
+    if (a.alive && a.state === 'bus') { pr.style.display = 'block'; pr.innerHTML = '<kbd>' + (Input.pad.on ? 'A' : Input.touch.on ? 'JUMP' : esc(Keys.of('jump')).toUpperCase()) + '</kbd>Jump from the bus'; pr.style.setProperty('--pc', '#4fb0ff'); }
     else if (a.alive && a.state === 'sky') { pr.style.display = 'block'; pr.innerHTML = '<kbd>' + (Input.pad.on ? 'A' : Input.touch.on ? 'JUMP' : esc(Keys.of('jump')).toUpperCase()) + '</kbd>Open glider early'; pr.style.setProperty('--pc', '#3aa8ff'); }
     else if (c && a.alive) { pr.style.display = 'block'; const k = (Input.pad.on ? 'X' : Input.touch.on ? 'USE' : Keys.of('use')); if (this.last.pr !== c.label + k) { this.last.pr = c.label + k; pr.innerHTML = '<kbd>' + k + '</kbd>' + esc(c.label); } pr.style.setProperty('--pc', c.color); }
     else { pr.style.display = 'none'; this.last.pr = null; }
@@ -7719,7 +7824,7 @@ const HUD = {
       $('eventTag').textContent = 'Live event · Skywhale crossing';
       const spec = !a.alive && Match.mode !== 'rumble' && v !== a;
       $('specBar').hidden = !spec; if (spec) txt('specBar', 'Spectating ' + v.name + ' · ' + v.kills + ' elims · ' + (Input.touch.on ? 'tap' : 'click or Space') + ' to switch');
-      if (Match.mode === 'squads') {
+      if (Match.mode === 'squads' || Match.mode === 'duos') {
         const mates = actors.filter(m => m.team === player.team && !m.npc);
         $('teamList').innerHTML = mates.map(m => `<div class="tm ${m.alive ? '' : 'dead'}">${esc(m === player ? 'You' : m.name)}<div class="tb"><i style="width:${m.alive ? m.shield * 0.7 : 0}px;background:var(--shield)"></i><i style="width:${m.alive ? m.hp * 0.7 : 0}px;background:var(--hp)"></i></div></div>`).join('');
       }
@@ -7749,8 +7854,17 @@ function drawMarkers(g, S, cx, cz, scale, big) {
     for (const p of W.sites) { const [x, y] = mapXY(p.x, p.z, cx, cz, scale, S); if (x < -60 || x > S + 60 || y < -20 || y > S + 20) continue; g.fillStyle = 'rgba(0,0,0,.55)'; g.fillText(p.name, x + 1, y + 1); g.fillStyle = p.kind === 'vault' ? '#ffe066' : '#fff'; g.fillText(p.name, x, y); }
   }
   for (const m of actors) {
-    if (!m.alive || m === player || m.npc || m.team !== player.team || m.state === 'bus') continue;
-    const [x, y] = mapXY(m.pos.x, m.pos.z, cx, cz, scale, S); g.fillStyle = Match.mode === 'rumble' ? '#7cc8ff' : '#ffd84a'; g.beginPath(); g.arc(x, y, big ? 4 : 3, 0, TAU); g.fill();
+    if (!m.alive || m === player || m.npc || m.state === 'bus') continue;
+    const fr = m.friend || m.human, mate = m.team === player.team && Match.mode !== 'solo';
+    if (!fr && m.team !== player.team) continue;
+    const [x, y] = mapXY(m.pos.x, m.pos.z, cx, cz, scale, S);
+    if (fr) {   // friends from the room: a diamond with an outline, and their name on the big map
+      const r = big ? 7 : 5; g.fillStyle = mate ? '#5ff0a0' : '#ffb84a'; g.strokeStyle = '#000'; g.lineWidth = 1.5;
+      g.beginPath(); g.moveTo(x, y - r); g.lineTo(x + r, y); g.lineTo(x, y + r); g.lineTo(x - r, y); g.closePath(); g.fill(); g.stroke();
+      if (big) { g.font = 'bold 12px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText(m.name, x + 1, y - r - 4); g.fillStyle = '#fff'; g.fillText(m.name, x, y - r - 5); }
+      continue;
+    }
+    g.fillStyle = Match.mode === 'rumble' ? '#7cc8ff' : '#ffd84a'; g.beginPath(); g.arc(x, y, big ? 4 : 3, 0, TAU); g.fill();
   }
   const v = Cam.view || player; if (!v) return;
   const p = v.state === 'bus' ? Bus.pos : v.pos; const [x, y] = mapXY(p.x, p.z, cx, cz, scale, S);
@@ -7808,6 +7922,46 @@ const Icons = {
     return out.toDataURL('image/png');
   },
 };
+
+// ---------------------------------------------------------------- waypoints over friends in a shared match
+// Every player from the room gets a marker with their name and distance; it slides to the screen edge when they are off screen.
+const Waypoints = {
+  els: new Map(), v: new THREE.Vector3(),
+  update() {
+    const box = $('wps'); if (!box) return;
+    const cam = camera, show = Net.inMatch && player && Match.state === 'play';
+    const seen = new Set();
+    if (show) {
+      const W2 = innerWidth / 2, H2 = innerHeight / 2, m = 46;
+      for (const a of actors) {
+        if (!(a.friend || a.human) || a === player || !a.alive || a.state === 'bus') continue;
+        seen.add(a);
+        let el = this.els.get(a);
+        if (!el) { el = document.createElement('div'); el.className = 'wp'; el.innerHTML = '<i></i><b></b><span></span>'; box.appendChild(el); this.els.set(a, el); }
+        const mate = a.team === player.team && Match.mode !== 'solo';
+        el.classList.toggle('mate', mate);
+        const v = this.v.set(a.pos.x, a.pos.y + 2.5 * (a.scale || 1), a.pos.z), cz = v.clone().applyMatrix4(cam.matrixWorldInverse).z;
+        v.project(cam); let x = v.x, y = -v.y; const behind = cz > 0;
+        if (behind) { x = -x; y = -y; }
+        let off = behind || Math.abs(x) > 1 || Math.abs(y) > 1;
+        let px = W2 + x * W2, py = H2 + y * H2;
+        if (off) {   // pin to the edge in the friend's direction
+          const k = Math.min((W2 - m) / Math.max(1e-3, Math.abs(px - W2)), (H2 - m) / Math.max(1e-3, Math.abs(py - H2)));
+          if (behind) { px = clamp(W2 + x * W2 * 3, m, W2 * 2 - m); py = H2 * 2 - m - 70; }   // behind you: along the bottom, on the side they are on
+          else { px = W2 + (px - W2) * Math.min(1, k); py = H2 + (py - H2) * Math.min(1, k); }
+        }
+        const d = Math.round(a.pos.distanceTo(player.pos));
+        el.style.transform = 'translate(' + Math.round(px) + 'px,' + Math.round(py) + 'px)';
+        el.classList.toggle('off', off);
+        const nm = a.name + (a.crawl ? ' (down)' : ''); if (el._n !== nm) { el._n = nm; el.querySelector('b').textContent = nm; }
+        const ds = d + ' m'; if (el._d !== ds) { el._d = ds; el.querySelector('span').textContent = ds; }
+        el.style.opacity = d < 6 ? 0.35 : 1;
+      }
+    }
+    for (const [a, el] of this.els) if (!seen.has(a)) { el.remove(); this.els.delete(a); }
+  },
+};
+
 
 // =====================================================================
 //  Lobby: 3D character stage, play options, locker, pass, career
@@ -7986,7 +8140,7 @@ const Lobby = {
   refresh() {
     const d = Profile.d;
     Net.render(); $('buildTag').textContent = 'build ' + BUILD_ID;
-    { const k = a => '<kbd>' + esc(Keys.of(a)) + '</kbd>'; $('kbHint').innerHTML = k('forward') + k('left') + k('back') + k('right') + ' move · ' + k('fire') + ' fire · ' + k('ads') + ' aim (or ' + k('scope') + ' to toggle the scope) · ' + k('jump') + ' jump · ' + k('sprint') + ' sprint · ' + k('use') + ' pick up / open · ' + k('reload') + ' reload · ' + k('wall') + k('ramp') + k('floor') + ' build · ' + k('material') + ' material · ' + k('emote') + ' emote · ' + k('map') + ' map. Change any of these in Settings.'; }
+    { const k = a => '<kbd>' + esc(Keys.of(a)) + '</kbd>'; $('kbHint').innerHTML = k('forward') + k('left') + k('back') + k('right') + ' move · ' + k('fire') + ' fire · ' + k('ads') + ' aim (or ' + k('scope') + ' to toggle the scope) · ' + k('jump') + ' jump · ' + k('sprint') + ' sprint · ' + k('use') + ' pick up / open · ' + k('reload') + ' reload · ' + k('wall') + k('ramp') + k('floor') + k('cone') + ' build · ' + k('material') + ' material · ' + k('emote') + ' emote · ' + k('map') + ' map · ' + k('inventory') + ' move items between slots. Change any of these in Settings.'; }
     $('coinLbl').textContent = d.coins.toLocaleString();
     [...$('tabs').children].forEach(b => b.classList.toggle('on', b.dataset.tab === this.tab));
     for (const t of ['play', 'locker', 'pass', 'career', 'shop']) $('tab-' + t).hidden = t !== this.tab;
@@ -8054,11 +8208,11 @@ function boot() {
   try { Creatures.load(); } catch (e) { console.warn(e); }
   try { CharModel.load(); } catch (e) { console.warn(e); }
   HUD.init();
-  Input.init(); Settings.init(); Tutorial.init();
+  Input.init(); Settings.init(); Tutorial.init(); Inv.init();
   Lobby.init();
   $('resumeBtn').addEventListener('click', () => togglePause());
   $('tkBtn').addEventListener('click', () => Ticket.close());
-  $('quitBtn').addEventListener('click', () => { Match.paused = false; $('pause').hidden = true; Match.showResults(); });
+  $('quitBtn').addEventListener('click', () => { Match.paused = false; $('pause').hidden = true; if (!Match.hasWinner) { Match.recount(); if (player && player.alive && Match.mode !== 'rumble' && !player.placement) player.placement = Math.max(2, Match.teamsAlive); Match.result = { win: false, left: true }; } Match.showResults(); });
   $('specBtn').addEventListener('click', () => { $('death').hidden = true; });
   $('dLobbyBtn').addEventListener('click', () => { Match.showResults(); });
   $('rLobbyBtn').addEventListener('click', () => Match.toLobby());
@@ -8186,7 +8340,8 @@ function step(now) {
     if (inStorm) { scene.fog.near = Math.min(scene.fog.near, 18); scene.fog.far = Math.min(scene.fog.far, 110); }
     if (hemi) hemi.intensity = th.hemiI * (inStorm ? 0.7 : 1) + Lightning.flash * 0.3 * Lightning.near;
   }
-  if (Match.state === 'play' || Match.state === 'results') HUD.update(dt);
+  if (Match.state === 'play' || Match.state === 'results') { HUD.update(dt); Waypoints.update(); }
+  if (Inv.on && (Match.state !== 'play' || Match.paused || !player || !player.alive)) Inv.close();
   renderer.render(scene, camera);
 }
 try { boot(); }

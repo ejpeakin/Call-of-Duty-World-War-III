@@ -10,6 +10,18 @@ function rayAABB(c, ox, oy, oz, ix, iy, iz) {
   return tmin;
 }
 function rayRamp(c, ox, oy, oz, dx, dy, dz) {
+  if (c.cone) {   // pyramid: step through its box until the ray dips below the surface, then narrow it down
+    let t0 = 0, t1 = 1e9;
+    for (const [o, d, lo, hi] of [[ox, dx, c.minX, c.maxX], [oy, dy, c.minY, c.maxY], [oz, dz, c.minZ, c.maxZ]]) {
+      if (Math.abs(d) < 1e-9) { if (o < lo || o > hi) return -1; continue; }
+      let a = (lo - o) / d, b = (hi - o) / d; if (a > b) { const q = a; a = b; b = q; } t0 = Math.max(t0, a); t1 = Math.min(t1, b);
+    }
+    if (t0 > t1) return -1;
+    const under = t => { const y = oy + dy * t; return y <= rampY(c, ox + dx * t, oz + dz * t); };
+    let prev = t0; if (under(t0)) return t0;
+    for (let i = 1; i <= 16; i++) { const t = t0 + (t1 - t0) * i / 16; if (under(t)) { let a = prev, b = t; for (let k = 0; k < 6; k++) { const m = (a + b) / 2; if (under(m)) b = m; else a = m; } return b; } prev = t; }
+    return -1;
+  }
   const k = c.rise / (c.dir < 2 ? (c.maxX - c.minX) : (c.maxZ - c.minZ));
   let u0, ux = 0, uz = 0;
   if (c.dir === 0) { u0 = -c.minX; ux = 1; } else if (c.dir === 1) { u0 = c.maxX; ux = -1; } else if (c.dir === 2) { u0 = -c.minZ; uz = 1; } else { u0 = c.maxZ; uz = -1; }

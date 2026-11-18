@@ -21,7 +21,7 @@ const HUD = {
     $('hud').hidden = false; $('killfeed').innerHTML = ''; this.dirty = true; this.last = {};
     $('scoreBox').hidden = Match.mode !== 'rumble'; $('aliveLbl').textContent = Match.mode === 'rumble' ? 'to win' : 'left';
     $('mats').style.display = Match.build ? '' : 'none'; $('buildbar').style.display = Match.build && !Input.touch.on ? '' : 'none';
-    $('teamList').style.display = Match.mode === 'squads' ? '' : 'none';
+    $('teamList').style.display = Match.mode === 'squads' || Match.mode === 'duos' ? '' : 'none';
     $('death').hidden = true; $('results').hidden = true; $('pause').hidden = true; $('bigmap').hidden = true;
     for (const n of this.nums) { n.t = 0; n.el.style.display = 'none'; }
   },
@@ -96,7 +96,7 @@ const HUD = {
       const mk = MAT_ORDER.map(m => v.mats[m]).join(',') + v.mat;
       if (this.last.mats !== mk) { this.last.mats = mk; [...$('mats').children].forEach(el => { const m = el.dataset.m; el.querySelector('span').textContent = v.mats[m]; el.classList.toggle('on', m === v.mat); }); }
       const bk = Build.active + Build.piece + Input.pad.on;
-      if (this.last.bb !== bk) { this.last.bb = bk; const pad = Input.pad.on; $('buildbar').innerHTML = [['wall', Keys.of('wall'), 'Wall'], ['ramp', Keys.of('ramp'), 'Ramp'], ['floor', Keys.of('floor'), 'Floor']].map(([p, k, n]) => `<div class="${Build.active && Build.piece === p ? 'on' : ''}">${pad ? '' : '<kbd>' + k + '</kbd>'}${n}</div>`).join('') + (pad ? '<div><kbd>B</kbd>Build</div><div><kbd>RB</kbd>Piece</div><div><kbd>LB</kbd>Material</div>' : '<div><kbd>' + esc(Keys.of('material')) + '</kbd>Material</div>'); }
+      if (this.last.bb !== bk) { this.last.bb = bk; const pad = Input.pad.on; $('buildbar').innerHTML = [['wall', Keys.of('wall'), 'Wall'], ['ramp', Keys.of('ramp'), 'Ramp'], ['floor', Keys.of('floor'), 'Floor'], ['cone', Keys.of('cone'), 'Cone']].map(([p, k, n]) => `<div class="${Build.active && Build.piece === p ? 'on' : ''}">${pad ? '' : '<kbd>' + k + '</kbd>'}${n}</div>`).join('') + (pad ? '<div><kbd>B</kbd>Build</div><div><kbd>RB</kbd>Piece</div><div><kbd>LB</kbd>Material</div>' : '<div><kbd>' + esc(Keys.of('material')) + '</kbd>Material</div>'); }
     }
     // dark purple tint while standing in the storm
     { const inS = v.alive && v.state !== 'bus' && Storm.state !== 'idle' && Storm.outside(v.pos.x, v.pos.z); const st = $('stormTint'); if (st.classList.contains('on') !== inS) st.classList.toggle('on', inS); }
@@ -114,7 +114,7 @@ const HUD = {
     $('scope').hidden = !Cam.scoped;
     // prompt
     const pr = $('prompt'), c = Interact.cur;
-    if (a.alive && a.state === 'bus') { pr.style.display = 'block'; pr.innerHTML = '<kbd>' + (Input.pad.on ? 'A' : IS_TOUCH || Input.touch.on ? 'JUMP' : esc(Keys.of('jump')).toUpperCase()) + '</kbd>Jump from the bus'; pr.style.setProperty('--pc', '#4fb0ff'); }
+    if (a.alive && a.state === 'bus') { pr.style.display = 'block'; pr.innerHTML = '<kbd>' + (Input.pad.on ? 'A' : Input.touch.on ? 'JUMP' : esc(Keys.of('jump')).toUpperCase()) + '</kbd>Jump from the bus'; pr.style.setProperty('--pc', '#4fb0ff'); }
     else if (a.alive && a.state === 'sky') { pr.style.display = 'block'; pr.innerHTML = '<kbd>' + (Input.pad.on ? 'A' : Input.touch.on ? 'JUMP' : esc(Keys.of('jump')).toUpperCase()) + '</kbd>Open glider early'; pr.style.setProperty('--pc', '#3aa8ff'); }
     else if (c && a.alive) { pr.style.display = 'block'; const k = (Input.pad.on ? 'X' : Input.touch.on ? 'USE' : Keys.of('use')); if (this.last.pr !== c.label + k) { this.last.pr = c.label + k; pr.innerHTML = '<kbd>' + k + '</kbd>' + esc(c.label); } pr.style.setProperty('--pc', c.color); }
     else { pr.style.display = 'none'; this.last.pr = null; }
@@ -147,7 +147,7 @@ const HUD = {
       $('eventTag').textContent = 'Live event · Skywhale crossing';
       const spec = !a.alive && Match.mode !== 'rumble' && v !== a;
       $('specBar').hidden = !spec; if (spec) txt('specBar', 'Spectating ' + v.name + ' · ' + v.kills + ' elims · ' + (Input.touch.on ? 'tap' : 'click or Space') + ' to switch');
-      if (Match.mode === 'squads') {
+      if (Match.mode === 'squads' || Match.mode === 'duos') {
         const mates = actors.filter(m => m.team === player.team && !m.npc);
         $('teamList').innerHTML = mates.map(m => `<div class="tm ${m.alive ? '' : 'dead'}">${esc(m === player ? 'You' : m.name)}<div class="tb"><i style="width:${m.alive ? m.shield * 0.7 : 0}px;background:var(--shield)"></i><i style="width:${m.alive ? m.hp * 0.7 : 0}px;background:var(--hp)"></i></div></div>`).join('');
       }
@@ -177,8 +177,17 @@ function drawMarkers(g, S, cx, cz, scale, big) {
     for (const p of W.sites) { const [x, y] = mapXY(p.x, p.z, cx, cz, scale, S); if (x < -60 || x > S + 60 || y < -20 || y > S + 20) continue; g.fillStyle = 'rgba(0,0,0,.55)'; g.fillText(p.name, x + 1, y + 1); g.fillStyle = p.kind === 'vault' ? '#ffe066' : '#fff'; g.fillText(p.name, x, y); }
   }
   for (const m of actors) {
-    if (!m.alive || m === player || m.npc || m.team !== player.team || m.state === 'bus') continue;
-    const [x, y] = mapXY(m.pos.x, m.pos.z, cx, cz, scale, S); g.fillStyle = Match.mode === 'rumble' ? '#7cc8ff' : '#ffd84a'; g.beginPath(); g.arc(x, y, big ? 4 : 3, 0, TAU); g.fill();
+    if (!m.alive || m === player || m.npc || m.state === 'bus') continue;
+    const fr = m.friend || m.human, mate = m.team === player.team && Match.mode !== 'solo';
+    if (!fr && m.team !== player.team) continue;
+    const [x, y] = mapXY(m.pos.x, m.pos.z, cx, cz, scale, S);
+    if (fr) {   // friends from the room: a diamond with an outline, and their name on the big map
+      const r = big ? 7 : 5; g.fillStyle = mate ? '#5ff0a0' : '#ffb84a'; g.strokeStyle = '#000'; g.lineWidth = 1.5;
+      g.beginPath(); g.moveTo(x, y - r); g.lineTo(x + r, y); g.lineTo(x, y + r); g.lineTo(x - r, y); g.closePath(); g.fill(); g.stroke();
+      if (big) { g.font = 'bold 12px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText(m.name, x + 1, y - r - 4); g.fillStyle = '#fff'; g.fillText(m.name, x, y - r - 5); }
+      continue;
+    }
+    g.fillStyle = Match.mode === 'rumble' ? '#7cc8ff' : '#ffd84a'; g.beginPath(); g.arc(x, y, big ? 4 : 3, 0, TAU); g.fill();
   }
   const v = Cam.view || player; if (!v) return;
   const p = v.state === 'bus' ? Bus.pos : v.pos; const [x, y] = mapXY(p.x, p.z, cx, cz, scale, S);
@@ -236,3 +245,43 @@ const Icons = {
     return out.toDataURL('image/png');
   },
 };
+
+// ---------------------------------------------------------------- waypoints over friends in a shared match
+// Every player from the room gets a marker with their name and distance; it slides to the screen edge when they are off screen.
+const Waypoints = {
+  els: new Map(), v: new THREE.Vector3(),
+  update() {
+    const box = $('wps'); if (!box) return;
+    const cam = camera, show = Net.inMatch && player && Match.state === 'play';
+    const seen = new Set();
+    if (show) {
+      const W2 = innerWidth / 2, H2 = innerHeight / 2, m = 46;
+      for (const a of actors) {
+        if (!(a.friend || a.human) || a === player || !a.alive || a.state === 'bus') continue;
+        seen.add(a);
+        let el = this.els.get(a);
+        if (!el) { el = document.createElement('div'); el.className = 'wp'; el.innerHTML = '<i></i><b></b><span></span>'; box.appendChild(el); this.els.set(a, el); }
+        const mate = a.team === player.team && Match.mode !== 'solo';
+        el.classList.toggle('mate', mate);
+        const v = this.v.set(a.pos.x, a.pos.y + 2.5 * (a.scale || 1), a.pos.z), cz = v.clone().applyMatrix4(cam.matrixWorldInverse).z;
+        v.project(cam); let x = v.x, y = -v.y; const behind = cz > 0;
+        if (behind) { x = -x; y = -y; }
+        let off = behind || Math.abs(x) > 1 || Math.abs(y) > 1;
+        let px = W2 + x * W2, py = H2 + y * H2;
+        if (off) {   // pin to the edge in the friend's direction
+          const k = Math.min((W2 - m) / Math.max(1e-3, Math.abs(px - W2)), (H2 - m) / Math.max(1e-3, Math.abs(py - H2)));
+          if (behind) { px = clamp(W2 + x * W2 * 3, m, W2 * 2 - m); py = H2 * 2 - m - 70; }   // behind you: along the bottom, on the side they are on
+          else { px = W2 + (px - W2) * Math.min(1, k); py = H2 + (py - H2) * Math.min(1, k); }
+        }
+        const d = Math.round(a.pos.distanceTo(player.pos));
+        el.style.transform = 'translate(' + Math.round(px) + 'px,' + Math.round(py) + 'px)';
+        el.classList.toggle('off', off);
+        const nm = a.name + (a.crawl ? ' (down)' : ''); if (el._n !== nm) { el._n = nm; el.querySelector('b').textContent = nm; }
+        const ds = d + ' m'; if (el._d !== ds) { el._d = ds; el.querySelector('span').textContent = ds; }
+        el.style.opacity = d < 6 ? 0.35 : 1;
+      }
+    }
+    for (const [a, el] of this.els) if (!seen.has(a)) { el.remove(); this.els.delete(a); }
+  },
+};
+

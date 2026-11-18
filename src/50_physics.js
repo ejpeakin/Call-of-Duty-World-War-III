@@ -5,6 +5,7 @@ const GRAV = 28, JUMP = 9.4, STEP = 0.6;
 const _cands = [], _cands2 = [], _cands3 = [];
 
 function rampY(c, x, z) {
+  if (c.cone) { const h = (c.maxX - c.minX) / 2, m = Math.max(Math.abs(x - (c.minX + c.maxX) / 2), Math.abs(z - (c.minZ + c.maxZ) / 2)) / h; return c.y0 + clamp(1 - m, 0, 1) * c.rise; }   // pyramid
   let p;
   if (c.dir === 0) p = (x - c.minX) / (c.maxX - c.minX);
   else if (c.dir === 1) p = (c.maxX - x) / (c.maxX - c.minX);

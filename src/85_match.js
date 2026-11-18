@@ -214,12 +214,12 @@ const Match = {
     actors.push(player);
     const N = this.mode === 'tutorial' ? 1 : this.mode === 'rumble' ? 32 : 100;
     for (let i = 1; i < N; i++) {
-      const team = this.mode === 'solo' ? i : this.mode === 'squads' ? Math.floor(i / 4) : (i < 16 ? 0 : 1);
+      const team = this.mode === 'solo' ? i : this.mode === 'squads' ? Math.floor(i / 4) : this.mode === 'duos' ? Math.floor(i / 2) : (i < 16 ? 0 : 1);
       const hm = Net.hosting ? Net.slotMember(i, this.mode) : null;
-      if (hm) { const h = newActor({ name: hm.name, team, ri: i - 1, look: Net.lookFromEq(hm.eq), remote: true, human: hm.id }); BotRig.setLook(h.ri, h.look); actors.push(h); Net.humans.set(hm.id, h); continue; }   // a friend takes this spot
+      if (hm) { const h = newActor({ name: hm.name, team, ri: i - 1, look: Net.lookFromEq(hm.eq), remote: true, human: hm.id, friend: true }); BotRig.setLook(h.ri, h.look); actors.push(h); Net.humans.set(hm.id, h); continue; }   // a friend takes this spot
       const b = newActor({ name: botName(), team, ri: i - 1, look: randomLook() });
       initBotAI(b, clamp(rnd(0.15, 0.85) + (this.ranked ? 0.18 : 0), 0, 1));
-      if (this.mode === 'squads' && team === 0) b.leader = player;
+      if ((this.mode === 'squads' || this.mode === 'duos') && team === 0) b.leader = player;
       BotRig.setLook(b.ri, b.look); actors.push(b);
     }
     if (this.mode !== 'rumble' && this.mode !== 'tutorial') for (const v of W.vaults) this.spawnVault(v);
@@ -258,7 +258,7 @@ const Match = {
     $('loading').hidden = true; HUD.startMatch();
     Input.requestLock();
     if (this.mode === 'tutorial') { /* the step box explains everything */ }
-    else if (this.mode !== 'rumble') HUD.banner('Welcome aboard the Sky Coach', Input.pad.on ? 'Press A to jump out' : IS_TOUCH ? 'Tap JUMP to leave the bus' : 'Press ' + Keys.of('jump').toUpperCase() + ' to jump out', 4);
+    else if (this.mode !== 'rumble') HUD.banner('Welcome aboard the Sky Coach', Input.pad.on ? 'Press A to jump out' : Input.touch.on ? 'Tap JUMP to leave the bus' : 'Press ' + Keys.of('jump').toUpperCase() + ' to jump out', 4);
     else HUD.banner('Storm Rumble', 'First team to 40 eliminations wins. You respawn.', 4);
   },
   spawnVault(v) {
@@ -292,6 +292,7 @@ const Match = {
     if (a === player) HUD.dirty = true;
     void z;
   },
+  teamCount() { return this.mode === 'squads' ? 25 : this.mode === 'duos' ? 50 : 100; },
   recount() { const s = new Set(); let n = 0; for (const a of actors) if (a.alive && !a.npc) { n++; s.add(a.team); } this.aliveCount = n; this.teamsAlive = s.size; },
   teamAlive(t) { return actors.some(a => a.alive && !a.npc && a.team === t); },
   onElim(t, src, o = {}) {
@@ -312,8 +313,8 @@ const Match = {
   },
   showDeath(src, o = {}) {
     if (document.pointerLockElement) document.exitPointerLock();
-    $('dPlace').innerHTML = '#' + player.placement + ' <small>of ' + (this.mode === 'squads' ? 25 : 100) + '</small>';
-    $('dTitle').textContent = this.mode === 'squads' ? 'Squad eliminated' : 'Eliminated';
+    $('dPlace').innerHTML = '#' + player.placement + ' <small>of ' + this.teamCount() + '</small>';
+    $('dTitle').textContent = this.mode === 'squads' ? 'Squad eliminated' : this.mode === 'duos' ? 'Duo eliminated' : 'Eliminated';
     $('dSub').textContent = src && src !== player ? 'Taken out by ' + src.name + '. ' + player.kills + ' elimination' + (player.kills === 1 ? '' : 's') + ' this match.' : 'Taken out by ' + (o.shark ? 'a shark' : o.storm ? 'the storm' : o.fall ? 'a long fall' : 'the island') + '. ' + player.kills + ' elimination' + (player.kills === 1 ? '' : 's') + ' this match.';
     $('death').hidden = false;
   },
@@ -324,7 +325,7 @@ const Match = {
     if (this.mode !== 'rumble') { if (win) player.placement = 1; }
     this.result = { win, winTeam };
     if (win) {
-      Sfx.win(); HUD.banner(this.mode === 'rumble' ? 'Your team wins the Rumble' : '#1 · Last one standing', this.mode === 'squads' ? 'Your squad survived the storm' : 'You outlasted every other player', 4);
+      Sfx.win(); HUD.banner(this.mode === 'rumble' ? 'Your team wins the Rumble' : '#1 · Last one standing', this.mode === 'squads' ? 'Your squad survived the storm' : this.mode === 'duos' ? 'You and your partner survived the storm' : 'You outlasted every other player', 4);
       if (player.alive && player.state === 'ground') { player.emote = Profile.d.eq.emote; player.emoteT = 0; }
     } else {
       const w = actors.find(a => a.alive && !a.npc && a.team === winTeam);
@@ -348,7 +349,8 @@ const Match = {
     if (document.pointerLockElement) document.exitPointerLock();
     const r = this.result || { win: false }, p = player, d = Profile.d;
     Profile.syncSeason();
-    const place = this.mode === 'rumble' ? null : (p.placement || 1), won = place === 1 || (!place && r.win);
+    // leaving while still in the match counts as being out right then, never as a win
+    const place = this.mode === 'rumble' ? null : (p.placement || (r.win ? 1 : Math.max(2, this.teamsAlive))), won = (place === 1 && r.win !== false) || (!place && r.win);
     const lines = [['Match performance', 100 + Math.round(p.aliveTime * 2.5) + p.kills * 150 + p.chests * 30]];
     if (place === 1) lines.push(['1st place', 2500]); else if (place) { const pb = place <= 5 ? 500 : place <= 10 ? 300 : place <= 25 ? 120 : 0; if (pb) lines.push(['Top ' + (place <= 5 ? 5 : place <= 10 ? 10 : 25) + ' finish', pb]); }
     else if (r.win) lines.push(['Rumble won', 600]);
@@ -368,9 +370,9 @@ const Match = {
     d.coins += winCoins;
     Profile.save();
     if (newUmb) unl.push(cosById('glider', 'umbrella'));
-    $('rPlace').innerHTML = place ? '#' + place + ' <small>of ' + (this.mode === 'squads' ? 25 : 100) + '</small>' : (this.score[0] + ' – ' + this.score[1]);
+    $('rPlace').innerHTML = place ? '#' + place + ' <small>of ' + this.teamCount() + '</small>' : (this.score[0] + ' – ' + this.score[1]);
     $('rTitle').textContent = r.win ? (this.mode === 'rumble' ? 'Rumble won' : 'Last one standing') : (this.mode === 'rumble' ? 'Rumble lost' : 'Match complete');
-    $('rSub').textContent = THEMES[this.theme].name + ' · ' + { solo: 'Solo', squads: 'Squads', rumble: 'Storm Rumble' }[this.mode] + ' · ' + (this.build ? 'Build' : 'No-Build');
+    $('rSub').textContent = THEMES[this.theme].name + ' · ' + { solo: 'Solo', duos: 'Duos', squads: 'Squads', rumble: 'Storm Rumble', tutorial: 'Tutorial' }[this.mode] + ' · ' + (this.build ? 'Build' : 'No-Build');
     $('rStats').innerHTML = [['Eliminations', p.kills], ['Damage dealt', p.dmgDealt], ['Survived', fmtTime(p.aliveTime)]].map(s => `<div class="stat"><b>${s[1]}</b><span>${s[0]}</span></div>`).join('');
     $('rXp').innerHTML = lines.map(l => `<span class="xpl"><span>${esc(l[0])}</span><b>+${l[1].toLocaleString()} XP</b></span>`).join('')
       + (winCoins ? `<span class="xpl gold"><span>Victory reward</span><b>+${winCoins} ${COIN}</b></span>` : '')

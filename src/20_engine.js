@@ -129,11 +129,12 @@ function initEngine() {
     MAT.terrain = new THREE.MeshLambertMaterial({ vertexColors: true, map: t }); }
   MAT.beam = {}; for (let r = 0; r < RARITY.length; r++) MAT.beam[r] = new THREE.MeshBasicMaterial({ color: RARITY[r].hex, transparent: true, opacity: 0.45, depthWrite: false, blending: THREE.AdditiveBlending });
 
-  const S2 = Math.SQRT2 * 4;
-  GEO.wall = new THREE.BoxGeometry(4, 4, 0.3);
-  GEO.floor = new THREE.BoxGeometry(4, 0.25, 4);
-  GEO.rampX = new THREE.BoxGeometry(S2, 0.25, 4);
-  GEO.rampZ = new THREE.BoxGeometry(4, 0.25, S2);
+  const S2 = Math.hypot(T, TH);   // build pieces follow the tile size in 70_build.js
+  GEO.wall = new THREE.BoxGeometry(T, TH, 0.3);
+  GEO.floor = new THREE.BoxGeometry(T, 0.25, T);
+  GEO.rampX = new THREE.BoxGeometry(S2, 0.25, T);
+  GEO.rampZ = new THREE.BoxGeometry(T, 0.25, S2);
+  GEO.cone = new THREE.ConeGeometry(T / Math.SQRT2, CONE_H, 4, 1).rotateY(Math.PI / 4).translate(0, CONE_H / 2, 0); GEO.cone.computeVertexNormals();
   GEO.unit = new THREE.BoxGeometry(1, 1, 1);
   GEO.beam = new THREE.CylinderGeometry(0.05, 0.05, 3.2, 6).translate(0, 1.6, 0);
   GEO.ring = new THREE.RingGeometry(0.35, 0.55, 18).rotateX(-Math.PI / 2);

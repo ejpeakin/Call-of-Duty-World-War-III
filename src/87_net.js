@@ -233,7 +233,7 @@ const Net = {
   hostStart() {
     const r1 = v => Math.round(v * 10) / 10;
     this.ids.clear(); for (const a of actors) this.ids.set(a.id, a);
-    const roster = actors.map(a => [a.id, a === player ? (Profile.d.name || 'Host').slice(0, 16) : a.name, a.team, (a.npc ? 1 : 0) | (a.boss ? 2 : 0), a.scale, a.maxHp, a === player ? this.lookFromEq(Profile.d.eq) : a.look, a.state, r1(a.pos.x), r1(a.pos.y), r1(a.pos.z)]);
+    const roster = actors.map(a => [a.id, a === player ? (Profile.d.name || 'Host').slice(0, 16) : a.name, a.team, (a.npc ? 1 : 0) | (a.boss ? 2 : 0) | (a === player || a.human ? 4 : 0), a.scale, a.maxHp, a === player ? this.lookFromEq(Profile.d.eq) : a.look, a.state, r1(a.pos.x), r1(a.pos.y), r1(a.pos.z)]);
     const pk = Pickups.list.filter(p => p.alive).map(p => [p.id, p.item, r1(p.x), r1(p.y), r1(p.z)]);
     const base = { k: 'start', cfg: { theme: Match.theme, mode: Match.mode, build: Match.build }, roster, pk, storm: this.stormState(), time: Match.time,
       bus: { x: Bus.start.x, y: Bus.start.y, z: Bus.start.z, dx: Bus.dir.x, dz: Bus.dir.z, dur: Bus.dur, t: Bus.t, on: Bus.active } };
@@ -245,6 +245,7 @@ const Net = {
       nextId = id; const mine = id === d.you;
       const a = newActor({ name: mine ? 'You' : String(name).slice(0, 24), team, npc: !!(fl & 1), boss: !!(fl & 2), scale: +scale || 1, hp: maxHp, maxHp, look: look || {}, state: st === 'ground' || st === 'sky' ? st : 'bus' });
       a.pos.set(x, y, z);
+      if (fl & 4) a.friend = true;   // a player from the room, not a bot
       if (mine) { a.isPlayer = true; player = a; }
       else { a.remote = true; a.ri = ri++; BotRig.setLook(a.ri, a.look); a.net = { x, y, z, yaw: 0, pitch: 0, vx: 0, vy: 0, vz: 0, t: 0, fresh: true, ic: 0 }; }
       actors.push(a); this.ids.set(id, a); maxId = Math.max(maxId, id);
@@ -354,7 +355,7 @@ const Net = {
       if (from !== this.hostId || this.isHost) return;
       if (Match.state !== 'lobby') { this.inMatch = false; Match.toLobby(); }
       this.startData = d; this.inMatch = true; Sfx.init();
-      Match.start({ mode: ['solo', 'squads', 'rumble'].includes(d.cfg.mode) ? d.cfg.mode : 'solo', build: !!d.cfg.build, ranked: false, theme: THEMES[d.cfg.theme] ? d.cfg.theme : 'greenvale' });
+      Match.start({ mode: ['solo', 'duos', 'squads', 'rumble'].includes(d.cfg.mode) ? d.cfg.mode : 'solo', build: !!d.cfg.build, ranked: false, theme: THEMES[d.cfg.theme] ? d.cfg.theme : 'greenvale' });
       return;
     }
     if (!this.inMatch || Match.state === 'lobby') return;
@@ -395,7 +396,7 @@ const Net = {
     try {
       const A = id => this.ids.get(id) || null, V = a => Array.isArray(a) && a.length >= 3 && a.every(Number.isFinite);
       if (d.k === 'elim') { const t = A(d.id); if (t && t.alive && t !== player) eliminate(t, A(d.src), d.o || {}); }
-      else if (d.k === 'bp') { const t = d.t; if (t && ['wall', 'floor', 'ramp'].includes(t.type) && [t.gx, t.gy, t.gz, t.dir].every(Number.isInteger) && typeof t.key === 'string' && t.key.length < 40) Build.place({ mats: { wood: 99, brick: 99, metal: 99 }, mat: MATS[d.mat] ? d.mat : 'wood', remote: true }, { type: t.type, gx: t.gx, gy: t.gy, gz: t.gz, dir: t.dir, key: t.key }); }
+      else if (d.k === 'bp') { const t = d.t; if (t && ['wall', 'floor', 'ramp', 'cone'].includes(t.type) && [t.gx, t.gy, t.gz, t.dir].every(Number.isInteger) && typeof t.key === 'string' && t.key.length < 40) Build.place({ mats: { wood: 99, brick: 99, metal: 99 }, mat: MATS[d.mat] ? d.mat : 'wood', remote: true }, { type: t.type, gx: t.gx, gy: t.gy, gz: t.gz, dir: t.dir, key: t.key }); }
       else if (d.k === 'bd') { const p = Build.map.get(d.key); if (p) Build.damage(p, clamp(+d.dmg || 0, 0, 2000), null); }
       else if (d.k === 'hv') { let best = null, bd = 4; for (const hv of W.harv) { if (hv.dead || hv.vehicle) continue; const q = (hv.x - d.x) ** 2 + (hv.z - d.z) ** 2; if (q < bd) { bd = q; best = hv; } } if (best) destroyHarv(best); }
       else if (d.k === 'shot') {

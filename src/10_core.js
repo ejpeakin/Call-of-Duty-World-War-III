@@ -158,8 +158,8 @@ const KEY_ACTIONS = [
   ['jump', 'Jump / leave bus / glider', 'Space'], ['sprint', 'Sprint', 'ShiftLeft'],
   ['fire', 'Fire / harvest / build', 'Mouse0'], ['ads', 'Aim / scope (hold)', 'Mouse2'], ['scope', 'Scope in / out (press)', 'KeyV'], ['reload', 'Reload', 'KeyR'], ['use', 'Pick up / open / drive', 'KeyE'],
   ['slot1', 'Harvesting tool', 'Digit1'], ['slot2', 'Slot 2', 'Digit2'], ['slot3', 'Slot 3', 'Digit3'], ['slot4', 'Slot 4', 'Digit4'], ['slot5', 'Slot 5', 'Digit5'], ['slot6', 'Slot 6', 'Digit6'],
-  ['build', 'Build mode on / off', 'KeyQ'], ['wall', 'Build wall', 'KeyZ'], ['ramp', 'Build ramp', 'KeyX'], ['floor', 'Build floor', 'KeyC'], ['material', 'Switch material', 'KeyG'],
-  ['emote', 'Emote', 'KeyB'], ['map', 'Full map', 'KeyM'],
+  ['build', 'Build mode on / off', 'KeyQ'], ['wall', 'Build wall', 'KeyZ'], ['ramp', 'Build ramp', 'KeyX'], ['floor', 'Build floor', 'KeyC'], ['cone', 'Build cone (roof)', 'KeyF'], ['material', 'Switch material', 'KeyG'],
+  ['emote', 'Emote', 'KeyB'], ['map', 'Full map', 'KeyM'], ['inventory', 'Inventory (move items between slots)', 'Tab'],
 ];
 const KEY_DEF = Object.fromEntries(KEY_ACTIONS.map(k => [k[0], k[2]]));
 const Keys = {

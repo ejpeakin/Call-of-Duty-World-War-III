@@ -41,6 +41,7 @@
       <h3>Mode</h3>
       <div class="opt-grid" id="modeGrid">
         <button class="opt" data-mode="solo"><b>Battle Royale · Solo</b><span>100 players, one survivor. Bus drop, loot, storm.</span></button>
+        <button class="opt" data-mode="duos"><b>Battle Royale · Duos</b><span>50 teams of 2. You and a partner, a friend from your room or a bot.</span></button>
         <button class="opt" data-mode="squads"><b>Battle Royale · Squads</b><span>25 squads of 4. You lead three bot teammates.</span></button>
         <button class="opt" data-mode="rumble"><b>Storm Rumble</b><span>16 vs 16 with respawns. First team to 40 eliminations.</span></button>
       </div>
@@ -138,6 +139,8 @@
 
 <!-- ================= HUD ================= -->
 <div id="hud" hidden>
+  <div id="wps"></div>
+  <div id="invHint" hidden></div>
   <div id="tutBox" hidden><span id="tutStep"></span><b id="tutTitle"></b><p id="tutText"></p><div id="tutBar"><i id="tutFill"></i></div><button id="tutSkip" type="button">Skip tutorial</button></div>
   <div id="tutEnd" class="overlay" hidden><div class="card"><h2>You are ready!</h2><p class="hint">That is everything you need for a real match: drop from the bus, loot chests, build when you need cover, and stay ahead of the storm.</p><div class="btn-row"><button class="btn pri" id="tutDone" type="button">Back to the lobby</button></div></div></div>
   <div id="stormVig"></div>

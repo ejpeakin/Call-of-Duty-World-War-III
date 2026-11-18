@@ -10,11 +10,11 @@ function boot() {
   try { Creatures.load(); } catch (e) { console.warn(e); }
   try { CharModel.load(); } catch (e) { console.warn(e); }
   HUD.init();
-  Input.init(); Settings.init(); Tutorial.init();
+  Input.init(); Settings.init(); Tutorial.init(); Inv.init();
   Lobby.init();
   $('resumeBtn').addEventListener('click', () => togglePause());
   $('tkBtn').addEventListener('click', () => Ticket.close());
-  $('quitBtn').addEventListener('click', () => { Match.paused = false; $('pause').hidden = true; Match.showResults(); });
+  $('quitBtn').addEventListener('click', () => { Match.paused = false; $('pause').hidden = true; if (!Match.hasWinner) { Match.recount(); if (player && player.alive && Match.mode !== 'rumble' && !player.placement) player.placement = Math.max(2, Match.teamsAlive); Match.result = { win: false, left: true }; } Match.showResults(); });
   $('specBtn').addEventListener('click', () => { $('death').hidden = true; });
   $('dLobbyBtn').addEventListener('click', () => { Match.showResults(); });
   $('rLobbyBtn').addEventListener('click', () => Match.toLobby());
@@ -142,7 +142,8 @@ function step(now) {
     if (inStorm) { scene.fog.near = Math.min(scene.fog.near, 18); scene.fog.far = Math.min(scene.fog.far, 110); }
     if (hemi) hemi.intensity = th.hemiI * (inStorm ? 0.7 : 1) + Lightning.flash * 0.3 * Lightning.near;
   }
-  if (Match.state === 'play' || Match.state === 'results') HUD.update(dt);
+  if (Match.state === 'play' || Match.state === 'results') { HUD.update(dt); Waypoints.update(); }
+  if (Inv.on && (Match.state !== 'play' || Match.paused || !player || !player.alive)) Inv.close();
   renderer.render(scene, camera);
 }
 try { boot(); }
