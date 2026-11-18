@@ -146,7 +146,7 @@ function openChest(c, a) {
   if (a === player) HUD.dirty = true;
   // Music Concert Ticket: one per season, a tiny chance in any chest you open
   if (a === player && !Profile.ticket() && (Math.random() < TICKET_CHANCE || window.__forceTicket)) Ticket.found(c);
-  // Lil Play Carti: a 1 in 1,000 chest find, once per player
+  // Play Carti: a 1 in 1,000 chest find, once per player
   if (a === player) ChestSkin.roll(c);
 }
 function playerTakePickup(p) {
@@ -450,7 +450,7 @@ const Vehicles = {
   },
 };
 
-// ---------------------------------------------------------------- the 1 in 1,000 chest skin
+// ---------------------------------------------------------------- the 1 in 1,000 chest skin (Play Carti)
 const ChestSkin = {
   roll(c) {
     if (Match.mode === 'tutorial' || Profile.d.owned['outfit:' + CHEST_SKIN]) return;   // once per player
@@ -462,7 +462,7 @@ const ChestSkin = {
     setTimeout(() => this.show(), 800);
   },
   show() {
-    const it = cosById('outfit', CHEST_SKIN); $('sfName').textContent = it.name;
+    const it = cosById('outfit', CHEST_SKIN); $('sfName').textContent = it.name; $('sfRar').textContent = RARITY[it.r].name + ' outfit';
     if (!$('ticket').hidden) { setTimeout(() => this.show(), 600); return; }   // never on top of the ticket reveal
     if (Match.state === 'play') { Match.paused = true; if (document.pointerLockElement) document.exitPointerLock(); }
     $('skinFind').hidden = false; Sfx.init();

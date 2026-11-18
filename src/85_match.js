@@ -358,7 +358,7 @@ const Match = {
     if (this.sharkKills) lines.push([this.sharkKills > 1 ? 'Sharks defeated ×' + this.sharkKills : 'Shark defeated', 2000 * this.sharkKills]);
     if (!d.firstBonus) { d.firstBonus = true; lines.push(['First time playing', 5000]); }
     const xp = lines.reduce((s, l) => s + l[1], 0), lv = Profile.addXp(xp), tier0 = lv.l0;
-    d.matches++; d.kills += p.kills;
+    d.matches++; d.kills += p.kills; d.chests = (d.chests || 0) + (p.chests || 0);
     if (r.win) d.wins++;
     if (place && place <= 10) d.top10++;
     let rpTxt = '';

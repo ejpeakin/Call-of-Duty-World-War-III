@@ -224,7 +224,7 @@ const Lobby = {
       $('passTrack').innerHTML = h;
     }
     if (this.tab === 'career') {
-      $('statGrid').innerHTML = [['Wins', d.wins], ['Matches', d.matches], ['Eliminations', d.kills], ['Top 10 finishes', d.top10]].map(s => `<div class="stat"><b>${s[1]}</b><span>${s[0]}</span></div>`).join('');
+      $('statGrid').innerHTML = [['Wins', d.wins], ['Matches', d.matches], ['Eliminations', d.kills], ['Top 10 finishes', d.top10], ['Chests opened', (d.chests || 0).toLocaleString()]].map(s => `<div class="stat"><b>${s[1]}</b><span>${s[0]}</span></div>`).join('');
       const ri = Profile.rankIdx();
       $('rankList').innerHTML = RANKS.map((r, i) => `<div class="rank ${i === ri ? 'cur' : ''}"><span>${r[0]}${i === ri ? ' · ' + d.rp + ' RP' : ''}</span><i>${r[1]} RP</i></div>`).join('');
     }

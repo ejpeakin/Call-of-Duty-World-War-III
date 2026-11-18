@@ -217,7 +217,8 @@ const COS = {
     { id: 'comet', build: 'average', hair: 0x6a4a2a, name: 'Comet Cadet', r: 2, shirt: 0xeeeeee, pants: 0xdddddd, skin: 0xf0c9a0, sleeve: 0xff7a2a, hat: 'helmet', hatC: 0xf4f4f4, unlock: 'tier:6' },
     { id: 'siren', build: 'slim', hair: 0x2be3ff, name: 'Circuit Siren', r: 2, shirt: 0x1b1b3a, pants: 0x2be3ff, skin: 0xc9a0ff, sleeve: 0xff2fd0, hat: 'antenna', hatC: 0x2be3ff, unlock: 'tier:10' },
     { id: 'toast', build: 'average', name: 'Sir Toastworth', r: 3, shirt: 0xc98a3c, pants: 0x6b4a2b, skin: 0xf2d29b, sleeve: 0xc98a3c, hat: 'toast', hatC: 0xb06a2a, head: [1.7, 1.55, 0.5], unlock: 'tier:14' },
-    { id: 'nightwarden', build: 'slim', hair: 0x111114, name: 'Play Carti', r: 3, shirt: 0x24242c, pants: 0x1a1a20, skin: 0x2c2c36, sleeve: 0x24242c, hat: 'horns', hatC: 0x17171b, visor: 0xff2840, unlock: 'tier:18' },
+    // chest find only: a 1 in 1,000 roll on any chest you open, once per player (never sold, no code, not on the Pass)
+    { id: 'nightwarden', build: 'slim', hair: 0x111114, name: 'Play Carti', r: 5, shirt: 0x24242c, pants: 0x1a1a20, skin: 0x2c2c36, sleeve: 0x24242c, hat: 'horns', hatC: 0x17171b, visor: 0xff2840, unlock: 'chest' },
     { id: 'tycoon', build: 'heavy', hair: 0x1a1a1a, name: 'Gilt Tycoon', r: 4, shirt: 0xd4a72c, pants: 0xd4a72c, skin: 0xe8c06a, sleeve: 0x1a1a1a, hat: 'tophat', hatC: 0x1a1a1a, unlock: 'tier:25' },
     { id: 'stormborn', build: 'average', hair: 0x0e0e10, name: 'Pluma Peso', r: 4, shirt: 0x141416, pants: 0x17181d, skin: 0xf1cdb0, sleeve: 0x141416, hat: 'none', hoodie: true, jeans: true, shiesty: 0x0e0e10, sneakers: 0xf6f6f4, unlock: 'tier:30' },
     { id: 'nova', build: 'average', name: 'Juice Earth', r: 4, shirt: 0xf3f2ee, pants: 0xe8731e, skin: 0x70482f, sleeve: 0xf3f2ee,
@@ -230,9 +231,6 @@ const COS = {
       jacket: 0xffd84a, leather: true, studBelt: true, unlock: 'shop', price: 1500, music: true },
     { id: 'week', build: 'slim', name: 'The Week', r: 4, shirt: 0x17171c, pants: 0x17171c, skin: 0x6e4630, sleeve: 0x17171c, hair: 0x0e0b0a, shoes: 0x0c0c0e,
       hat: 'afro', afroSize: 0.8, lineup: true, hatC: 0x0e0b0a, suit: true, tieC: 0xb3121e, mustache: true, shades: 0x0a0a0c, personal: true, unlock: 'shop', price: 1500 },
-    // chest find only: a 1 in 1,000 roll on any chest you open, once per player (never sold in the Shop)
-    { id: 'lilcarti', build: 'slim', name: 'Lil Play Carti', r: 5, shirt: 0xa50f1c, jacket: 0x0c0c0e, pants: 0x0f0f12, skin: 0x5e3a26, sleeve: 0x0c0c0e, hair: 0x0b0b0d, shoes: 0x0b0b0d, boots: true,
-      hat: 'dreads', hatC: 0x0b0b0d, tip: 0xd0101e, hairSeed: 1717, leather: true, studBelt: true, cargo: true, shades: 0x0a0a0c, faceTats: true, personal: true, unlock: 'chest' },
   ],
   backpack: [
     { id: 'none', name: 'No Backpack', r: 0 },
@@ -291,12 +289,13 @@ async function redeemCode(raw) {
   const hex = [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join(''), hit = SKIN_CODES[hex];
   if (!hit) return { err: 'That code does not work. Check the letters and try again.' };
   const [cat, id] = hit.split(':'), it = cosById(cat, id); if (!it) return { err: 'That code does not work.' };
+  if (it.unlock === 'chest' && !Profile.owns(it)) return { err: it.name + ' can only be found in chests now (1 in 1,000).' };
   const had = Profile.owns(it); Profile.d.owned[cat + ':' + id] = true; Profile.d.eq[cat] = id; Profile.save();
   return { it, had };
 }
 function itemPrice(c) { return c.price || RARITY_PRICE[c.r] || 0; }
 const COIN = 'FortBux';
-const PASS_TIERS = 30, XP_PER_TIER = 5000, XP_PER_LEVEL = 5000, LEVEL_COINS = 50, WIN_COINS = 50, TICKET_CHANCE = 1 / 10000, CHEST_SKIN = 'lilcarti', CHEST_SKIN_CHANCE = 1 / 1000;
+const PASS_TIERS = 30, XP_PER_TIER = 5000, XP_PER_LEVEL = 5000, LEVEL_COINS = 50, WIN_COINS = 50, TICKET_CHANCE = 1 / 10000, CHEST_SKIN = 'nightwarden', CHEST_SKIN_CHANCE = 1 / 1000;
 // ---------------------------------------------------------------- seasons: 30 days each, the first is Music Festival 2026
 const SEASON_EPOCH = Date.UTC(2026, 10, 16), SEASON_DAYS = 30, SEASON_NAMES = ['Music Festival 2026'];
 const Season = {
@@ -324,7 +323,7 @@ function passRewards() {
 // ---------------------------------------------------------------- profile (per-viewer, localStorage)
 const Profile = {
   d: {
-    xp: 0, wins: 0, matches: 0, kills: 0, top10: 0, rp: 0, umbrella: false, coins: 0, owned: {},
+    xp: 0, wins: 0, matches: 0, kills: 0, top10: 0, chests: 0, rp: 0, umbrella: false, coins: 0, owned: {},
     eq: { outfit: 'rae', body: 'woman', backpack: 'ruck', pickaxe: 'pick', glider: 'sail', wrap: 'none', emote: 'groove', car: 'street' },
     sens: 1, shadows: !IS_TOUCH, mode: 'solo', build: true, theme: 'greenvale', ranked: false, novaGiven: true,
     season: -1, seasonXp: 0, firstBonus: false, thankSeason: -1, ticketSeason: -1, skinsPaid: true, keys: {}, gfxV: 2,
@@ -336,6 +335,10 @@ const Profile = {
         // these four skins used to be free: players who already had a save keep them
         // earlier builds could save shadows off or Fast graphics on their own: start everyone from full quality once
         if (o.gfxV !== 2) { this.d.shadows = !IS_TOUCH; this.d.gfx = 'auto'; this.d.gfxV = 2; this.save(); }
+        if (typeof this.d.chests !== 'number') this.d.chests = 0;
+        // the short-lived Lil Play Carti skin became Play Carti
+        if (this.d.owned['outfit:lilcarti']) { delete this.d.owned['outfit:lilcarti']; this.d.owned['outfit:nightwarden'] = true; }
+        if (this.d.eq.outfit === 'lilcarti') this.d.eq.outfit = this.d.owned['outfit:nightwarden'] ? 'nightwarden' : 'rae';
         if (!o.skinsPaid) { for (const id of ['nova', 'tripy', 'uzi', 'week']) this.d.owned['outfit:' + id] = true; this.d.skinsPaid = true; this.save(); } }
     } catch (e) { /* storage unavailable */ }
   },
