@@ -346,7 +346,7 @@ const Profile = {
     xp: 0, wins: 0, matches: 0, kills: 0, top10: 0, chests: 0, rp: 0, umbrella: false, coins: 0, owned: {},
     eq: { outfit: 'rae', body: 'woman', backpack: 'ruck', pickaxe: 'pick', glider: 'sail', wrap: 'none', emote: 'groove', car: 'street' },
     sens: 1, shadows: !IS_TOUCH, mode: 'solo', build: true, theme: 'greenvale', ranked: false, novaGiven: true,
-    season: -1, seasonXp: 0, firstBonus: false, thankSeason: -1, ticketSeason: -1, passSeason: -1, passPick: -1, skinsPaid: true, keys: {}, gfxV: 2,
+    season: -1, seasonXp: 0, firstBonus: false, thankSeason: -1, ticketSeason: -1, passSeason: -1, passPick: -1, skinsPaid: true, keys: {}, gfxV: 2, perf: false,
   },
   load() {
     try {

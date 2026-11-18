@@ -41,6 +41,7 @@ const Lobby = {
   },
   rebuild() { const eq = this.viewEq(); this.rigKey = JSON.stringify(eq); if (this.rig) this.scene.remove(this.rig.root); this.rig = makeRig(eq); this.scene.add(this.rig.root); },
   render(dt) {
+    if (Perf.on && !Opening.on) { this.acc = (this.acc || 0) + dt; if (this.acc < 1 / 30) return; dt = this.acc; this.acc = 0; }   // Performance Mode: the lobby draws at 30 fps
     this.t += dt; const f = this.fake, sel = this.shopSel, cat = this.tab === 'locker' ? this.cat : this.tab === 'shop' ? sel.cat : 'outfit';
     const veq = this.viewEq(); if (JSON.stringify(veq) !== this.rigKey) this.rebuild();
     f.state = cat === 'glider' ? 'glide' : 'ground'; f.slot = cat === 'wrap' ? 1 : 0; f.pitch = 0;
@@ -54,9 +55,12 @@ const Lobby = {
     if (showCar) { const m = which === 'midnight' ? this.car : which === 'limo' ? this.limo : this.street; m.rotation.y += dt * 0.45; for (const w of m.userData.wheels) w.rotation.set(0, w.userData.front ? Math.sin(this.t * 0.8) * 0.3 : 0, 0, 'YXZ'); }
     this.rig.glider.position.y = 3.2;
     const lt = cat === 'glider' ? 1.9 : 0; if (Math.abs(this.lift - lt) > 0.01) { this.lift = lerp(this.lift, lt, Math.min(1, dt * 5)); this.place(); }
-    const bt = (this.t * 0.05) % 1; this.bus.position.set(lerp(-50, 50, bt), 4.5 + Math.sin(this.t) * 0.4, -26); this.bus.rotation.y = Math.PI / 2;
-    for (const p of this.bus.userData.props) p.rotation.z += dt * 20;
-    this.isl.rotation.y += dt * 0.05;
+    this.bus.visible = !Perf.on;   // Performance Mode: a still background (no flying bus or turning island)
+    if (!Perf.on) {
+      const bt = (this.t * 0.05) % 1; this.bus.position.set(lerp(-50, 50, bt), 4.5 + Math.sin(this.t) * 0.4, -26); this.bus.rotation.y = Math.PI / 2;
+      for (const p of this.bus.userData.props) p.rotation.z += dt * 20;
+      this.isl.rotation.y += dt * 0.05;
+    }
     Opening.cam(this.cam, dt);
     renderer.render(this.scene, this.cam);
   },

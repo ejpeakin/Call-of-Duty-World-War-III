@@ -438,7 +438,7 @@ const Lightning = {
     }
     if (Match.state !== 'play' || Match.paused || Storm.state === 'idle' || !stormMesh.visible) return;
     this.t -= dt; if (this.t > 0) return;
-    this.t = rnd(1.0, 3.0);
+    this.t = Perf.on ? rnd(3, 6) : rnd(1.0, 3.0);   // fewer bolts in Performance Mode
     const v = Cam.view || player; if (!v) return;
     const a0 = Math.atan2(v.pos.z - Storm.cz, v.pos.x - Storm.cx), inside = !Storm.outside(v.pos.x, v.pos.z);
     let a = a0 + rnd(-0.45, 0.45), r = Storm.r + rnd(0, 45);

@@ -399,7 +399,7 @@ const GroundCover = {
   },
   update(cam) {
     if (!this.layers.length || !W.cls) return;
-    const show = cam.y - groundH(cam.x, cam.z) < 75;
+    const show = !Perf.on && cam.y - groundH(cam.x, cam.z) < 75;   // no grass, flowers or pollen in Performance Mode
     if (show !== this.shown) { this.shown = show; for (const l of this.layers) l.m.visible = show && !l.off; }
     if (!show) return;
     for (const l of this.layers) {
@@ -413,12 +413,12 @@ const GroundCover = {
 
 // ---------------------------------------------------------------- sky: clouds, sun, drifting motes
 const Nature = {
-  uTime: { value: 0 }, uCam: { value: new THREE.Vector3() }, chunks: [], spin: [], fires: [], cloudItems: [], cloudMeshes: [], motes: null, sunSprite: null, ct: 0,
+  uTime: { value: 0 }, uCam: { value: new THREE.Vector3() }, chunks: [], statics: [], spin: [], fires: [], cloudItems: [], cloudMeshes: [], motes: null, sunSprite: null, ct: 0,
   clear() {
     for (const c of this.chunks) for (const m of c.ms) if (m.dispose) m.dispose();
     for (const m of this.cloudMeshes) if (m.dispose) m.dispose();
     this._blade = null; this._fan = null;
-    this.chunks = []; this.spin = []; this.fires = []; this.cloudItems = []; this.cloudMeshes = []; this.motes = null; GroundCover.clear();
+    this.chunks = []; this.statics = []; this.spin = []; this.fires = []; this.cloudItems = []; this.cloudMeshes = []; this.motes = null; GroundCover.clear();
   },
   buildSky(R) {
     const th = W.theme, nat = NAT[th.style];
@@ -445,6 +445,17 @@ const Nature = {
     if (!this.moteTex) { const c = document.createElement('canvas'); c.width = c.height = 32; const x = c.getContext('2d'), gr = x.createRadialGradient(16, 16, 0, 16, 16, 16); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.35, 'rgba(255,255,255,.8)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = gr; x.fillRect(0, 0, 32, 32); this.moteTex = new THREE.CanvasTexture(c); }
     this.motes = new THREE.Points(g, new THREE.PointsMaterial({ map: this.moteTex, color: nat.motes, size: th.night ? 0.2 : 0.12, transparent: true, opacity: th.night ? 0.95 : 0.6, depthWrite: false, blending: th.night ? THREE.AdditiveBlending : THREE.NormalBlending })); this.motes.frustumCulled = false; W.group.add(this.motes);
   },
+  // big static meshes (each town, vault and landmark batch) get hidden once they are past the fog
+  collectStatics() {
+    this.statics = []; const sp = new THREE.Sphere();
+    for (const o of W.group.children) {
+      if (!o.isMesh || o.isInstancedMesh || o.isSkinnedMesh || Object.keys(o.userData || {}).length) continue;
+      const g = o.geometry; if (!g || !g.attributes.position) continue; if (!g.boundingSphere) g.computeBoundingSphere();
+      o.updateMatrixWorld(true); sp.copy(g.boundingSphere).applyMatrix4(o.matrixWorld);
+      if (sp.radius > 170 || sp.radius < 0.5) continue;   // the terrain, water and island-wide paths always draw
+      this.statics.push({ o, x: sp.center.x, z: sp.center.z, r: sp.radius });
+    }
+  },
   placeSun() { const th = W.theme, s = this.sunSprite; if (!s) return; s.position.copy(W.sunDir).multiplyScalar(1300); s.scale.setScalar(th.night ? 300 : 520); s.material.color.setHex(th.night ? 0xcfd8ff : th.sun); },
   moveClouds(dt) {
     for (const c of this.cloudItems) { c.x += c.v * dt; if (c.x > 1250) c.x -= 2500; _qq.setFromAxisAngle(_yy, c.rot); _mm.compose(_pp.set(c.x, c.y, c.z), _qq, _ss.set(c.s, c.s * 0.62, c.s * 0.8)); c.m.setMatrixAt(c.i, _mm); }
@@ -453,11 +464,17 @@ const Nature = {
   update(dt) {
     if (!W.group || !W.theme) return; this.uTime.value += dt; const cam = camera.position, t = this.uTime.value; this.uCam.value.copy(cam);
     this.ct -= dt;
-    if (this.ct <= 0) { this.ct = 0.3; const far = (scene.fog ? scene.fog.far : 2000) + 30; for (const c of this.chunks) { const v = Math.hypot(c.x - cam.x, c.z - cam.z) - c.r < far; for (const m of c.ms) m.visible = v; } }
+    if (this.ct <= 0) {
+      this.ct = 0.3; const far = (scene.fog ? scene.fog.far : 2000) + 30;
+      for (const c of this.chunks) { const v = Math.hypot(c.x - cam.x, c.z - cam.z) - c.r < far; for (const m of c.ms) m.visible = v; }
+      for (const s of this.statics) s.o.visible = Math.hypot(s.x - cam.x, s.z - cam.z) - s.r < far;   // towns and buildings lost in the fog are not drawn
+    }
     GroundCover.update(cam);
-    for (const s of this.spin) s.o.rotation[s.ax] += s.v * dt;
-    for (const f of this.fires) { const k = 0.85 + 0.22 * Math.sin(t * 9 + f.ph) + 0.1 * Math.sin(t * 23 + f.ph); f.o.scale.set(1 + (k - 1) * 0.4, k, 1 + (k - 1) * 0.4); }
-    this.moveClouds(dt);
+    if (!Perf.on) {   // Performance Mode keeps clouds, windmills and flames still
+      for (const s of this.spin) s.o.rotation[s.ax] += s.v * dt;
+      for (const f of this.fires) { const k = 0.85 + 0.22 * Math.sin(t * 9 + f.ph) + 0.1 * Math.sin(t * 23 + f.ph); f.o.scale.set(1 + (k - 1) * 0.4, k, 1 + (k - 1) * 0.4); }
+      this.moveClouds(dt);
+    }
     if (this.motes) {
       const show = GroundCover.shown; this.motes.visible = show;
       if (show) { const a = this.motes.geometry.attributes.position.array, B = this.moteBase; for (let i = 0, n = B.length / 4; i < n; i++) { const ph = B[i * 4 + 3], bx = B[i * 4] + t * 0.5 + Math.sin(t * 0.6 + ph) * 1.4, bz = B[i * 4 + 2] + Math.cos(t * 0.5 + ph) * 1.4; a[i * 3] = cam.x + ((((bx - cam.x) % 60) + 60) % 60) - 30; a[i * 3 + 1] = cam.y - 4 + B[i * 4 + 1] + Math.sin(t * 0.9 + ph) * 0.5; a[i * 3 + 2] = cam.z + ((((bz - cam.z) % 60) + 60) % 60) - 30; } this.motes.geometry.attributes.position.needsUpdate = true; }

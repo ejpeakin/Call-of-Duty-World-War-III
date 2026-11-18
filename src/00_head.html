@@ -275,6 +275,8 @@ button:focus-visible{outline:2px solid var(--sun-2);outline-offset:2px}
 #crosshair i:nth-child(3){width:8px;height:2px;top:-1px;left:calc(-8px - var(--spr,6px))}
 #crosshair i:nth-child(4){width:8px;height:2px;top:-1px;left:var(--spr,6px)}
 #crosshair.pick i{opacity:.0}
+#buildWhy{position:absolute;left:50%;top:calc(50% + 30px);transform:translateX(-50%);font:800 13px var(--f-body);letter-spacing:.04em;text-transform:uppercase;color:#ff8a94;text-shadow:0 1px 3px #000,0 0 6px rgba(0,0,0,.6);pointer-events:none;white-space:nowrap}
+#buildWhy:empty{display:none}
 #crosshair .ring{display:none;position:absolute;box-sizing:border-box;width:calc(var(--spr,20px)*2);height:calc(var(--spr,20px)*2);left:calc(var(--spr,20px)*-1);top:calc(var(--spr,20px)*-1);border:2px solid rgba(255,255,255,.9);border-radius:50%;box-shadow:0 0 2px #000,inset 0 0 2px #000}
 #crosshair.sg .ring{display:block}
 #crosshair.sg i{height:6px;width:2px}
@@ -544,6 +546,9 @@ details.ctl .hint{margin-top:8px}
 .ctl-grid > span:nth-child(odd){color:var(--mute)}
 .ctl-grid kbd{font-family:var(--f-body);font-size:11.5px;font-weight:700;background:rgba(255,255,255,.1);border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:1px 6px;margin-right:2px;color:var(--ink)}
 .hint.credit{font-size:11px;opacity:.7}
+.perf-row{align-items:flex-start;padding:10px 12px;border-radius:12px;border:1px solid rgba(126,240,160,.4);background:rgba(126,240,160,.08)}
+.perf-row > span{display:flex;flex-direction:column;gap:2px}
+.perf-row .hint{font-size:12px}
 #readyBtn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;line-height:1}
 #readyBtn .rb-sub{font:700 13px var(--f-body);font-style:normal;text-transform:none;letter-spacing:.01em;opacity:.92}
 @media (max-width: 760px){

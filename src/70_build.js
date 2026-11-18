@@ -7,13 +7,36 @@ const Build = {
   active: false, piece: 'wall', pieces: [], map: new Map(), ghosts: null, tgt: null, lastKey: null, lastCol: null, placeCD: 0,
   init() {
     this.ghosts = { wall: new THREE.Mesh(GEO.wall, MAT.ghost), floor: new THREE.Mesh(GEO.floor, MAT.ghost), rampX: new THREE.Mesh(GEO.rampX, MAT.ghost), rampZ: new THREE.Mesh(GEO.rampZ, MAT.ghost), cone: new THREE.Mesh(GEO.cone, MAT.ghost) };
-    for (const k in this.ghosts) { this.ghosts[k].visible = false; this.ghosts[k].renderOrder = 6; scene.add(this.ghosts[k]); }
+    for (const k in this.ghosts) {
+      const g = this.ghosts[k]; g.visible = false; g.renderOrder = 6; scene.add(g);
+      const e = new THREE.LineSegments(new THREE.EdgesGeometry(g.geometry, 25), MAT.ghostLine); e.renderOrder = 7; g.add(e); g.userData.edge = e;
+    }
+  },
+  // where a piece would sit (for the blocked check): centre point and top height
+  centre(t) {
+    const y0 = t.gy * TH;
+    if (t.type === 'wall') return t.dir === 0 ? [(t.gx + 0.5) * T, y0 + TH / 2, t.gz * T, y0 + TH] : [t.gx * T, y0 + TH / 2, (t.gz + 0.5) * T, y0 + TH];
+    if (t.type === 'floor') return [(t.gx + 0.5) * T, y0, (t.gz + 0.5) * T, y0 + 0.12];
+    if (t.type === 'cone') return [(t.gx + 0.5) * T, y0 + CONE_H / 2, (t.gz + 0.5) * T, y0 + CONE_H];
+    return [(t.gx + 0.5) * T, y0 + TH / 2, (t.gz + 0.5) * T, y0 + TH];
+  },
+  // why a piece can't go here ('' when it can): shown under the crosshair and turns the blueprint red
+  why(a, t) {
+    if (!t) return 'Out of range';
+    if (this.map.has(t.key)) return 'Spot taken';
+    if (!MAT_ORDER.some(m => a.mats[m] >= 10)) return 'Need 10 materials';
+    const [x, y, z, top] = this.centre(t);
+    if (t.gy * TH > 220 || Math.hypot(x, z) > W.R + 30) return 'Out of range';
+    if (groundH(x, z) > top - 0.25) return 'Blocked';   // fully underground
+    const L = this._q || (this._q = []); Grid.query(x - 0.05, z - 0.05, x + 0.05, z + 0.05, L);
+    for (const c of L) if (!c.dead && !c.piece && c.kind !== 'ramp' && c.maxY - c.minY > 0.5 && x > c.minX + 0.15 && x < c.maxX - 0.15 && z > c.minZ + 0.15 && z < c.maxZ - 0.15 && y > c.minY + 0.15 && y < c.maxY - 0.15) return 'Blocked';   // inside a wall, rock, tree or car
+    return '';
   },
   clear() {
     for (const p of this.pieces) { scene.remove(p.mesh); if (p.col) Grid.remove(p.col); }
     this.pieces = []; this.map.clear(); this.active = false; this.hideGhost();
   },
-  hideGhost() { if (this.ghosts) for (const k in this.ghosts) this.ghosts[k].visible = false; },
+  hideGhost() { if (this.ghosts) for (const k in this.ghosts) this.ghosts[k].visible = false; if (this.whyTxt) { this.whyTxt = ''; const el = document.getElementById('buildWhy'); if (el) el.textContent = ''; } },
   compute(a, type) {
     const fx = Math.sin(a.yaw), fz = Math.cos(a.yaw), p = a.pitch;
     let gy = Math.floor((a.pos.y + 1.2) / TH);
@@ -43,6 +66,7 @@ const Build = {
   canAfford(a) { return a.mats[a.mat] >= 10; },
   place(a, t) {
     if (!t || this.map.has(t.key)) return false;
+    if (a === player && !Net.applying) { const w = this.why(a, t); if (w === 'Blocked' || w === 'Out of range') return false; }
     if (!this.canAfford(a)) {
       const alt = MAT_ORDER.find(m => a.mats[m] >= 10);
       if (!alt) { if (a === player) HUD.toast('Not enough materials. Harvest with the tool in slot 1.'); return false; }
@@ -81,14 +105,17 @@ const Build = {
     for (const p of this.pieces.slice()) { const d = Math.hypot(p.x - x, p.y - y, p.z - z); if (d < r + 2) this.damage(p, dmg * (1 - d / (r + 2) * 0.5), null); }
   },
   update(dt) {
+    this.vt = (this.vt || 0) - dt;
+    if (this.vt <= 0) { this.vt = 0.3; const cp = camera.position, f = View.far + 12, f2 = f * f; for (const p of this.pieces) if (p.mesh) p.mesh.visible = (p.x - cp.x) ** 2 + (p.z - cp.z) ** 2 < f2; }   // pieces lost in the fog are not drawn
     for (const p of this.pieces) if (p.anim > 0) { p.anim -= dt; p.mesh.scale.setScalar(p.anim > 0 ? 1 - p.anim / 0.14 * 0.6 : 1); }
     this.placeCD -= dt;
     this.hideGhost();
     if (!this.active || !player || !player.alive || player.crawl || player.state !== 'ground' || player.vehicle || !Match.build) { this.tgt = null; return; }
     const t = this.compute(player, this.piece); this.tgt = t;
     const g = this.ghosts[this.geoKey(t)]; this.pose(t, g);
-    const ok = !this.map.has(t.key) && MAT_ORDER.some(m => player.mats[m] >= 10);
-    g.material = ok ? MAT.ghost : MAT.ghostBad; g.visible = true;
+    const why = this.why(player, t), ok = !why;
+    g.material = ok ? MAT.ghost : MAT.ghostBad; g.userData.edge.material = ok ? MAT.ghostLine : MAT.ghostLineBad; g.visible = true;
+    if (why !== this.whyTxt) { this.whyTxt = why; $('buildWhy').textContent = why; }
     // one click = one piece. While fire stays held you can keep building as you move or turn, but never a second
     // piece of the same kind straight above / below the last one (a fresh ramp lifts you, which used to stack a twin)
     const col = t.type + ':' + t.gx + ':' + t.gz + ':' + (t.dir || 0);

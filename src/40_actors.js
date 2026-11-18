@@ -152,10 +152,11 @@ const BotRig = {
     const mR = new THREE.Matrix4(), mH = new THREE.Matrix4(), mT = new THREE.Matrix4(), mA = new THREE.Matrix4(), mB = new THREE.Matrix4(), mL = new THREE.Matrix4(), mO = new THREE.Matrix4();
     const q = new THREE.Quaternion(), e = new THREE.Euler(), p = new THREE.Vector3(), s = new THREE.Vector3(1, 1, 1);
     const local = (x, y, z, rx, ry, rz) => { e.set(rx, ry, rz, 'YXZ'); q.setFromEuler(e); return mL.compose(p.set(x, y, z), q, s); };
-    let n = 0, recolor = false;
+    let n = 0, recolor = false; const far = Math.min(430, View.far + 20), far2 = far * far;
     for (const a of actors) {
       if (a.ri < 0) continue; const ai = a.ri;
-      if (a._cm || (!a.alive && !(a._dissolveAt > Match.time)) || a.state === 'bus' || a.pos.distanceToSquared(camP) > 430 * 430) continue;
+      if (a._cm || (!a.alive && !(a._dissolveAt > Match.time)) || a.state === 'bus' || a.pos.distanceToSquared(camP) > far2) continue;
+      if (!View.sees(a.pos.x, a.pos.y + 1.2, a.pos.z, 2.6)) continue;   // off-screen: no pose work, nothing to draw
       const i = n++;
       computePose(a, P, t);
       const it = a.inv[a.slot]; const gk = it && it.kind === 'weapon' ? it.rarity : -1;

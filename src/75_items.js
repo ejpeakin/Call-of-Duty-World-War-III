@@ -23,11 +23,11 @@ function pickupMesh(it) {
 
 const Pickups = {
   list: [], byId: new Map(), nid: 0,
-  clear() { for (const p of this.list) if (p.mesh && p.mesh.parent) p.mesh.parent.remove(p.mesh); this.list = []; this.byId.clear(); this.nid = 0; },
+  clear() { for (const p of this.list) if (p.mesh && p.mesh.parent) p.mesh.parent.remove(p.mesh); this.list = []; this.byId.clear(); this.nid = 0; this.pool.clear(); },
   spawn(item, x, y, z, o = {}) {
     // in a shared match the host owns the loot on the ground: guests ask for a drop instead of making one
     if (Net.guest && !Net.applying) { if (!Net.building) Net.emit({ k: 'drop', item, x, y, z, pop: o.pop ? [o.pop.x, o.pop.y + 1, o.pop.z] : 0 }); return { item, x, y, z, alive: false }; }
-    const p = { item, x, y, z, alive: true, mesh: null, path: o.path ? o.path.slice() : null, claim: null, t: Math.random() * 6, fails: 0, age: 0, ttl: o.ttl || 0, pop: o.pop ? { x: o.pop.x, y: o.pop.y + 1, z: o.pop.z } : null };
+    const p = { item, x, y, z, alive: true, mesh: null, path: o.path ? o.path.slice() : null, claim: null, t: Math.random() * 6, fails: 0, age: 0, ttl: o.ttl || 0, drop: !!(o.pop || o.drop), pop: o.pop ? { x: o.pop.x, y: o.pop.y + 1, z: o.pop.z } : null };
     p.id = o.id || ++this.nid; this.byId.set(p.id, p);
     this.list.push(p);
     if (Net.hosting && !Net.building) Net.emit({ k: 'pk+', id: p.id, item, x, y, z, pop: p.pop ? [p.pop.x, p.pop.y, p.pop.z] : 0, ttl: p.ttl });
@@ -36,24 +36,48 @@ const Pickups = {
   remove(p) {
     if (p.alive && p.id && Net.inMatch && !Net.applying) Net.emit({ k: Net.isHost ? 'pk-' : 'take', id: p.id });
     if (p.id) this.byId.delete(p.id);
-    p.alive = false; if (p.mesh) { if (p.mesh.parent) p.mesh.parent.remove(p.mesh); p.mesh = null; } },
+    p.alive = false; this.give(p); },
+  // loot models are reused instead of rebuilt each time one comes into view (less garbage, fewer hitches)
+  pool: new Map(),
+  mkey(it) { return it.kind + ':' + (it.wid || it.hid || it.ammo || it.mat || '') + ':' + (it.rarity == null ? '' : it.rarity); },
+  take(it) { const L = this.pool.get(this.mkey(it)); return (L && L.pop()) || pickupMesh(it); },
+  give(p) {
+    const m = p.mesh; if (!m) return; p.mesh = null; if (m.parent) m.parent.remove(m);
+    const k = this.mkey(p.item); let L = this.pool.get(k); if (!L) this.pool.set(k, L = []); if (L.length < 6) L.push(m);
+  },
   update(dt) {
-    const cp = camera.position, p_time = performance.now() / 1000;
+    const cp = camera.position, p_time = performance.now() / 1000, pf = Perf.on;
+    // 4 times a second: only the closest loot within range gets a 3D model (80 at most, 28 in Performance Mode)
+    this.pt = (this.pt || 0) - dt;
+    if (this.pt <= 0) {
+      this.pt = 0.25; const cap = pf ? 28 : 80, rad = pf ? 70 : 115, near = this._near || (this._near = []); near.length = 0;
+      for (const p of this.list) { if (!p.alive) continue; p._want = false; const d2 = (p.x - cp.x) ** 2 + (p.z - cp.z) ** 2; if (d2 < rad * rad) near.push(p), p._d2 = d2; }
+      near.sort((a, b) => a._d2 - b._d2); for (let i = 0; i < near.length && i < cap; i++) near[i]._want = true;
+    }
+    // keep memory in check (the host or a solo game decides): loot dropped by players disappears after a while
+    // when no real player is near it, and there is a hard cap on how much loot can lie around
+    this.gc = (this.gc || 0) - dt;
+    if (this.gc <= 0 && !Net.guest && Match.state === 'play') {
+      this.gc = 2; const life = pf ? 90 : 150, cap = pf ? 380 : 560, people = actors.filter(a => !a.ai && a.alive);
+      const watched = p => people.some(a => (a.pos.x - p.x) ** 2 + (a.pos.z - p.z) ** 2 < 45 * 45);
+      for (const p of this.list) if (p.alive && p.drop && p.age > life && !watched(p)) this.remove(p);
+      const alive = this.list.filter(p => p.alive);
+      if (alive.length > cap) { alive.sort((a, b) => (b.drop - a.drop) || (b.age - a.age)); let n = alive.length - cap; for (const p of alive) { if (n <= 0) break; if (!watched(p)) { this.remove(p); n--; } } }
+    }
     for (const p of this.list) {
       if (!p.alive) continue; p.t += dt; p.age += dt;
       if (p.ttl && p.age > p.ttl) { this.remove(p); continue; }
-      const dx = p.x - cp.x, dz = p.z - cp.z, d2 = dx * dx + dz * dz;
-      if (d2 < 115 * 115) {
-        if (!p.mesh) { p.mesh = pickupMesh(p.item); W.group.add(p.mesh); }
+      if (p._want) {
+        if (!p.mesh) { p.mesh = this.take(p.item); W.group.add(p.mesh); }
         if (p.pop && p.age < 0.5) { const k = p.age / 0.5; p.mesh.position.set(lerp(p.pop.x, p.x, k), lerp(p.pop.y, p.y + 0.4, k) + Math.sin(k * Math.PI) * 1.6, lerp(p.pop.z, p.z, k)); }   // dropped loot bursts out of the eliminated player
         else p.mesh.position.set(p.x, p.y + 0.4 + Math.sin(p.t * 2) * 0.08, p.z);
         p.mesh.children[0].rotation.y = p.t * 0.9;
-      } else if (d2 > 135 * 135 && p.mesh) { W.group.remove(p.mesh); p.mesh = null; }
+      } else if (p.mesh) this.give(p);
     }
     if (this.list.length > 700) this.list = this.list.filter(p => p.alive);
     // chests: skip drawing the far ones (they are a few pixels across beyond ~170 m)
     this.ct = (this.ct || 0) - dt;
-    if (this.ct <= 0) { this.ct = 0.25; for (const c of W.chests) if (c.mesh && !c.falling) { const d2 = (c.x - cp.x) ** 2 + (c.z - cp.z) ** 2; c.mesh.visible = d2 < 170 * 170; } }
+    if (this.ct <= 0) { this.ct = 0.25; const cd = Math.min(pf ? 110 : 170, View.far + 10); for (const c of W.chests) if (c.mesh && !c.falling) { const d2 = (c.x - cp.x) ** 2 + (c.z - cp.z) ** 2; c.mesh.visible = d2 < cd * cd; } }
     // chests wobble, sparkle and spin a star until someone opens them; then the lid springs up
     for (const c of W.chests) {
       const m = c.mesh; if (!m || !m.visible || c.falling) continue; const u = m.userData, s0 = u.s0 || 1;
@@ -63,11 +87,11 @@ const Pickups = {
         u.lid.rotation.x = -1.9 * e; m.position.y = c.y + Math.sin(u.openT * Math.PI) * 0.22; m.scale.setScalar(s0 * (1 + Math.sin(u.openT * Math.PI) * 0.12));
         continue;
       }
-      const d2 = (c.x - cp.x) ** 2 + (c.z - cp.z) ** 2; if (d2 > 75 * 75) continue;
+      const d2 = (c.x - cp.x) ** 2 + (c.z - cp.z) ** 2; if (d2 > (pf ? 40 * 40 : 75 * 75) || !View.sees(c.x, c.y + 0.8, c.z, 1.6)) continue;
       const t = p_time + c.x * 0.7, sq = Math.sin(t * 3.2);
       m.scale.set(s0 * (1 - sq * 0.03), s0 * (1 + sq * 0.045), s0 * (1 - sq * 0.03));
       if (u.star) { u.star.rotation.y = t * 2.2; u.star.position.y = 1.3 + Math.sin(t * 2.4) * 0.09; u.star.scale.setScalar(0.85 + Math.sin(t * 5) * 0.15); u.lock.rotation.y = t * 1.5; }
-      if (d2 < 35 * 35 && Math.random() < dt * 1.4) FX.burst(c.x + rnd(-0.6, 0.6), c.y + 0.5 + Math.random() * 0.9, c.z + rnd(-0.6, 0.6), c.kind === 'exotic' ? 0x9ffff5 : 0xfff0a0, 1, 0.5, 0.6, 0.06, 1);
+      if (!pf && d2 < 35 * 35 && Math.random() < dt * 1.4) FX.burst(c.x + rnd(-0.6, 0.6), c.y + 0.5 + Math.random() * 0.9, c.z + rnd(-0.6, 0.6), c.kind === 'exotic' ? 0x9ffff5 : 0xfff0a0, 1, 0.5, 0.6, 0.06, 1);
     }
   },
 };
@@ -105,7 +129,7 @@ function botGive(a, items, dropAt) {
     if (it.kind === 'weapon') left = botConsiderWeapon(a, it);
     else if (it.kind === 'ammo') left = null;
     else left = giveItem(a, it);
-    if (left && dropAt && player && Math.hypot(dropAt.x - player.pos.x, dropAt.z - player.pos.z) < 110) Pickups.spawn(left, dropAt.x + rnd(-1, 1), dropAt.y, dropAt.z + rnd(-1, 1));
+    if (left && dropAt && player && Math.hypot(dropAt.x - player.pos.x, dropAt.z - player.pos.z) < 110) Pickups.spawn(left, dropAt.x + rnd(-1, 1), dropAt.y, dropAt.z + rnd(-1, 1), { drop: true });
   }
   if (Math.random() < 0.7) a.mats[pick(MAT_ORDER)] += rndi(20, 50);
 }
@@ -155,7 +179,7 @@ function playerTakePickup(p) {
     const left = giveItem(a, it);
     if (left) {
       const s = a.slot === 0 ? 1 : a.slot; const old = a.inv[s]; a.inv[s] = it; a.slot = s;
-      if (old) Pickups.spawn(old, a.pos.x + Math.sin(a.yaw) * 1.2, a.pos.y, a.pos.z + Math.cos(a.yaw) * 1.2);
+      if (old) Pickups.spawn(old, a.pos.x + Math.sin(a.yaw) * 1.2, a.pos.y, a.pos.z + Math.cos(a.yaw) * 1.2, { drop: true });
     } else if (a.slot === 0) { const idx = a.inv.indexOf(it); if (idx > 0) a.slot = idx; }
     Pickups.remove(p);
   } else if (it.kind === 'heal') {
@@ -163,7 +187,7 @@ function playerTakePickup(p) {
     if (!left) Pickups.remove(p);
     else {
       const s = a.slot === 0 ? 1 : a.slot; const old = a.inv[s];
-      if (old && !(old.kind === 'heal' && old.hid === it.hid)) { a.inv[s] = { kind: 'heal', hid: it.hid, count: Math.min(it.count, HEALS[it.hid].stack) }; it.count -= a.inv[s].count; Pickups.spawn(old, a.pos.x + Math.sin(a.yaw) * 1.2, a.pos.y, a.pos.z + Math.cos(a.yaw) * 1.2); if (it.count <= 0) Pickups.remove(p); }
+      if (old && !(old.kind === 'heal' && old.hid === it.hid)) { a.inv[s] = { kind: 'heal', hid: it.hid, count: Math.min(it.count, HEALS[it.hid].stack) }; it.count -= a.inv[s].count; Pickups.spawn(old, a.pos.x + Math.sin(a.yaw) * 1.2, a.pos.y, a.pos.z + Math.cos(a.yaw) * 1.2, { drop: true }); if (it.count <= 0) Pickups.remove(p); }
       else HUD.toast('No room for more ' + HEALS[it.hid].name);
     }
   } else { if (!giveItem(a, it)) Pickups.remove(p); }
@@ -393,7 +417,8 @@ const Vehicles = {
   },
   update(dt) {
     const cp = camera.position;
-    for (const v of this.list) v.mesh.visible = (v.x - cp.x) ** 2 + (v.z - cp.z) ** 2 < 230 * 230;
+    const cd = Math.min(Perf.on ? 90 : 160, View.far + 10), cd2 = cd * cd;   // each car is ~20 parts: far ones are not drawn
+    for (const v of this.list) v.mesh.visible = (v.x - cp.x) ** 2 + (v.z - cp.z) ** 2 < cd2;
     for (const v of this.list) {
       const d = v.driver;
       if (!d && Math.abs(v.speed) < 0.05 && v.vy === 0) continue;

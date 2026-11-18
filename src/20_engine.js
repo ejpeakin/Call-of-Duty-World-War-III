@@ -56,11 +56,11 @@ function makeTex(kind) {
 const GFX = {
   fast: false, base: 1, pr: 1, tWin: 0, nWin: 0, steps: 0,
   lowPower: /CrOS/.test(navigator.userAgent) || IS_TOUCH,
-  pick() { return (Profile.d.gfx || 'auto') === 'fast' || SOFT_GL; },
+  pick() { return (Profile.d.gfx || 'auto') === 'fast' || !!Profile.d.perf || SOFT_GL; },
   shadows() { return !!Profile.d.shadows && !this.fast && !SOFT_GL; },
   apply() {
     this.fast = this.pick(); const dpr = window.devicePixelRatio || 1;
-    this.base = SOFT_GL ? 0.6 : this.fast ? Math.min(dpr, 1) * 0.9 : Math.min(dpr, IS_TOUCH ? 1.25 : 1.5);
+    this.base = SOFT_GL ? 0.6 : Profile.d.perf ? Math.min(dpr, 1) * 0.8 : this.fast ? Math.min(dpr, 1) * 0.9 : Math.min(dpr, IS_TOUCH ? 1.25 : 1.5);
     this.pr = this.base; this.steps = 0; renderer.setPixelRatio(this.pr); renderer.setSize(innerWidth, innerHeight);
     if (sun) sun.castShadow = Match.state === 'play' ? this.shadows() : false;
   },
@@ -70,15 +70,29 @@ const GFX = {
     this.tWin += dt; this.nWin++; if (this.tWin < 4) return;
     const fps = this.nWin / this.tWin; this.tWin = this.nWin = 0;
     if (fps >= 30 || (Profile.d.gfx || 'auto') === 'pretty') return;
+    if (!Profile.d.perf && !this.tipped) { this.tipped = true; HUD.toast('Running slowly? Turn on Performance Mode in Settings.'); }
     if (sun && sun.castShadow) { sun.castShadow = false; this.steps++; return; }
     if (!GroundCover.thin) { GroundCover.thinOut(); this.steps++; return; }
     const floor = Math.min(this.base, 0.75);
     if (this.pr > floor + 0.01) { this.pr = Math.max(floor, this.pr * 0.9); this.steps++; renderer.setPixelRatio(this.pr); renderer.setSize(innerWidth, innerHeight); }
   },
 };
+// Performance Mode (Settings): one switch for Chromebooks and other slow computers. No shadows, no grass or
+// pollen, fewer particles and tracers, a shorter view distance, fewer detailed characters and loot models,
+// still clouds and a still lobby.
+const Perf = {
+  get on() { return !!(Profile.d && Profile.d.perf); },
+  set(v) { Profile.d.perf = !!v; Profile.save(); GFX.apply(); },
+};
+// what the camera can see this frame, so far-away or off-screen things can skip work
+const View = {
+  fr: new THREE.Frustum(), m: new THREE.Matrix4(), s: new THREE.Sphere(), far: 2000,
+  update() { camera.updateMatrixWorld(); this.m.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse); this.fr.setFromProjectionMatrix(this.m); this.far = scene.fog ? scene.fog.far : 2000; },
+  sees(x, y, z, r) { this.s.center.set(x, y, z); this.s.radius = r; return this.fr.intersectsSphere(this.s); },
+};
 function initEngine() {
   const canvas = $('fdView'), g0 = Profile.d.gfx || 'auto';
-  renderer = new THREE.WebGLRenderer({ canvas, antialias: g0 !== 'fast', powerPreference: 'high-performance' });
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: g0 !== 'fast' && !Profile.d.perf, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, IS_TOUCH ? 1.25 : 1.5));
   renderer.setSize(innerWidth, innerHeight);
   // no graphics acceleration (software drawing): fewer pixels and no shadows, or every frame takes seconds
@@ -117,8 +131,11 @@ function initEngine() {
   MAT.wood = new THREE.MeshLambertMaterial({ map: makeTex('wood') });
   MAT.brick = new THREE.MeshLambertMaterial({ map: makeTex('brick') });
   MAT.metal = new THREE.MeshLambertMaterial({ map: makeTex('metal') });
-  MAT.ghost = new THREE.MeshBasicMaterial({ color: 0x5ab8ff, transparent: true, opacity: 0.38, depthWrite: false });
-  MAT.ghostBad = new THREE.MeshBasicMaterial({ color: 0xff4d5e, transparent: true, opacity: 0.32, depthWrite: false });
+  MAT.ghost = new THREE.MeshBasicMaterial({ color: 0x4fb2ff, transparent: true, opacity: 0.3, depthWrite: false });
+  MAT.ghostBad = new THREE.MeshBasicMaterial({ color: 0xff4d5e, transparent: true, opacity: 0.3, depthWrite: false });
+  // blueprint outline drawn on top of the see-through piece
+  MAT.ghostLine = new THREE.LineBasicMaterial({ color: 0xbfe8ff, transparent: true, opacity: 0.95, depthWrite: false });
+  MAT.ghostLineBad = new THREE.LineBasicMaterial({ color: 0xff8a94, transparent: true, opacity: 0.95, depthWrite: false });
   MAT.batch = new THREE.MeshLambertMaterial({ vertexColors: true });
   MAT.glow = new THREE.MeshBasicMaterial({ vertexColors: true });
   // ground: vertex colours times a fine grain texture, so it reads as earth up close instead of flat paint
@@ -173,11 +190,14 @@ const FX = {
     const fg = new THREE.SphereGeometry(1, 14, 10);
     for (let i = 0; i < 8; i++) { const m = new THREE.Mesh(fg, new THREE.MeshBasicMaterial({ color: 0xffb040, transparent: true, opacity: 0.8, depthWrite: false })); m.visible = false; scene.add(m); this.flashes.push({ m, life: 0, max: 0, r: 1 }); }
   },
-  clear() { for (const p of this.P) p.life = 0; for (const t of this.tracers) { t.life = 0; t.l.visible = false; } for (const f of this.flashes) { f.life = 0; f.m.visible = false; } },
+  clear() { this.live = true; for (const p of this.P) p.life = 0; for (const t of this.tracers) { t.life = 0; t.l.visible = false; } for (const f of this.flashes) { f.life = 0; f.m.visible = false; } },
   burst(x, y, z, hex, n = 8, spd = 4, life = 0.5, size = 0.12, grav = 9) {
-    if (camera.position.distanceToSquared(_v4.set(x, y, z)) > 200 * 200) return;
+    const pf = Perf.on, cap = pf ? 160 : this.max;   // Performance Mode: at most 160 particles, fewer per burst, none far away
+    if (camera.position.distanceToSquared(_v4.set(x, y, z)) > (pf ? 110 * 110 : 200 * 200)) return;
+    if (pf && n > 1) n = Math.max(1, Math.round(n * 0.4));
+    this.live = true;
     for (let k = 0; k < n; k++) {
-      const i = this.n; this.n = (this.n + 1) % this.max; const p = this.P[i];
+      const i = this.n % cap; this.n = (i + 1) % cap; const p = this.P[i];
       p.x = x; p.y = y; p.z = z; const a = Math.random() * TAU, e = Math.random() * 1.2 - 0.2;
       const s = spd * (0.4 + Math.random() * 0.8);
       p.vx = Math.cos(a) * Math.cos(e) * s; p.vy = Math.sin(e) * s + spd * 0.3; p.vz = Math.sin(a) * Math.cos(e) * s;
@@ -187,8 +207,9 @@ const FX = {
     this.mesh.instanceColor.needsUpdate = true;
   },
   tracer(x0, y0, z0, x1, y1, z1, hex = 0xfff1a8) {
-    if (camera.position.distanceToSquared(_v4.set(x0, y0, z0)) > 160 * 160) return;
-    const t = this.tracers[this.ti]; this.ti = (this.ti + 1) % this.tracers.length;
+    const pf = Perf.on; if (camera.position.distanceToSquared(_v4.set(x0, y0, z0)) > (pf ? 90 * 90 : 160 * 160)) return;
+    const tc = pf ? 16 : this.tracers.length; this.ti %= tc;   // at most 48 tracers at once (16 in Performance Mode); each lasts 0.06 s
+    const t = this.tracers[this.ti]; this.ti = (this.ti + 1) % tc;
     const a = t.l.geometry.attributes.position.array; a[0] = x0; a[1] = y0; a[2] = z0; a[3] = x1; a[4] = y1; a[5] = z1;
     t.l.geometry.attributes.position.needsUpdate = true; t.l.material.color.setHex(hex); t.l.visible = true; t.life = 0.06;
   },
@@ -197,15 +218,17 @@ const FX = {
     f.m.position.set(x, y, z); f.m.material.color.setHex(hex); f.life = f.max = life; f.r = r; f.m.visible = true;
   },
   update(dt) {
-    const m = new THREE.Matrix4();
-    for (let i = 0; i < this.max; i++) {
-      const p = this.P[i];
-      if (p.life <= 0) { if (p.max) { this.mesh.setMatrixAt(i, ZERO_M); p.max = 0; } continue; }
-      p.life -= dt; p.vy -= p.g * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt;
-      const s = p.s * clamp(p.life / p.max * 1.5, 0, 1);
-      m.makeScale(s, s, s); m.setPosition(p.x, p.y, p.z); this.mesh.setMatrixAt(i, m);
+    if (this.live) {   // skip the whole pass (and the upload to the graphics card) when no particle is alive
+      const m = this._m || (this._m = new THREE.Matrix4()); let any = false;
+      for (let i = 0; i < this.max; i++) {
+        const p = this.P[i];
+        if (p.life <= 0) { if (p.max) { this.mesh.setMatrixAt(i, ZERO_M); p.max = 0; } continue; }
+        any = true; p.life -= dt; p.vy -= p.g * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt;
+        const s = p.s * clamp(p.life / p.max * 1.5, 0, 1);
+        m.makeScale(s, s, s); m.setPosition(p.x, p.y, p.z); this.mesh.setMatrixAt(i, m);
+      }
+      this.mesh.instanceMatrix.needsUpdate = true; this.live = any;
     }
-    this.mesh.instanceMatrix.needsUpdate = true;
     for (const t of this.tracers) if (t.life > 0) { t.life -= dt; if (t.life <= 0) t.l.visible = false; }
     for (const f of this.flashes) if (f.life > 0) {
       f.life -= dt; const k = 1 - f.life / f.max; f.m.scale.setScalar(f.r * (0.3 + k * 0.9)); f.m.material.opacity = 0.8 * (1 - k);

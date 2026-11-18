@@ -689,11 +689,12 @@ const CharPool = {
     this.t -= dt;
     if (this.t <= 0) {
       this.t = 0.2;
-      for (const R of this.rigs) if (R.actor && (!ok(R.actor) || R.actor.pos.distanceTo(cam) > this.keep || !actors.includes(R.actor))) this.release(R);
-      const free = this.rigs.filter(R => !R.actor);
+      const pf = Perf.on, cap = pf ? 8 : this.N, keep = pf ? 55 : this.keep;
+      this.rigs.forEach((R, i) => { if (R.actor && (i >= cap || !ok(R.actor) || R.actor.pos.distanceTo(cam) > keep || !actors.includes(R.actor))) this.release(R); });
+      const free = this.rigs.filter((R, i) => !R.actor && i < cap);
       if (free.length) {
         const cand = [];
-        const near = GFX.fast ? 65 : this.near; for (const a of actors) if (!a._cm && a.alive && ok(a)) { const d = a.pos.distanceTo(cam); if (d < near) cand.push([d, a]); }
+        const near = Perf.on ? 40 : GFX.fast ? 65 : this.near; for (const a of actors) if (!a._cm && a.alive && ok(a)) { const d = a.pos.distanceTo(cam); if (d < near) cand.push([d, a]); }
         cand.sort((p, q) => p[0] - q[0]);
         for (let i = 0; i < cand.length && free.length; i++) {
           const R = free.pop(), a = cand[i][1]; R.actor = a; a._cm = R; a._dieT = null;
@@ -705,7 +706,9 @@ const CharPool = {
       const a = R.actor;
       if (a.alive) a._dieT = null;
       else { if (a._dieT == null) a._dieT = a._dissolveAt > Match.time ? a._dissolveAt - Match.time : 0; a._dieT -= dt; if (a._dieT <= 0) { this.release(R); continue; } }
-      CharModel.animate(R, a, dt);
+      R._acc = (R._acc || 0) + dt;
+      if (!View.sees(a.pos.x, a.pos.y + 1.2, a.pos.z, 2.6) && (R._skip = ((R._skip || 0) + 1) % 4)) continue;   // off-screen: catch up every 4th frame
+      CharModel.animate(R, a, R._acc); R._acc = 0;
     }
   },
 };

@@ -736,5 +736,5 @@ function genWorld(key) {
   // exotic crates near three plazas
   const ps = W.pois.slice().sort(() => R() - 0.5).slice(0, 3);
   for (const p of ps) { const a = R() * TAU; addChest('exotic', p.x + Math.cos(a) * 11, p.h + 0.3, p.z + Math.sin(a) * 11, a, null); }
-  buildMapCanvas(); applyTheme(th); Nature.placeSun();
+  buildMapCanvas(); applyTheme(th); Nature.placeSun(); Nature.collectStatics();
 }

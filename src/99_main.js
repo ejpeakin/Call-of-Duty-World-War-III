@@ -31,6 +31,8 @@ function boot() {
   $('rLobbyBtn').addEventListener('click', () => Match.toLobby());
   $('sensIn').value = Profile.d.sens; $('sensIn').addEventListener('input', e => { Profile.d.sens = +e.target.value; Profile.save(); });
   $('shadowChk').checked = !!Profile.d.shadows; $('shadowChk').addEventListener('change', e => { Profile.d.shadows = e.target.checked; sun.castShadow = GFX.shadows(); Profile.save(); });
+  $('perfChk').checked = !!Profile.d.perf; $('perfChk').addEventListener('change', e => { Perf.set(e.target.checked); $('shadowChk').disabled = e.target.checked; $('gfxNote').textContent = e.target.checked ? 'Performance Mode is on. Edge smoothing turns off after you reload the page.' : 'Performance Mode is off. Edge smoothing comes back after you reload the page.'; });
+  $('shadowChk').disabled = !!Profile.d.perf;
   $('gfxSel').value = Profile.d.gfx || 'auto'; $('gfxSel').addEventListener('change', e => { Profile.d.gfx = e.target.value; Profile.save(); GFX.apply(); $('gfxNote').textContent = 'Saved. Grass and edge smoothing change after you reload the page.'; });
   $('fdView').addEventListener('click', () => { if (Match.state === 'play' && !Match.paused && !Input.locked) Input.requestLock(); });
   Opening.start();
@@ -126,7 +128,7 @@ function step(now) {
     Interact.find();
   }
   Pickups.update(dt); Build.update(dt); FX.update(dt);
-  Cam.update(dt);
+  Cam.update(dt); View.update();
   const v = Cam.view || player;
   if (PlayerRig && player) {
     const show = (player.alive || player._dissolveAt > Match.time) && player.state !== 'bus' && !player.vehicle && !Cam.scoped;
@@ -148,7 +150,8 @@ function step(now) {
   if (scene.fog && W.theme) {
     const th = W.theme, hk = clamp((camera.position.y - 60) / 90, 0, 1);
     const inStorm = v && v.alive && Storm.state !== 'idle' && Storm.outside(v.pos.x, v.pos.z) && v.state !== 'bus';
-    scene.fog.near = lerp(inStorm ? 25 : th.fogNear, 600, hk); scene.fog.far = lerp(inStorm ? 140 : th.fogFar, 1500, hk);
+    const fs = Perf.on ? 0.5 : 1;   // Performance Mode: closer fog, so far-away things are skipped
+    scene.fog.near = lerp(inStorm ? 25 : th.fogNear * fs, 600 * fs, hk); scene.fog.far = lerp(inStorm ? 140 : th.fogFar * fs, Perf.on ? 1000 : 1500, hk);
     scene.fog.color.setHex(inStorm ? 0x1e0a3c : th.fog);
     if (inStorm) { scene.fog.near = Math.min(scene.fog.near, 18); scene.fog.far = Math.min(scene.fog.far, 110); }
     if (hemi) hemi.intensity = th.hemiI * (inStorm ? 0.7 : 1) + Lightning.flash * 0.3 * Lightning.near;
