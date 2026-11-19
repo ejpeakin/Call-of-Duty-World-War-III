@@ -1,8 +1,9 @@
 // =====================================================================
-//  Building: walls, ramps, floors on a 4m grid (wood / brick / metal)
+//  Building: walls, ramps, floors and roofs on a grid (wood / brick / metal)
 // =====================================================================
-// Build tiles in Fortnite-style proportions: 5.12 m wide and 3.84 m tall (wider than tall), ramps rise one storey per tile
-const T = 5.12, TH = 3.84, CONE_H = TH * 0.5;
+// Build tiles are wider than tall (4:3) and ramps rise one storey per tile. BUILD_SCALE sets how big builds feel next to
+// a ~1.9 m player: at 1.2 a tile is 6.14 m wide and a wall 4.61 m tall, about 2.4 times your height.
+const BUILD_SCALE = 1.2, T = 5.12 * BUILD_SCALE, TH = 3.84 * BUILD_SCALE, CONE_H = TH * 0.5;
 // A freshly placed piece is see-through and firms up to solid over this many seconds (sturdier materials take longer)
 const BUILD_TIME = { wood: 1.4, brick: 2.0, metal: 2.6 }, FADE_STEPS = 12;
 const Build = {
@@ -46,7 +47,7 @@ const Build = {
   hideGhost() { if (this.ghosts) for (const k in this.ghosts) this.ghosts[k].visible = false; if (this.whyTxt) { this.whyTxt = ''; const el = document.getElementById('buildWhy'); if (el) el.textContent = ''; } },
   compute(a, type) {
     const fx = Math.sin(a.yaw), fz = Math.cos(a.yaw), p = a.pitch;
-    let gy = Math.floor((a.pos.y + 1.2) / TH);
+    let gy = Math.floor((a.pos.y + 1.2 * BUILD_SCALE) / TH);   // the storey just below your feet (scaled with the tiles, so walls sit on hills as before)
     if (type === 'wall') {
       if (p > 0.75) gy += 1;
       const cx = Math.floor(a.pos.x / T), cz = Math.floor(a.pos.z / T);

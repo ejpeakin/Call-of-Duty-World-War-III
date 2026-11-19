@@ -40,7 +40,7 @@ Your session may be out of date: the other person can push while you work.
 
 ### Things to keep consistent
 
-- Build tiles are 5.12 m wide and 3.84 m tall (`T`, `TH` in `src/70_build.js`). Characters are about 1.9 m tall (`BODY_SCALE = 1.0` in `src/40_actors.js`), so a wall is about twice a player's height. Keep that proportion.
+- Build tiles are 6.14 m wide and 4.61 m tall (`T`, `TH` in `src/70_build.js`, set by `BUILD_SCALE = 1.2`, which the user chose so builds feel bigger). Characters are about 1.9 m tall (`BODY_SCALE = 1.0` in `src/40_actors.js`), so a wall is about 2.4 times a player's height. Change the size with `BUILD_SCALE` only.
 - A placed build starts see-through and turns solid over `BUILD_TIME` seconds (`src/70_build.js`).
 - FortDay is its own game. Don't copy names, characters, art, music or the look of existing games.
 - Every part of the per-frame update in `step()` (`src/99_main.js`) runs inside `Guard`, so an error in one part is reported (once, with its name) and skipped instead of freezing the whole match. Wrap any new per-frame system the same way.

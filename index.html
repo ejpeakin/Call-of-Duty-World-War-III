@@ -1165,7 +1165,7 @@ details.soc summary .w-k{display:flex;align-items:center;gap:6px}
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js"></script>
 <script async src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>
-const BUILD_ID = '1119-1932';
+const BUILD_ID = '1119-2001';
 'use strict';
 // =====================================================================
 //  FORTDAY — core utilities, data tables, profile, audio
@@ -3454,7 +3454,7 @@ function computePose(a, P, t) {
 
 // ---------------------------------------------------------------- body geometry (shared by the instanced bots and the detailed rig)
 // Skeleton (metres, feet at 0): hips 0.95, knee 0.51, shoulders 1.48, head centre 1.79.
-const BODY_SCALE = 1.0;   // characters are drawn (and hit) at their real ~1.9 m height, so a 3.84 m wall stands about twice as tall as you
+const BODY_SCALE = 1.0;   // characters are drawn (and hit) at their real ~1.9 m height; build walls are about 2.4 times that (BUILD_SCALE in 70_build.js)
 const SK = { hipY: 0.95, hipX: 0.1, thigh: 0.44, shin: 0.42, shY: 0.53, shX: 0.235, upper: 0.29, fore: 0.26, headY: 0.84 };
 function limbGeo(r0, r1, len, seg = 9, N = 3) {
   const pts = [];
@@ -5113,10 +5113,11 @@ function actorTick(a, dt) {
 }
 
 // =====================================================================
-//  Building: walls, ramps, floors on a 4m grid (wood / brick / metal)
+//  Building: walls, ramps, floors and roofs on a grid (wood / brick / metal)
 // =====================================================================
-// Build tiles in Fortnite-style proportions: 5.12 m wide and 3.84 m tall (wider than tall), ramps rise one storey per tile
-const T = 5.12, TH = 3.84, CONE_H = TH * 0.5;
+// Build tiles are wider than tall (4:3) and ramps rise one storey per tile. BUILD_SCALE sets how big builds feel next to
+// a ~1.9 m player: at 1.2 a tile is 6.14 m wide and a wall 4.61 m tall, about 2.4 times your height.
+const BUILD_SCALE = 1.2, T = 5.12 * BUILD_SCALE, TH = 3.84 * BUILD_SCALE, CONE_H = TH * 0.5;
 // A freshly placed piece is see-through and firms up to solid over this many seconds (sturdier materials take longer)
 const BUILD_TIME = { wood: 1.4, brick: 2.0, metal: 2.6 }, FADE_STEPS = 12;
 const Build = {
@@ -5160,7 +5161,7 @@ const Build = {
   hideGhost() { if (this.ghosts) for (const k in this.ghosts) this.ghosts[k].visible = false; if (this.whyTxt) { this.whyTxt = ''; const el = document.getElementById('buildWhy'); if (el) el.textContent = ''; } },
   compute(a, type) {
     const fx = Math.sin(a.yaw), fz = Math.cos(a.yaw), p = a.pitch;
-    let gy = Math.floor((a.pos.y + 1.2) / TH);
+    let gy = Math.floor((a.pos.y + 1.2 * BUILD_SCALE) / TH);   // the storey just below your feet (scaled with the tiles, so walls sit on hills as before)
     if (type === 'wall') {
       if (p > 0.75) gy += 1;
       const cx = Math.floor(a.pos.x / T), cz = Math.floor(a.pos.z / T);
