@@ -116,7 +116,7 @@ function giveItem(a, it) {
   if (it.kind === 'weapon') { for (let i = 1; i < 6; i++) if (!a.inv[i]) { a.inv[i] = it; return null; } return it; }
   return it;
 }
-function weaponScore(w) { return w.rarity + ({ ar: 2.2, shotgun: 2.1, smg: 1.6, sniper: 1.5, rocket: 1.2, pistol: 0.4 }[WEAPONS[w.wid].type] || 1) + (w.rarity >= 5 ? 3 : 0); }
+function weaponScore(w) { return w.rarity + ({ katana: 2.0, ar: 2.2, shotgun: 2.1, smg: 1.6, sniper: 1.5, rocket: 1.2, pistol: 0.4 }[WEAPONS[w.wid].type] || 1) + (w.rarity >= 5 ? 3 : 0); }
 function botConsiderWeapon(a, w) {
   let same = -1, worst = -1, worstScore = 1e9, empty = -1, nW = 0;
   for (let i = 1; i < 6; i++) {
@@ -167,6 +167,7 @@ function openChest(c, a) {
   if (Net.hosting) Net.emit({ k: 'chest', x: c.x, z: c.z, by: a.id });
   if (Net.guest) { if (Math.hypot(c.x - player.pos.x, c.z - player.pos.z) < 110) { FX.burst(c.x, c.y + 0.8, c.z, c.kind === 'exotic' ? 0x2fe0d0 : 0xffd84a, 16, 3, 0.8, 0.12, -1); if (Sfx.vol(c.x, c.y, c.z) > 0.3) Sfx.chest(); } return; }
   const items = chestLoot(c.kind);
+  if (c.katana) { c.katana = false; items.unshift(makeWeapon('katana', 4)); }   // one of this match's five Japanese Katanas
   const near = player && Math.hypot(c.x - player.pos.x, c.z - player.pos.z) < 110;
   if (a === player || !a.ai) {
     const fx = Math.sin(c.rot || 0), fz = Math.cos(c.rot || 0);

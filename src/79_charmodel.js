@@ -666,6 +666,7 @@ const CharModel = {
     if (showGun) {
       R.mHandR.getWorldPosition(_cmV); R.body.worldToLocal(_cmV);
       R.gun.position.set(_cmV.x, _cmV.y + 0.07 * Math.cos(pitch), _cmV.z - 0.07 * Math.sin(pitch)); R.gun.rotation.set(-pitch, 0, 0);
+      if (a.slashT > 0) { const k = 1 - a.slashT / 0.28, sd = a.slashSide || 1; R.gun.rotation.set(-pitch - 0.5 * Math.sin(k * Math.PI), sd * (1.2 - 2.4 * k), sd * 0.6); }   // katana swing
     }
     R.pick.visible = showPick; R.held.visible = showHeld; R.glider.visible = glider;
   },

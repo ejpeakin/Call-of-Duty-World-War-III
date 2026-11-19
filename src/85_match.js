@@ -206,6 +206,7 @@ const Match = {
   setup() {
     Net.building = true;
     genWorld(this.theme); Reboot.setup(this.mode);
+    if (this.mode !== 'tutorial') { const cs = W.chests.filter(c => c.kind === 'chest'); for (let i = 0; i < KATANAS_PER_MATCH && cs.length; i++) cs.splice(Math.floor(Math.random() * cs.length), 1)[0].katana = true; }
     $('ldFill').style.width = '80%';
     actors.length = 0; nextId = 1; ElimFX.clear(); CharPool.clear(); BotRig.hideAll(); Trails.clear();
     if (Net.guest) Net.guestSetup(); else {

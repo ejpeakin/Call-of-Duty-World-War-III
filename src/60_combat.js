@@ -122,6 +122,7 @@ function coneDir(d, spread, out) {
 }
 function fireWeapon(a) {
   const it = a.inv[a.slot]; const st = wstat(it);
+  if (st.melee) { slash(a, it, st); return; }
   if (it.mag <= 0) { startReload(a); return; }
   it.mag--; a.fireCD = 1 / st.rate; a.emote = null; a.lastShotT = Match.time;
   aimRay(a, AIM);
@@ -153,6 +154,28 @@ function fireWeapon(a) {
   FX.burst(mz.x, mz.y, mz.z, 0xffd27a, 2, 1.5, 0.06, 0.12, 0);
   if (a === player) { Cam.kick += st.type === 'sniper' ? 0.05 : st.type === 'shotgun' ? 0.045 : st.type === 'rocket' ? 0.04 : 0.012; HUD.dirty = true; }
 }
+// Japanese Katana: one swing cuts everyone in front of you within reach (and builds in the way)
+function slash(a, it, st) {
+  a.fireCD = 1 / st.rate; a.emote = null; a.lastShotT = Match.time; a.slashT = 0.28; a.slashSide = -(a.slashSide || 1);
+  const fx = Math.sin(a.yaw), fz = Math.cos(a.yaw), s = a.scale || 1, ey = a.pos.y + 1.3 * s, R = st.range * s; let hits = 0;
+  for (const t of actors) {
+    if (t === a || !t.alive || t.state === 'bus' || t.vehicle || t.team === a.team) continue;
+    const dx = t.pos.x - a.pos.x, dz = t.pos.z - a.pos.z, d = Math.hypot(dx, dz), ts = t.scale || 1;
+    if (d > R + 0.45 * ts || Math.abs(t.pos.y - a.pos.y) > 2.2 * Math.max(s, ts)) continue;
+    if (d > 0.35 && (dx * fx + dz * fz) / d < 0.45) continue;   // about 63 degrees either side of where you face
+    if (!losClear(a.pos.x, ey, a.pos.z, t.pos.x, t.pos.y + 1.1 * ts, t.pos.z)) continue;
+    damageActor(t, st.dmg, a, { x: t.pos.x, y: t.pos.y + 1.6 * ts, z: t.pos.z, w: WEAPONS[it.wid].name });
+    FX.burst(t.pos.x, t.pos.y + 1.2 * ts, t.pos.z, t.shield > 0 ? 0x5ab8ff : 0xff4050, 8, 4, 0.4, 0.09); hits++;
+  }
+  // builds, cars, rocks and creatures straight ahead
+  const cp = Math.cos(a.pitch), h = raycast(a.pos.x, ey, a.pos.z, fx * cp, Math.sin(a.pitch), fz * cp, R + 0.4, a, false);
+  if (h.type === 'col') { const c = h.obj; if (c.piece) Build.damage(c.piece, st.dmg * st.struct, a); else if (c.harv && c.harv.vehicle) Vehicles.damage(c.harv.vehicle, st.dmg * 0.4); FX.burst(h.x, h.y, h.z, MATS[c.mat] ? MATS[c.mat].color : 0xcccccc, 5, 3, 0.35, 0.08); }
+  { const cr = Creatures.ray(a.pos.x, ey, a.pos.z, fx, 0, fz, R + 0.6); if (cr) Creatures.damage(cr.c, st.dmg, a, { x: a.pos.x + fx * cr.t, y: ey, z: a.pos.z + fz * cr.t }); }
+  FX.slash(a.pos.x + fx * 0.3, ey - 0.15, a.pos.z + fz * 0.3, a.yaw, a.slashSide);
+  if (a === player || Sfx.vol(a.pos.x, a.pos.y, a.pos.z) > 0.2) { Sfx.noise(0.14, 3600, 1.5, 0.16, 'highpass'); if (hits) Sfx.tone(1900, 0.09, 'triangle', 0.07, -700); }
+  if (a === player) { Cam.kick += 0.015; HUD.dirty = true; }
+  if (Net.inMatch && !a.remote && !Net.applying) Net.emit({ k: 'sl', id: a.id, s: a.slashSide }, a.pos, NET_RANGE);
+}
 function applyHit(a, st, h, d, pellets) {
   if (h.type === 'actor') {
     const t = h.obj; let dmg = st.dmg;
@@ -172,7 +195,7 @@ function applyHit(a, st, h, d, pellets) {
 }
 function canReload(a) {
   const it = a.inv[a.slot]; if (!it || it.kind !== 'weapon') return false;
-  const st = wstat(it); if (it.mag >= st.mag) return false;
+  const st = wstat(it); if (st.melee || it.mag >= st.mag) return false;
   return !a.isPlayer || a.ammo[st.ammo] > 0;
 }
 function startReload(a) {
@@ -405,7 +428,7 @@ function finishUse(a) {
 // ---------------------------------------------------------------- per-actor tick (timers + actions)
 function actorTick(a, dt) {
   if (!a.alive) return;
-  a.fireCD -= dt; a.pickCD -= dt; if (a.pickAnim > 0) a.pickAnim -= dt; if (a.slowT > 0) a.slowT -= dt; if (a.invuln > 0) a.invuln -= dt;
+  a.fireCD -= dt; a.pickCD -= dt; if (a.pickAnim > 0) a.pickAnim -= dt; if (a.slashT > 0) a.slashT -= dt; if (a.slowT > 0) a.slowT -= dt; if (a.invuln > 0) a.invuln -= dt;
   if (a.state !== 'bus') a.aliveTime += dt;
   if (a.emote) { a.emoteT += dt; if (Math.abs(a.input.f) > 0.1 || Math.abs(a.input.r) > 0.1 || a.input.fire || a.state !== 'ground') a.emote = null; }
   if (a.reloadT > 0) { a.reloadT -= dt; if (a.reloadT <= 0) finishReload(a); }

@@ -927,7 +927,7 @@ details.ctl .hint{margin-top:8px}
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js"></script>
 <script async src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>
-const BUILD_ID = '1118-2355';
+const BUILD_ID = '1118-2358';
 'use strict';
 // =====================================================================
 //  FORTDAY — core utilities, data tables, profile, audio
@@ -1001,9 +1001,12 @@ const WEAPONS = {
   stormcaller: { name: "Warden's Stormcaller", short: 'MYTHIC', type: 'ar', dmg: 38, rate: 7, mag: 40, reload: 1.8, spread: 0.018, ads: 0.004, range: 240, ammo: 'medium', auto: true, struct: 1.2, head: 1.8, mythic: true },
   sledge: { name: "Foreman's Sledge", short: 'MYTHIC', type: 'shotgun', dmg: 11, pellets: 10, rate: 1.7, mag: 8, reload: 3.2, spread: 0.065, ads: 0.036, range: 48, ammo: 'shells', auto: false, struct: 1.5, head: 1.75, mythic: true },
   frostbite: { name: 'Frostbite Rifle', short: 'EXOTIC', type: 'ar', dmg: 44, rate: 2.6, mag: 10, reload: 2.2, spread: 0.02, ads: 0.002, range: 300, ammo: 'heavy', auto: false, struct: 1, head: 2, slow: 2.5, exotic: true },
+  // melee: every swing slices everyone in front of you within reach, about as hard as a close shotgun blast; no ammo, no reload
+  katana: { name: 'Japanese Katana', short: 'KATANA', type: 'katana', dmg: 86, rate: 1.4, mag: 1, reload: 0.01, spread: 0, ads: 0, range: 3.6, ammo: 'light', auto: false, struct: 1.4, head: 1, melee: true, minR: 4 },
   kicker: { name: 'Kinetic Kicker', short: 'EXOTIC', type: 'shotgun', dmg: 8, pellets: 10, rate: 1.3, mag: 6, reload: 3.4, spread: 0.07, ads: 0.04, range: 38, ammo: 'shells', auto: false, struct: 1, head: 1.6, knock: 17, exotic: true },
 };
-const GUN_SIZE = { pistol: [0.1, 0.18, 0.42], smg: [0.12, 0.2, 0.62], ar: [0.12, 0.2, 0.95], shotgun: [0.14, 0.18, 0.92], sniper: [0.11, 0.18, 1.35], rocket: [0.26, 0.26, 1.25] };
+const KATANAS_PER_MATCH = 5;   // hidden in 5 random chests each match
+const GUN_SIZE = { katana: [0.06, 0.07, 1.2], pistol: [0.1, 0.18, 0.42], smg: [0.12, 0.2, 0.62], ar: [0.12, 0.2, 0.95], shotgun: [0.14, 0.18, 0.92], sniper: [0.11, 0.18, 1.35], rocket: [0.26, 0.26, 1.25] };
 const WEAPON_POOL = [{ w: 24, id: 'ar' }, { w: 20, id: 'shotgun' }, { w: 18, id: 'smg' }, { w: 16, id: 'pistol' }, { w: 9, id: 'sniper' }, { w: 5, id: 'rocket' }];
 const RAR_FLOOR = [{ w: 38, r: 0 }, { w: 34, r: 1 }, { w: 19, r: 2 }, { w: 7, r: 3 }, { w: 2, r: 4 }];
 const RAR_CHEST = [{ w: 16, r: 0 }, { w: 34, r: 1 }, { w: 31, r: 2 }, { w: 14, r: 3 }, { w: 5, r: 4 }];
@@ -1590,7 +1593,7 @@ const FX = {
     const fg = new THREE.SphereGeometry(1, 14, 10);
     for (let i = 0; i < 8; i++) { const m = new THREE.Mesh(fg, new THREE.MeshBasicMaterial({ color: 0xffb040, transparent: true, opacity: 0.8, depthWrite: false })); m.visible = false; scene.add(m); this.flashes.push({ m, life: 0, max: 0, r: 1 }); }
   },
-  clear() { this.live = true; for (const p of this.P) p.life = 0; for (const t of this.tracers) { t.life = 0; t.l.visible = false; } for (const f of this.flashes) { f.life = 0; f.m.visible = false; } },
+  clear() { this.live = true; for (const p of this.P) p.life = 0; for (const t of this.tracers) { t.life = 0; t.l.visible = false; } for (const f of this.flashes) { f.life = 0; f.m.visible = false; } if (this.sl) for (const s of this.sl) { s.life = 0; s.m.visible = false; } },
   burst(x, y, z, hex, n = 8, spd = 4, life = 0.5, size = 0.12, grav = 9) {
     const pf = Perf.on, cap = pf ? 160 : this.max;   // Performance Mode: at most 160 particles, fewer per burst, none far away
     if (camera.position.distanceToSquared(_v4.set(x, y, z)) > (pf ? 110 * 110 : 200 * 200)) return;
@@ -1613,6 +1616,16 @@ const FX = {
     const a = t.l.geometry.attributes.position.array; a[0] = x0; a[1] = y0; a[2] = z0; a[3] = x1; a[4] = y1; a[5] = z1;
     t.l.geometry.attributes.position.needsUpdate = true; t.l.material.color.setHex(hex); t.l.visible = true; t.life = 0.06;
   },
+  // a pale arc in front of a katana swing
+  slash(x, y, z, yaw, side) {
+    if (camera.position.distanceToSquared(_v4.set(x, y, z)) > 120 * 120) return;
+    if (!this.sl) {
+      this.sl = []; const g = new THREE.RingGeometry(0.9, 3.4, 26, 1, -Math.PI / 2 - 1.0, 2.0); g.rotateX(-Math.PI / 2);
+      for (let i = 0; i < 6; i++) { const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: 0xeef8ff, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending })); m.visible = false; m.frustumCulled = false; scene.add(m); this.sl.push({ m, life: 0 }); }
+    }
+    const s = this.sl.find(q => q.life <= 0) || this.sl[0];
+    s.m.position.set(x, y, z); s.m.rotation.set(0, yaw, side * 0.38); s.life = 0.2; s.m.visible = true; s.m.scale.setScalar(0.8);
+  },
   flash(x, y, z, r, hex = 0xffb040, life = 0.45) {
     const f = this.flashes.find(f => f.life <= 0) || this.flashes[0];
     f.m.position.set(x, y, z); f.m.material.color.setHex(hex); f.life = f.max = life; f.r = r; f.m.visible = true;
@@ -1630,6 +1643,7 @@ const FX = {
       this.mesh.instanceMatrix.needsUpdate = true; this.live = any;
     }
     for (const t of this.tracers) if (t.life > 0) { t.life -= dt; if (t.life <= 0) t.l.visible = false; }
+    if (this.sl) for (const s of this.sl) if (s.life > 0) { s.life -= dt; const k = Math.max(0, s.life / 0.2); s.m.material.opacity = 0.6 * k; s.m.scale.setScalar(0.8 + (1 - k) * 0.35); if (s.life <= 0) s.m.visible = false; }
     for (const f of this.flashes) if (f.life > 0) {
       f.life -= dt; const k = 1 - f.life / f.max; f.m.scale.setScalar(f.r * (0.3 + k * 0.9)); f.m.material.opacity = 0.8 * (1 - k);
       if (f.life <= 0) f.m.visible = false;
@@ -3989,6 +4003,22 @@ function gunGeo(type, rarity, wrap, simple) {
     if (detail) for (let i = 0; i < 4; i++) { C(0.0085, 0.046, 0.034, 0.026, -0.05 + i * 0.022, 0xb02020, 0.0085, 8, 'y'); C(0.009, 0.012, 0.034, -0.003, -0.05 + i * 0.022, brass, 0.009, 8, 'y'); }   // shells on a side saddle
     B(0.058, 0.012, 0.2, 0, 0.06, 0.02, acc);
     shift = 0.1;
+  } else if (type === 'katana') {
+    const steel = 0xc9ced6, edge = 0xf2f5f8, wrapC = 0x17131a, gold = 0xc8a040;
+    C(0.018, 0.27, 0, 0, -0.025, wrapC, 0.017, 8);                                   // handle (tsuka)
+    if (detail) for (let z = -0.14; z < 0.1; z += 0.034) B(0.03, 0.03, 0.012, 0, 0, z, acc === dark ? 0x3a2a44 : acc, 0, 0, Math.PI / 4);   // diamond wrap
+    C(0.021, 0.022, 0, 0, -0.17, gold);                                                // pommel cap
+    { const g = new THREE.CylinderGeometry(0.058, 0.058, 0.012, 14); g.rotateX(Math.PI / 2); g.scale(1, 0.82, 1); g.translate(0, 0.004, 0.118); L.push([g, 0x2a2420]); }   // guard (tsuba)
+    C(0.06, 0.004, 0, 0.004, 0.125, acc === dark ? gold : acc, 0.06, 14);              // rarity ring on the guard
+    B(0.022, 0.036, 0.032, 0, 0.012, 0.142, gold);                                     // collar (habaki)
+    let py = 0.012, pz = 0.158;
+    for (let i = 0; i < 6; i++) {                                                     // blade: six segments curving gently up
+      const t1 = (i + 1) / 6, len = 0.15, ny = 0.012 + 0.07 * t1 * t1, nz = pz + len, ang = Math.atan2(ny - py, len), h = 0.034 - i * 0.002;
+      B(0.008, h, len + 0.004, 0, (py + ny) / 2 + 0.004, (pz + nz) / 2, steel, -ang);
+      B(0.009, 0.008, len + 0.004, 0, (py + ny) / 2 - h / 2 + 0.006, (pz + nz) / 2, edge, -ang);   // bright cutting edge
+      py = ny; pz = nz;
+    }
+    B(0.008, 0.024, 0.06, 0, py + 0.004, pz + 0.022, steel, -0.7);                     // tip
   } else if (type === 'sniper') {
     C(0.028, 0.24, 0, 0.03, 0.02, body);                                            // round receiver
     C(0.006, 0.05, -0.045, 0.03, -0.06, metal, 0.006, 8, 'x'); B(0.022, 0.022, 0.022, -0.075, 0.018, -0.06, dark);   // bolt handle + knob
@@ -4365,6 +4395,7 @@ function coneDir(d, spread, out) {
 }
 function fireWeapon(a) {
   const it = a.inv[a.slot]; const st = wstat(it);
+  if (st.melee) { slash(a, it, st); return; }
   if (it.mag <= 0) { startReload(a); return; }
   it.mag--; a.fireCD = 1 / st.rate; a.emote = null; a.lastShotT = Match.time;
   aimRay(a, AIM);
@@ -4396,6 +4427,28 @@ function fireWeapon(a) {
   FX.burst(mz.x, mz.y, mz.z, 0xffd27a, 2, 1.5, 0.06, 0.12, 0);
   if (a === player) { Cam.kick += st.type === 'sniper' ? 0.05 : st.type === 'shotgun' ? 0.045 : st.type === 'rocket' ? 0.04 : 0.012; HUD.dirty = true; }
 }
+// Japanese Katana: one swing cuts everyone in front of you within reach (and builds in the way)
+function slash(a, it, st) {
+  a.fireCD = 1 / st.rate; a.emote = null; a.lastShotT = Match.time; a.slashT = 0.28; a.slashSide = -(a.slashSide || 1);
+  const fx = Math.sin(a.yaw), fz = Math.cos(a.yaw), s = a.scale || 1, ey = a.pos.y + 1.3 * s, R = st.range * s; let hits = 0;
+  for (const t of actors) {
+    if (t === a || !t.alive || t.state === 'bus' || t.vehicle || t.team === a.team) continue;
+    const dx = t.pos.x - a.pos.x, dz = t.pos.z - a.pos.z, d = Math.hypot(dx, dz), ts = t.scale || 1;
+    if (d > R + 0.45 * ts || Math.abs(t.pos.y - a.pos.y) > 2.2 * Math.max(s, ts)) continue;
+    if (d > 0.35 && (dx * fx + dz * fz) / d < 0.45) continue;   // about 63 degrees either side of where you face
+    if (!losClear(a.pos.x, ey, a.pos.z, t.pos.x, t.pos.y + 1.1 * ts, t.pos.z)) continue;
+    damageActor(t, st.dmg, a, { x: t.pos.x, y: t.pos.y + 1.6 * ts, z: t.pos.z, w: WEAPONS[it.wid].name });
+    FX.burst(t.pos.x, t.pos.y + 1.2 * ts, t.pos.z, t.shield > 0 ? 0x5ab8ff : 0xff4050, 8, 4, 0.4, 0.09); hits++;
+  }
+  // builds, cars, rocks and creatures straight ahead
+  const cp = Math.cos(a.pitch), h = raycast(a.pos.x, ey, a.pos.z, fx * cp, Math.sin(a.pitch), fz * cp, R + 0.4, a, false);
+  if (h.type === 'col') { const c = h.obj; if (c.piece) Build.damage(c.piece, st.dmg * st.struct, a); else if (c.harv && c.harv.vehicle) Vehicles.damage(c.harv.vehicle, st.dmg * 0.4); FX.burst(h.x, h.y, h.z, MATS[c.mat] ? MATS[c.mat].color : 0xcccccc, 5, 3, 0.35, 0.08); }
+  { const cr = Creatures.ray(a.pos.x, ey, a.pos.z, fx, 0, fz, R + 0.6); if (cr) Creatures.damage(cr.c, st.dmg, a, { x: a.pos.x + fx * cr.t, y: ey, z: a.pos.z + fz * cr.t }); }
+  FX.slash(a.pos.x + fx * 0.3, ey - 0.15, a.pos.z + fz * 0.3, a.yaw, a.slashSide);
+  if (a === player || Sfx.vol(a.pos.x, a.pos.y, a.pos.z) > 0.2) { Sfx.noise(0.14, 3600, 1.5, 0.16, 'highpass'); if (hits) Sfx.tone(1900, 0.09, 'triangle', 0.07, -700); }
+  if (a === player) { Cam.kick += 0.015; HUD.dirty = true; }
+  if (Net.inMatch && !a.remote && !Net.applying) Net.emit({ k: 'sl', id: a.id, s: a.slashSide }, a.pos, NET_RANGE);
+}
 function applyHit(a, st, h, d, pellets) {
   if (h.type === 'actor') {
     const t = h.obj; let dmg = st.dmg;
@@ -4415,7 +4468,7 @@ function applyHit(a, st, h, d, pellets) {
 }
 function canReload(a) {
   const it = a.inv[a.slot]; if (!it || it.kind !== 'weapon') return false;
-  const st = wstat(it); if (it.mag >= st.mag) return false;
+  const st = wstat(it); if (st.melee || it.mag >= st.mag) return false;
   return !a.isPlayer || a.ammo[st.ammo] > 0;
 }
 function startReload(a) {
@@ -4648,7 +4701,7 @@ function finishUse(a) {
 // ---------------------------------------------------------------- per-actor tick (timers + actions)
 function actorTick(a, dt) {
   if (!a.alive) return;
-  a.fireCD -= dt; a.pickCD -= dt; if (a.pickAnim > 0) a.pickAnim -= dt; if (a.slowT > 0) a.slowT -= dt; if (a.invuln > 0) a.invuln -= dt;
+  a.fireCD -= dt; a.pickCD -= dt; if (a.pickAnim > 0) a.pickAnim -= dt; if (a.slashT > 0) a.slashT -= dt; if (a.slowT > 0) a.slowT -= dt; if (a.invuln > 0) a.invuln -= dt;
   if (a.state !== 'bus') a.aliveTime += dt;
   if (a.emote) { a.emoteT += dt; if (Math.abs(a.input.f) > 0.1 || Math.abs(a.input.r) > 0.1 || a.input.fire || a.state !== 'ground') a.emote = null; }
   if (a.reloadT > 0) { a.reloadT -= dt; if (a.reloadT <= 0) finishReload(a); }
@@ -4918,7 +4971,7 @@ function giveItem(a, it) {
   if (it.kind === 'weapon') { for (let i = 1; i < 6; i++) if (!a.inv[i]) { a.inv[i] = it; return null; } return it; }
   return it;
 }
-function weaponScore(w) { return w.rarity + ({ ar: 2.2, shotgun: 2.1, smg: 1.6, sniper: 1.5, rocket: 1.2, pistol: 0.4 }[WEAPONS[w.wid].type] || 1) + (w.rarity >= 5 ? 3 : 0); }
+function weaponScore(w) { return w.rarity + ({ katana: 2.0, ar: 2.2, shotgun: 2.1, smg: 1.6, sniper: 1.5, rocket: 1.2, pistol: 0.4 }[WEAPONS[w.wid].type] || 1) + (w.rarity >= 5 ? 3 : 0); }
 function botConsiderWeapon(a, w) {
   let same = -1, worst = -1, worstScore = 1e9, empty = -1, nW = 0;
   for (let i = 1; i < 6; i++) {
@@ -4969,6 +5022,7 @@ function openChest(c, a) {
   if (Net.hosting) Net.emit({ k: 'chest', x: c.x, z: c.z, by: a.id });
   if (Net.guest) { if (Math.hypot(c.x - player.pos.x, c.z - player.pos.z) < 110) { FX.burst(c.x, c.y + 0.8, c.z, c.kind === 'exotic' ? 0x2fe0d0 : 0xffd84a, 16, 3, 0.8, 0.12, -1); if (Sfx.vol(c.x, c.y, c.z) > 0.3) Sfx.chest(); } return; }
   const items = chestLoot(c.kind);
+  if (c.katana) { c.katana = false; items.unshift(makeWeapon('katana', 4)); }   // one of this match's five Japanese Katanas
   const near = player && Math.hypot(c.x - player.pos.x, c.z - player.pos.z) < 110;
   if (a === player || !a.ai) {
     const fx = Math.sin(c.rot || 0), fz = Math.cos(c.rot || 0);
@@ -6156,6 +6210,7 @@ const CharModel = {
     if (showGun) {
       R.mHandR.getWorldPosition(_cmV); R.body.worldToLocal(_cmV);
       R.gun.position.set(_cmV.x, _cmV.y + 0.07 * Math.cos(pitch), _cmV.z - 0.07 * Math.sin(pitch)); R.gun.rotation.set(-pitch, 0, 0);
+      if (a.slashT > 0) { const k = 1 - a.slashT / 0.28, sd = a.slashSide || 1; R.gun.rotation.set(-pitch - 0.5 * Math.sin(k * Math.PI), sd * (1.2 - 2.4 * k), sd * 0.6); }   // katana swing
     }
     R.pick.visible = showPick; R.held.visible = showHeld; R.glider.visible = glider;
   },
@@ -6206,7 +6261,7 @@ const CharPool = {
 // =====================================================================
 //  Bots: drop, loot, rotate with the storm, fight, heal, build cover
 // =====================================================================
-const PREF_RANGE = { shotgun: 6, smg: 12, pistol: 14, ar: 26, sniper: 70, rocket: 30 };
+const PREF_RANGE = { katana: -3.6, shotgun: 6, smg: 12, pistol: 14, ar: 26, sniper: 70, rocket: 30 };
 function initBotAI(a, skill) {
   a.ai = {
     t: Math.random() * 0.4, mode: 'idle', target: null, lastSeen: -99, seen: new THREE.Vector3(), loot: null, roam: null,
@@ -6237,7 +6292,7 @@ function botBestSlot(a, dist) {
     const s = a.inv[i]; if (!s || s.kind !== 'weapon') continue;
     const t = WEAPONS[s.wid].type, d = dist;
     let sc = t === 'shotgun' ? (d < 10 ? 10 : d < 20 ? 4 : 0.2) : t === 'smg' ? (d < 18 ? 8 : d < 35 ? 5 : 1) : t === 'ar' ? (d < 8 ? 5 : d < 70 ? 9 : 7) :
-      t === 'sniper' ? (d > 45 ? 10 : d > 22 ? 4 : 0.5) : t === 'rocket' ? (d > 8 && d < 70 ? 6.5 : 0) : 3;
+      t === 'sniper' ? (d > 45 ? 10 : d > 22 ? 4 : 0.5) : t === 'rocket' ? (d > 8 && d < 70 ? 6.5 : 0) : t === 'katana' ? (d < 4 ? 12 : d < 9 ? 5 : 0.1) : 3;
     sc += s.rarity * 0.5 + (s.rarity >= 5 ? 2 : 0); if (s.mag <= 0) sc -= 2;
     if (sc > bs) { bs = sc; best = i; }
   }
@@ -6844,6 +6899,7 @@ const Match = {
   setup() {
     Net.building = true;
     genWorld(this.theme); Reboot.setup(this.mode);
+    if (this.mode !== 'tutorial') { const cs = W.chests.filter(c => c.kind === 'chest'); for (let i = 0; i < KATANAS_PER_MATCH && cs.length; i++) cs.splice(Math.floor(Math.random() * cs.length), 1)[0].katana = true; }
     $('ldFill').style.width = '80%';
     actors.length = 0; nextId = 1; ElimFX.clear(); CharPool.clear(); BotRig.hideAll(); Trails.clear();
     if (Net.guest) Net.guestSetup(); else {
@@ -7506,7 +7562,7 @@ const Net = {
   },
   // other players' characters glide toward where they were last reported, slightly ahead
   tickRemote(a, dt) {
-    const n = a.net; if (a.pickAnim > 0) a.pickAnim -= dt; if (a.emote) a.emoteT += dt; if (a.invuln > 0) a.invuln -= dt;
+    const n = a.net; if (a.pickAnim > 0) a.pickAnim -= dt; if (a.slashT > 0) a.slashT -= dt; if (a.emote) a.emoteT += dt; if (a.invuln > 0) a.invuln -= dt;
     if (!n || !a.alive || a.state === 'bus') return;
     const age = performance.now() / 1000 - n.t, k = 1 - Math.exp(-dt * 12), lead = Math.min(age, 0.22);
     if (age > 0.5) n.vx = n.vy = n.vz = 0;
@@ -7592,7 +7648,7 @@ const Net = {
       else if (d.k === 'rbt') { const t = this.ids.get(d.id); if (!t || t.alive) return; if (t.human) this.send(t.human, d); else if (!t.remote) Match.reboot(t, d.tw | 0, String(d.by || me.name).slice(0, 24)); }
       else if (d.k === 'rbc') { Reboot.cool(d.tw | 0); this.toGuests({ k: 'rbc', tw: d.tw | 0 }, from); }
       else if (d.k === 'bye') this.dropHuman(from);
-      else if (['bp', 'bd', 'hv', 'sb', 'shot', 'rk'].includes(d.k)) { d.id = me.id; this.applyWorld(d); this.toGuests(d, from, d.k === 'shot' || d.k === 'rk' ? me.pos : null, NET_RANGE); }
+      else if (['bp', 'bd', 'hv', 'sb', 'sl', 'shot', 'rk'].includes(d.k)) { d.id = me.id; this.applyWorld(d); this.toGuests(d, from, d.k === 'shot' || d.k === 'rk' || d.k === 'sl' ? me.pos : null, NET_RANGE); }
       return;
     }
     if (from !== this.hostId) return;
@@ -7618,6 +7674,7 @@ const Net = {
       if (d.k === 'elim') { const t = A(d.id); if (t && t.alive && t !== player) eliminate(t, A(d.src), d.o || {}); }
       else if (d.k === 'bp') { const t = d.t; if (t && ['wall', 'floor', 'ramp', 'cone'].includes(t.type) && [t.gx, t.gy, t.gz, t.dir].every(Number.isInteger) && typeof t.key === 'string' && t.key.length < 40) Build.place({ mats: { wood: 99, brick: 99, metal: 99 }, mat: MATS[d.mat] ? d.mat : 'wood', remote: true }, { type: t.type, gx: t.gx, gy: t.gy, gz: t.gz, dir: t.dir, key: t.key }); }
       else if (d.k === 'bd') { const p = Build.map.get(d.key); if (p) Build.damage(p, clamp(+d.dmg || 0, 0, 2000), null); }
+      else if (d.k === 'sl') { const a = A(d.id); if (a && a !== player && a.alive) { a.slashT = 0.28; a.slashSide = d.s === -1 ? -1 : 1; FX.slash(a.pos.x + Math.sin(a.yaw) * 0.3, a.pos.y + 1.15, a.pos.z + Math.cos(a.yaw) * 0.3, a.yaw, a.slashSide); if (Sfx.vol(a.pos.x, a.pos.y, a.pos.z) > 0.2) Sfx.noise(0.14, 3600, 1.5, 0.16, 'highpass'); } }
       else if (d.k === 'sb') { if (V([d.x, d.y, d.z])) { const L = []; Grid.query(d.x - 0.2, d.z - 0.2, d.x + 0.2, d.z + 0.2, L); for (const c of L) if (!c.dead && !c.piece && !c.harv && Math.abs((c.minX + c.maxX) / 2 - d.x) < 0.02 && Math.abs((c.minY + c.maxY) / 2 - d.y) < 0.02 && Math.abs((c.minZ + c.maxZ) / 2 - d.z) < 0.02) { breakStatic(c); break; } } }
       else if (d.k === 'hv') { let best = null, bd = 4; for (const hv of W.harv) { if (hv.dead || hv.vehicle) continue; const q = (hv.x - d.x) ** 2 + (hv.z - d.z) ** 2; if (q < bd) { bd = q; best = hv; } } if (best) destroyHarv(best); }
       else if (d.k === 'shot') {
@@ -8343,7 +8400,7 @@ const HUD = {
     if (!it) { el.classList.remove('r'); ic.textContent = ''; ct.textContent = ''; return; }
     if (it.kind === 'pick') { el.classList.remove('r'); ic.textContent = 'TOOL'; ct.textContent = ''; return; }
     el.classList.add('r'); el.style.setProperty('--rc', RARITY[itemRarity(it)].css);
-    if (it.kind === 'weapon') { ic.textContent = WEAPONS[it.wid].short; ct.textContent = it.mag; }
+    if (it.kind === 'weapon') { ic.textContent = WEAPONS[it.wid].short; ct.textContent = WEAPONS[it.wid].melee ? '' : it.mag; }
     else { ic.textContent = HEALS[it.hid].short; ct.textContent = it.count; }
   },
   update(dt) {
@@ -8379,7 +8436,7 @@ const HUD = {
     if (it && it.kind === 'weapon') {
       const st = wstat(it);
       txt('wName', itemName(it)); $('wName').style.color = RARITY[it.rarity].css;
-      txt('magTxt', String(it.mag)); txt('resTxt', v.isPlayer ? '/ ' + v.ammo[st.ammo] : '');
+      txt('magTxt', st.melee ? '' : String(it.mag)); txt('resTxt', st.melee ? '' : v.isPlayer ? '/ ' + v.ammo[st.ammo] : '');
     } else if (it && it.kind === 'heal') { txt('wName', HEALS[it.hid].name); $('wName').style.color = RARITY[HEALS[it.hid].rarity].css; txt('magTxt', String(it.count)); txt('resTxt', ''); }
     else { txt('wName', v.vehicle ? 'Driving · ' + Math.round(Math.abs(v.vehicle.speed) * 3.6) + ' km/h' : 'Harvesting Tool'); $('wName').style.color = '#fff'; txt('magTxt', ''); txt('resTxt', ''); }
     if (Match.build) {

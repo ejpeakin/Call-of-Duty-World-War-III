@@ -53,7 +53,7 @@ const HUD = {
     if (!it) { el.classList.remove('r'); ic.textContent = ''; ct.textContent = ''; return; }
     if (it.kind === 'pick') { el.classList.remove('r'); ic.textContent = 'TOOL'; ct.textContent = ''; return; }
     el.classList.add('r'); el.style.setProperty('--rc', RARITY[itemRarity(it)].css);
-    if (it.kind === 'weapon') { ic.textContent = WEAPONS[it.wid].short; ct.textContent = it.mag; }
+    if (it.kind === 'weapon') { ic.textContent = WEAPONS[it.wid].short; ct.textContent = WEAPONS[it.wid].melee ? '' : it.mag; }
     else { ic.textContent = HEALS[it.hid].short; ct.textContent = it.count; }
   },
   update(dt) {
@@ -89,7 +89,7 @@ const HUD = {
     if (it && it.kind === 'weapon') {
       const st = wstat(it);
       txt('wName', itemName(it)); $('wName').style.color = RARITY[it.rarity].css;
-      txt('magTxt', String(it.mag)); txt('resTxt', v.isPlayer ? '/ ' + v.ammo[st.ammo] : '');
+      txt('magTxt', st.melee ? '' : String(it.mag)); txt('resTxt', st.melee ? '' : v.isPlayer ? '/ ' + v.ammo[st.ammo] : '');
     } else if (it && it.kind === 'heal') { txt('wName', HEALS[it.hid].name); $('wName').style.color = RARITY[HEALS[it.hid].rarity].css; txt('magTxt', String(it.count)); txt('resTxt', ''); }
     else { txt('wName', v.vehicle ? 'Driving · ' + Math.round(Math.abs(v.vehicle.speed) * 3.6) + ' km/h' : 'Harvesting Tool'); $('wName').style.color = '#fff'; txt('magTxt', ''); txt('resTxt', ''); }
     if (Match.build) {

@@ -1,7 +1,7 @@
 // =====================================================================
 //  Bots: drop, loot, rotate with the storm, fight, heal, build cover
 // =====================================================================
-const PREF_RANGE = { shotgun: 6, smg: 12, pistol: 14, ar: 26, sniper: 70, rocket: 30 };
+const PREF_RANGE = { katana: -3.6, shotgun: 6, smg: 12, pistol: 14, ar: 26, sniper: 70, rocket: 30 };
 function initBotAI(a, skill) {
   a.ai = {
     t: Math.random() * 0.4, mode: 'idle', target: null, lastSeen: -99, seen: new THREE.Vector3(), loot: null, roam: null,
@@ -32,7 +32,7 @@ function botBestSlot(a, dist) {
     const s = a.inv[i]; if (!s || s.kind !== 'weapon') continue;
     const t = WEAPONS[s.wid].type, d = dist;
     let sc = t === 'shotgun' ? (d < 10 ? 10 : d < 20 ? 4 : 0.2) : t === 'smg' ? (d < 18 ? 8 : d < 35 ? 5 : 1) : t === 'ar' ? (d < 8 ? 5 : d < 70 ? 9 : 7) :
-      t === 'sniper' ? (d > 45 ? 10 : d > 22 ? 4 : 0.5) : t === 'rocket' ? (d > 8 && d < 70 ? 6.5 : 0) : 3;
+      t === 'sniper' ? (d > 45 ? 10 : d > 22 ? 4 : 0.5) : t === 'rocket' ? (d > 8 && d < 70 ? 6.5 : 0) : t === 'katana' ? (d < 4 ? 12 : d < 9 ? 5 : 0.1) : 3;
     sc += s.rarity * 0.5 + (s.rarity >= 5 ? 2 : 0); if (s.mag <= 0) sc -= 2;
     if (sc > bs) { bs = sc; best = i; }
   }

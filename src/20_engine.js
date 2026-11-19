@@ -190,7 +190,7 @@ const FX = {
     const fg = new THREE.SphereGeometry(1, 14, 10);
     for (let i = 0; i < 8; i++) { const m = new THREE.Mesh(fg, new THREE.MeshBasicMaterial({ color: 0xffb040, transparent: true, opacity: 0.8, depthWrite: false })); m.visible = false; scene.add(m); this.flashes.push({ m, life: 0, max: 0, r: 1 }); }
   },
-  clear() { this.live = true; for (const p of this.P) p.life = 0; for (const t of this.tracers) { t.life = 0; t.l.visible = false; } for (const f of this.flashes) { f.life = 0; f.m.visible = false; } },
+  clear() { this.live = true; for (const p of this.P) p.life = 0; for (const t of this.tracers) { t.life = 0; t.l.visible = false; } for (const f of this.flashes) { f.life = 0; f.m.visible = false; } if (this.sl) for (const s of this.sl) { s.life = 0; s.m.visible = false; } },
   burst(x, y, z, hex, n = 8, spd = 4, life = 0.5, size = 0.12, grav = 9) {
     const pf = Perf.on, cap = pf ? 160 : this.max;   // Performance Mode: at most 160 particles, fewer per burst, none far away
     if (camera.position.distanceToSquared(_v4.set(x, y, z)) > (pf ? 110 * 110 : 200 * 200)) return;
@@ -213,6 +213,16 @@ const FX = {
     const a = t.l.geometry.attributes.position.array; a[0] = x0; a[1] = y0; a[2] = z0; a[3] = x1; a[4] = y1; a[5] = z1;
     t.l.geometry.attributes.position.needsUpdate = true; t.l.material.color.setHex(hex); t.l.visible = true; t.life = 0.06;
   },
+  // a pale arc in front of a katana swing
+  slash(x, y, z, yaw, side) {
+    if (camera.position.distanceToSquared(_v4.set(x, y, z)) > 120 * 120) return;
+    if (!this.sl) {
+      this.sl = []; const g = new THREE.RingGeometry(0.9, 3.4, 26, 1, -Math.PI / 2 - 1.0, 2.0); g.rotateX(-Math.PI / 2);
+      for (let i = 0; i < 6; i++) { const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: 0xeef8ff, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending })); m.visible = false; m.frustumCulled = false; scene.add(m); this.sl.push({ m, life: 0 }); }
+    }
+    const s = this.sl.find(q => q.life <= 0) || this.sl[0];
+    s.m.position.set(x, y, z); s.m.rotation.set(0, yaw, side * 0.38); s.life = 0.2; s.m.visible = true; s.m.scale.setScalar(0.8);
+  },
   flash(x, y, z, r, hex = 0xffb040, life = 0.45) {
     const f = this.flashes.find(f => f.life <= 0) || this.flashes[0];
     f.m.position.set(x, y, z); f.m.material.color.setHex(hex); f.life = f.max = life; f.r = r; f.m.visible = true;
@@ -230,6 +240,7 @@ const FX = {
       this.mesh.instanceMatrix.needsUpdate = true; this.live = any;
     }
     for (const t of this.tracers) if (t.life > 0) { t.life -= dt; if (t.life <= 0) t.l.visible = false; }
+    if (this.sl) for (const s of this.sl) if (s.life > 0) { s.life -= dt; const k = Math.max(0, s.life / 0.2); s.m.material.opacity = 0.6 * k; s.m.scale.setScalar(0.8 + (1 - k) * 0.35); if (s.life <= 0) s.m.visible = false; }
     for (const f of this.flashes) if (f.life > 0) {
       f.life -= dt; const k = 1 - f.life / f.max; f.m.scale.setScalar(f.r * (0.3 + k * 0.9)); f.m.material.opacity = 0.8 * (1 - k);
       if (f.life <= 0) f.m.visible = false;

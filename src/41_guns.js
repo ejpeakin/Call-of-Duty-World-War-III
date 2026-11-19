@@ -83,6 +83,22 @@ function gunGeo(type, rarity, wrap, simple) {
     if (detail) for (let i = 0; i < 4; i++) { C(0.0085, 0.046, 0.034, 0.026, -0.05 + i * 0.022, 0xb02020, 0.0085, 8, 'y'); C(0.009, 0.012, 0.034, -0.003, -0.05 + i * 0.022, brass, 0.009, 8, 'y'); }   // shells on a side saddle
     B(0.058, 0.012, 0.2, 0, 0.06, 0.02, acc);
     shift = 0.1;
+  } else if (type === 'katana') {
+    const steel = 0xc9ced6, edge = 0xf2f5f8, wrapC = 0x17131a, gold = 0xc8a040;
+    C(0.018, 0.27, 0, 0, -0.025, wrapC, 0.017, 8);                                   // handle (tsuka)
+    if (detail) for (let z = -0.14; z < 0.1; z += 0.034) B(0.03, 0.03, 0.012, 0, 0, z, acc === dark ? 0x3a2a44 : acc, 0, 0, Math.PI / 4);   // diamond wrap
+    C(0.021, 0.022, 0, 0, -0.17, gold);                                                // pommel cap
+    { const g = new THREE.CylinderGeometry(0.058, 0.058, 0.012, 14); g.rotateX(Math.PI / 2); g.scale(1, 0.82, 1); g.translate(0, 0.004, 0.118); L.push([g, 0x2a2420]); }   // guard (tsuba)
+    C(0.06, 0.004, 0, 0.004, 0.125, acc === dark ? gold : acc, 0.06, 14);              // rarity ring on the guard
+    B(0.022, 0.036, 0.032, 0, 0.012, 0.142, gold);                                     // collar (habaki)
+    let py = 0.012, pz = 0.158;
+    for (let i = 0; i < 6; i++) {                                                     // blade: six segments curving gently up
+      const t1 = (i + 1) / 6, len = 0.15, ny = 0.012 + 0.07 * t1 * t1, nz = pz + len, ang = Math.atan2(ny - py, len), h = 0.034 - i * 0.002;
+      B(0.008, h, len + 0.004, 0, (py + ny) / 2 + 0.004, (pz + nz) / 2, steel, -ang);
+      B(0.009, 0.008, len + 0.004, 0, (py + ny) / 2 - h / 2 + 0.006, (pz + nz) / 2, edge, -ang);   // bright cutting edge
+      py = ny; pz = nz;
+    }
+    B(0.008, 0.024, 0.06, 0, py + 0.004, pz + 0.022, steel, -0.7);                     // tip
   } else if (type === 'sniper') {
     C(0.028, 0.24, 0, 0.03, 0.02, body);                                            // round receiver
     C(0.006, 0.05, -0.045, 0.03, -0.06, metal, 0.006, 8, 'x'); B(0.022, 0.022, 0.022, -0.075, 0.018, -0.06, dark);   // bolt handle + knob
