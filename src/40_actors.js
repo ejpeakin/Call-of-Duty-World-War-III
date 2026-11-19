@@ -246,48 +246,59 @@ function backPrint(txt, w, h, fill = '#111114', edge = '#e8731e') {
   const tex = new THREE.CanvasTexture(c);
   return new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshLambertMaterial({ map: tex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
 }
-function textDecal(txt, w, h, color = '#e8e8ee') {
+function textDecal(txt, w, h, color = '#e8e8ee', font) {
   const c = document.createElement('canvas'); c.width = 256; c.height = 128;
-  const x = c.getContext('2d'); x.font = 'italic 700 92px "Brush Script MT", "Segoe Script", cursive';
+  const x = c.getContext('2d'); x.font = font || 'italic 700 92px "Brush Script MT", "Segoe Script", cursive';
   x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = color; x.fillText(txt, 128, 68);
   const tex = new THREE.CanvasTexture(c);
   return new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshLambertMaterial({ map: tex, transparent: true, depthWrite: false }));
 }
 // Freeform dreads: locks radiate from the scalp and droop, dark roots with blonde ends (built inside the 0.6-scaled hat group).
 function dreadsModel(o, head, noCap) {
+  // smooth, tapered locks that grow out of the scalp and fall with gravity (dark roots, coloured tips)
   const L = [], root = o.hatC, tip = o.tip || 0xcfa552, cy = -0.008, rnd = seededRand(o.hairSeed || 999);
-  const mid = new THREE.Color(root).lerp(new THREE.Color(tip), 0.5).getHex();
-  const cap = new THREE.SphereGeometry(1, 18, 10, 0, TAU, 0, Math.PI * 0.56); cap.scale(0.228, 0.285, 0.255); cap.rotateX(-0.22); cap.translate(0, cy + 0.01, -0.01);
+  const mid = new THREE.Color(root).lerp(new THREE.Color(tip), 0.45).getHex();
+  const cap = new THREE.SphereGeometry(1, 20, 12, 0, TAU, 0, Math.PI * 0.56); cap.scale(0.228, 0.285, 0.255); cap.rotateX(-0.22); cap.translate(0, cy + 0.01, -0.01);
   if (!noCap) L.push([cap, root]);   // on the uploaded body the scalp is painted instead
-
-  const UP = new THREE.Vector3(0, 1, 0), q = new THREE.Quaternion(), rm = new THREE.Matrix4();
-  const seg = (a, b, r0, r1, hex) => {
-    const d = b.clone().sub(a), len = d.length(), g = new THREE.CylinderGeometry(r1, r0, len, 6);
-    g.applyMatrix4(rm.makeRotationFromQuaternion(q.setFromUnitVectors(UP, d.normalize()))); g.translate((a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2);
+  const RX = 0.235, RY = 0.29, RZ = 0.262, CZ = -0.01, V = THREE.Vector3;
+  // keep a point outside the head (and a little off the neck below it)
+  const outside = p => {
+    if (p.y > -0.18) { const e = (p.x / RX) ** 2 + (p.y / RY) ** 2 + ((p.z - CZ) / RZ) ** 2, k = 1.03; if (e < k) { const s = Math.sqrt(k / Math.max(e, 0.05)); p.x *= s; p.z = CZ + (p.z - CZ) * s; } }
+    else { const hr = Math.hypot(p.x, p.z - CZ), mn = 0.15; if (hr < mn) { const s = mn / Math.max(hr, 0.01); p.x *= s; p.z = CZ + (p.z - CZ) * s; } }
+    return p;
+  };
+  // a tube along pts whose radius runs r0 -> r1 (TubeGeometry gives one radius; scale each ring)
+  const tube = (pts, r0, r1, hex) => {
+    if (pts.length < 2) return;
+    const curve = new THREE.CatmullRomCurve3(pts), n = Math.max(2, pts.length - 1), R = 5, g = new THREE.TubeGeometry(curve, n, 1, R, false), P = g.attributes.position;   // thin locks: few sides keep many of them cheap
+    for (let j = 0; j <= n; j++) { const c = curve.getPointAt(j / n), r = r0 + (r1 - r0) * j / n; for (let k = 0; k <= R; k++) { const i = j * (R + 1) + k; P.setXYZ(i, c.x + (P.getX(i) - c.x) * r, c.y + (P.getY(i) - c.y) * r, c.z + (P.getZ(i) - c.z) * r); } }
     L.push([g, hex]);
   };
-  // one lock: 4 segments that bend downward; the last `blonde` segments are tip-coloured
-  const lock = (p, dir, len, r, droop, blonde) => {
-    let a = p.clone(); const d = dir.clone().normalize(), N = 4;
-    for (let i = 0; i < N; i++) {
-      const b = a.clone().addScaledVector(d, len / N);
-      const hex = i >= N - blonde ? tip : (i === N - blonde - 1 ? mid : root);
-      seg(a, b, r * (1 - 0.09 * i), r * (1 - 0.09 * (i + 1)), hex);
-      a = b; d.y -= droop; d.normalize();
+  const lock = (p, n, len, r, side, front) => {
+    const pts = [p.clone().addScaledVector(n, -0.012)]; let pos = p.clone().addScaledVector(n, 0.016); pts.push(pos.clone());
+    const dir = n.clone(); dir.y += front ? 0.0 : 0.08; if (front) dir.x += side * 0.9; dir.normalize();
+    const steps = 6, st = len / steps, out = new V(n.x, 0, n.z).normalize();
+    for (let k = 0; k < steps; k++) {
+      dir.y -= k === 0 ? 0.55 : 0.45; dir.addScaledVector(out, 0.04); dir.x += (rnd() - 0.5) * 0.08; dir.z += (rnd() - 0.5) * 0.08; dir.normalize();
+      pos = outside(pos.clone().addScaledVector(dir, st)); pts.push(pos.clone());
     }
-    L.push([new THREE.SphereGeometry(r * 0.66, 6, 4).translate(a.x, a.y, a.z), blonde ? tip : root]);
+    const full = new THREE.CatmullRomCurve3(pts), S = full.getPoints(20), cut1 = 13, cut2 = 15, r1 = r * 0.72;
+    const rAt = i => r + (r1 - r) * i / 20;
+    tube(S.slice(0, cut1 + 1), rAt(0), rAt(cut1), root);
+    tube(S.slice(cut1, cut2 + 1), rAt(cut1), rAt(cut2), mid);
+    tube(S.slice(cut2), rAt(cut2), rAt(20), tip);
+    const e = S[20]; L.push([new THREE.SphereGeometry(r1, 5, 4).translate(e.x, e.y, e.z), tip]);
   };
-
-  // rings of locks from the crown (phi = 0) down to the hairline; theta = 0 is the front
-  const rings = [[0.18, 5], [0.52, 9], [0.88, 12], [1.2, 13], [1.45, 12]];
+  // roots in rings from the crown down to the hairline; theta = 0 is the face
+  const rings = [[0.12, 8], [0.36, 16], [0.6, 22], [0.84, 27], [1.06, 31], [1.27, 33], [1.47, 33]];   // many thin locks, packed close
   for (const [phi, n] of rings) for (let i = 0; i < n; i++) {
-    const th = (i + rnd() * 0.6) / n * TAU, sp = Math.sin(phi), cp = Math.cos(phi), sx = Math.sin(th), cz = Math.cos(th);
-    if (phi > 1 && cz > 0.2) continue;                                  // keep the face and temples clear
-    const p = new THREE.Vector3(0.215 * sp * sx, cy + 0.01 + 0.27 * cp, -0.01 + 0.245 * sp * cz);
-    const dir = new THREE.Vector3(sp * sx + (rnd() - 0.5) * 0.5, cp + 0.25 + (rnd() - 0.5) * 0.3, sp * cz + (rnd() - 0.5) * 0.5);
-    const frontLock = cz > 0.35 && phi > 0.4;
-    const len = frontLock ? 0.24 + rnd() * 0.07 : phi < 0.7 ? 0.2 + rnd() * 0.07 : 0.28 + rnd() * 0.1;
-    lock(p, dir, len, 0.03 + rnd() * 0.008, frontLock ? 0.5 : 0.3 + rnd() * 0.12, 1 + Math.floor(rnd() * 2.6));
+    const th = (i + rnd() * 0.55) / n * TAU, sp = Math.sin(phi), cp = Math.cos(phi), sx = Math.sin(th), cz = Math.cos(th);
+    if (phi > 1.05 && cz > 0.15) continue;                                  // keep the face and temples clear
+    const p = new V(RX * 0.97 * sp * sx, cy + 0.01 + RY * 0.97 * cp, CZ + RZ * 0.97 * sp * cz);
+    const nrm = new V(p.x / (RX * RX), (p.y - cy) / (RY * RY), (p.z - CZ) / (RZ * RZ)).normalize();
+    const front = cz > 0.35 && phi > 0.35, back = cz < -0.3;
+    const len = front ? 0.16 + rnd() * 0.05 : back ? 0.42 + rnd() * 0.12 : phi < 0.6 ? 0.34 + rnd() * 0.08 : 0.36 + rnd() * 0.1;
+    lock(p, nrm, len, 0.0085 + rnd() * 0.002, sx >= 0 ? 1 : -1, front);
   }
   head.add(mergedColored(L));
 }
@@ -666,9 +677,15 @@ function buildCharacter(eq, skinned) {
       const moon = new THREE.Shape(); moon.absarc(0, 0, 0.032, Math.PI * 0.35, Math.PI * 1.65, false); moon.absarc(0.016, 0, 0.026, Math.PI * 1.55, Math.PI * 0.45, true);
       const mg = new THREE.ExtrudeGeometry(moon, { depth: 0.008, bevelEnabled: false }); const pm = M(mg, new THREE.MeshPhongMaterial({ color: 0xf0c64a, shininess: 80, specular: 0x8a6a20 }), 0, py - 0.005, pz - 0.004, torso); pm.rotation.z = -0.3;
     } else {
-      M(B(0.1, 0.044, 0.008), 0xb9bfc8, 0, py, pz, torso);
-      const pend = textDecal('999', 0.1, 0.05, '#ffffff'); pend.position.set(0, py, pz + 0.006); torso.add(pend);
+      M(B(0.122, 0.058, 0.008), 0xd9dee5, 0, py, pz - 0.002, torso);                  // silver rim
+      M(B(0.108, 0.045, 0.006), 0x1e2127, 0, py, pz + 0.002, torso);                  // dark face
+      const pend = textDecal('999', 0.1, 0.05, '#f4f6f8', '900 100px "Arial Black", Impact, sans-serif'); pend.position.set(0, py, pz + 0.0065); torso.add(pend);
+      for (const sx of [-1, 1]) M(new THREE.CylinderGeometry(0.006, 0.006, 0.01, 8).rotateX(Math.PI / 2), 0xeef1f5, sx * 0.052, py + 0.022, pz + 0.004, torso);   // bails the chain hangs from
     }
+  }
+  if (o.chestLogo) {   // small print on the left of the chest
+    const y = 0.5, lx = 0.085, lz = front(y) * Math.sqrt(Math.max(0, 1 - (lx / (1.12 * Math.max(0.05, torsoR(y)))) ** 2)) + 0.012 + (SKN ? CHAIN_Z : 0);
+    const d = textDecal(o.chestLogo, 0.07, 0.035, o.chestLogoC || '#1b1d22', '900 100px "Arial Black", Impact, sans-serif'); d.position.set(lx, y, lz); d.rotation.y = Math.atan2(lx, 0.25) * 0.6; torso.add(d);
   }
   if (SKN) R.elbowR = new THREE.Group();
   for (const side of SKN ? [] : [1, -1]) {
@@ -754,12 +771,12 @@ function buildCharacter(eq, skinned) {
     }
     M(B(0.026, 0.005, 0.005), 0x15151a, 0, 0.027, 0.146, head);
   }
-  if (o.beard) {
-    const bc = 0x1a120c;
-    M(B(0.05, 0.007, 0.01), bc, 0, -0.051, 0.133, head);
-    M(B(0.014, 0.012, 0.01), bc, 0, -0.088, 0.122, head);
-    M(B(0.06, 0.02, 0.02), bc, 0, -0.126, 0.1, head);
-    for (const s of [-1, 1]) { const j = M(B(0.01, 0.018, 0.05), bc, s * 0.058, -0.112, 0.07, head); j.rotation.y = s * 0.35; }
+  if (o.beard) {   // neat chinstrap along the jaw, thin moustache and a small goatee
+    const bc = new THREE.MeshLambertMaterial({ color: 0x1a120c }), V3 = (x, y, z) => new THREE.Vector3(x, y, z);
+    const strap = new THREE.CatmullRomCurve3([V3(-0.118, -0.005, 0.03), V3(-0.112, -0.06, 0.06), V3(-0.08, -0.105, 0.092), V3(-0.035, -0.128, 0.112), V3(0, -0.132, 0.116), V3(0.035, -0.128, 0.112), V3(0.08, -0.105, 0.092), V3(0.112, -0.06, 0.06), V3(0.118, -0.005, 0.03)]);
+    M(new THREE.TubeGeometry(strap, 28, 0.0075, 6, false), bc, 0, 0, 0, head);
+    M(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([V3(-0.032, -0.056, 0.131), V3(0, -0.05, 0.139), V3(0.032, -0.056, 0.131)]), 10, 0.0045, 5, false), bc, 0, 0, 0, head);
+    const gt = M(new THREE.SphereGeometry(1, 10, 8), bc, 0, -0.112, 0.117, head); gt.scale.set(0.018, 0.016, 0.008);
   }
   if (SKN) { /* hair is painted onto the model's scalp */ }
   else if (o.hat === 'slick') { const h = M(G.hair, new THREE.MeshPhongMaterial({ color: o.hair, shininess: 35, specular: 0x262626 }), 0, 0.006, -0.006, head); h.scale.set(1.02, 1.06, 1.04); }
