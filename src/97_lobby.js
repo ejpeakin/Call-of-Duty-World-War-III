@@ -69,12 +69,24 @@ const Lobby = {
     const d = Profile.d, m = { solo: 'Solo', duos: 'Duos', squads: 'Squads', rumble: 'Storm Rumble' }[d.mode] || 'Solo', th = THEMES[MapRotation.current()];
     return [m, d.build ? 'Build' : 'No-Build', th ? th.name : '', d.ranked && d.mode !== 'rumble' && Net.state !== 'room' ? 'Ranked' : ''].filter(Boolean).join(' · ');
   },
+  // the mode card and the Unranked / Ranked switch next to PLAY
+  modeBar() {
+    const d = Profile.d, room = typeof Net !== 'undefined' && Net.state === 'room', guest = room && !Net.isHost, br = d.mode !== 'rumble';
+    $('modeName').textContent = br ? 'Battle Royale' : 'Storm Rumble';
+    $('modeSub').textContent = [{ solo: 'Solo', duos: 'Duos', squads: 'Squads', rumble: '16 vs 16' }[d.mode] || 'Solo', d.build ? 'Build' : 'No-Build'].join(' · ');
+    $('modeBtn').disabled = guest; $('modeBtn').title = guest ? 'The host picks the mode' : 'Change mode';
+    const off = !br || room, ranked = !!d.ranked && !off;
+    for (const b of $('rankSeg').children) { const on = (b.dataset.ranked === '1') === ranked; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); b.disabled = off && b.dataset.ranked === '1'; }
+    $('rankSeg').title = !br ? 'Storm Rumble is always unranked' : room ? 'Matches with friends are unranked' : '';
+    $('lbFoot').classList.toggle('ranked', ranked);
+    if (guest && !$('modeMenu').hidden) $('modeMenu').hidden = true;
+  },
   bindUI() {
     // Enter starts the match from the lobby (not while typing, or while a menu or the opening is up)
     addEventListener('keydown', e => {
       if (e.key !== 'Enter' || e.repeat || Match.state !== 'lobby' || $('lobby').classList.contains('intro')) return;
       const t = e.target; if (t && t.closest && t.closest('input, textarea, select, button, a, summary')) return;
-      if (!$('settings').hidden || !$('tutAsk').hidden || $('readyBtn').disabled) return;
+      if (!$('settings').hidden || !$('tutAsk').hidden || !$('modeMenu').hidden || $('readyBtn').disabled) return;
       e.preventDefault(); $('readyBtn').click();
     });
     $('tabs').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; this.tab = b.dataset.tab; this.refresh(); });
@@ -83,7 +95,13 @@ const Lobby = {
     $('islGrid').addEventListener('click', e => { const b = e.target.closest('[data-isl]'); if (!b) return; if (b.dataset.isl !== MapRotation.current()) { Sfx.init(); $('islNote').textContent = THEMES[b.dataset.isl].name + ' is locked. Only ' + THEMES[MapRotation.current()].name + ' is open right now.'; return; } Profile.d.theme = b.dataset.isl; Profile.save(); this.refresh(); });
     $('nameIn').addEventListener('input', e => { Profile.d.name = e.target.value.trim().slice(0, 16); Profile.save(); const m = $('mpName'); if (m) m.value = Profile.d.name; });
     $('nameIn').addEventListener('keydown', e => e.stopPropagation());
-    $('rankedChk').addEventListener('change', e => { Profile.d.ranked = e.target.checked; Profile.save(); this.refresh(); });
+    // mode picker and Unranked / Ranked, right above PLAY
+    const menu = $('modeMenu'), openMenu = on => { menu.hidden = !on; $('modeBtn').setAttribute('aria-expanded', on); $('lbFoot').classList.toggle('menu-on', on); };
+    $('modeBtn').addEventListener('click', () => { Sfx.init(); openMenu(menu.hidden); });
+    $('modeDone').addEventListener('click', () => openMenu(false));
+    addEventListener('pointerdown', e => { if (!menu.hidden && !e.target.closest('#lbFoot')) openMenu(false); });
+    addEventListener('keydown', e => { if (e.key === 'Escape' && !menu.hidden) { e.stopImmediatePropagation(); openMenu(false); } }, true);
+    $('rankSeg').addEventListener('click', e => { const b = e.target.closest('[data-ranked]'); if (!b || b.disabled) return; Profile.d.ranked = b.dataset.ranked === '1'; Profile.save(); Sfx.init(); this.refresh(); });
     $('catRow').addEventListener('click', e => { const b = e.target.closest('[data-cat]'); if (!b) return; this.cat = b.dataset.cat; this.refresh(); });
     $('itemGrid').addEventListener('click', e => {
       const b = e.target.closest('[data-id]'); if (!b) return; const item = cosById(this.cat, b.dataset.id);
@@ -254,7 +272,7 @@ const Lobby = {
     const cur = MapRotation.current(), nxt = MapRotation.next(); if (d.theme !== cur) { d.theme = cur; Profile.save(); }
     $('islGrid').innerHTML = THEME_ORDER.map(k => { const t = THEMES[k], open = k === cur; return `<button class="isl ${open ? 'on' : 'locked'}" data-isl="${k}" style="--sw:${t.swatch}" aria-disabled="${!open}">${open ? '' : '<i class="isl-lock" aria-hidden="true"></i>'}<b>${t.name}</b><span>${open ? 'Open now · closes in ' + MapRotation.left() : k === nxt ? 'Opens in ' + MapRotation.left() : 'Locked'}</span></button>`; }).join('');
     $('islNote').textContent = MapRotation.start() ? THEMES[cur].name + ' is open for ' + MapRotation.left() + ', then ' + THEMES[nxt].name + ' opens and ' + THEMES[cur].name + ' closes.' : 'Every player starts on Greenvale. After 30 days the next island opens and this one closes.';
-    $('rankedChk').checked = !!d.ranked; $('rankedChk').disabled = d.mode === 'rumble';
+    this.modeBar();
     if (this.tab === 'locker') this.lockerView();
     if (this.tab === 'pass') {
       const rw = passRewards();

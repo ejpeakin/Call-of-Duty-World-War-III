@@ -87,7 +87,7 @@ button:focus-visible{outline:2px solid var(--sun-2);outline-offset:2px}
 .isl-lock::before{content:'';position:absolute;left:2px;top:-7px;width:8px;height:8px;border:2px solid #fff;border-bottom:0;border-radius:6px 6px 0 0;box-sizing:border-box;width:8px}
 .check{display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer}
 .check input{width:18px;height:18px;accent-color:var(--sun)}
-.lb-foot{grid-column:2;grid-row:3;display:flex;gap:10px}
+.lb-foot{grid-column:2;grid-row:3;display:flex;flex-direction:column;gap:8px;position:relative}
 #buildTag{position:fixed;left:10px;bottom:6px;font:600 11px var(--f-body);color:rgba(200,215,255,.35);pointer-events:none}
 #readyBtn{flex:1;font-family:var(--f-display);font-weight:900;font-style:italic;text-transform:uppercase;letter-spacing:.03em;font-size:30px;padding:14px 18px;border:0;border-radius:14px;color:#ffffff;
   background:linear-gradient(180deg,var(--sun-2),var(--sun));box-shadow:0 5px 0 #144bb0,0 10px 24px rgba(47,134,255,.35)}
@@ -663,6 +663,35 @@ details.ctl .hint{margin-top:8px}
   .lb-set{margin-left:auto}
   #readyBtn{font-size:24px;padding:10px 14px}
 }
+/* Mode card + Unranked/Ranked switch above PLAY, and the mode menu that opens from it */
+.mode-bar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+.mode-cur{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto auto auto;column-gap:10px;align-items:center;text-align:left;padding:8px 12px;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);transition:border-color .15s,background .2s}
+.mode-cur:hover:not(:disabled),.lb-foot.menu-on .mode-cur{border-color:var(--sun);background:var(--panel-hi)}
+.mode-cur:disabled{opacity:.6;cursor:default}
+.mode-cur .mc-k{grid-column:1;font:700 10.5px var(--f-body);letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}
+.mode-cur b{grid-column:1;font-family:var(--f-display);font-weight:800;font-style:italic;text-transform:uppercase;font-size:21px;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mode-cur .mc-sub{grid-column:1;font:600 12.5px var(--f-body);color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mode-cur .mc-chev{grid-column:2;grid-row:1 / 4;width:10px;height:10px;border-right:2.5px solid var(--sun-2);border-top:2.5px solid var(--sun-2);transform:rotate(-45deg) translate(-2px,2px);transition:transform .2s}
+.lb-foot.menu-on .mc-chev{transform:rotate(135deg) translate(-2px,2px)}
+.rank-seg{display:flex;flex-direction:column;gap:4px;padding:4px;border-radius:12px;border:1px solid var(--line);background:var(--panel);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.rank-seg button{flex:1;min-width:104px;padding:0 12px;border:0;border-radius:8px;background:transparent;color:var(--mute);font-family:var(--f-display);font-weight:800;font-style:italic;text-transform:uppercase;font-size:15px;letter-spacing:.03em;cursor:pointer;transition:background .2s,color .2s}
+.rank-seg button:hover:not(:disabled):not(.on){background:rgba(255,255,255,.07);color:var(--ink)}
+.rank-seg button.on{background:linear-gradient(180deg,var(--sun-2),var(--sun));color:#fff;box-shadow:0 2px 0 #144bb0}
+.rank-seg button[data-ranked="1"].on{background:linear-gradient(180deg,#ffe07a,#f2a51f);color:#3a2300;box-shadow:0 2px 0 #9a5d00}
+.rank-seg button:disabled{opacity:.35;cursor:not-allowed}
+.mode-menu{position:absolute;left:0;right:0;bottom:calc(100% + 10px);z-index:5;max-height:min(72vh,600px);overflow:auto;display:flex;flex-direction:column;gap:10px;padding:14px;border-radius:16px;border:1px solid rgba(108,200,255,.45);background:rgba(8,26,64,.97);box-shadow:0 18px 50px rgba(0,0,0,.5);animation:menuUp .18s ease-out}
+.mode-menu[hidden]{display:none}
+.mode-menu > *{flex-shrink:0}
+.mode-menu h3{margin:4px 0 0;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);font-weight:600}
+.mm-head{display:flex;align-items:center;justify-content:space-between}
+.mm-head b{font-family:var(--f-display);font-weight:800;font-style:italic;text-transform:uppercase;font-size:22px}
+.mm-x{padding:6px 14px;border-radius:9px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--ink);font:700 13px var(--f-body);cursor:pointer}
+@keyframes menuUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media (max-width: 760px){
+  .mode-cur b{font-size:18px}
+  .rank-seg button{min-width:86px;font-size:13px}
+  .mode-menu{max-height:62vh}
+}
 @media (prefers-reduced-motion: reduce){ *{animation:none!important;transition:none!important} }
 </style>
 </head>
@@ -709,29 +738,15 @@ details.ctl .hint{margin-top:8px}
         <b>Welcome to FortDay!</b>
         <ol>
           <li>New here? Take the quick <b>Tutorial</b> just below.</li>
-          <li>Pick a <b>mode</b>, a <b>combat style</b> and an <b>island</b>.</li>
+          <li>Pick your <b>mode</b> and <b>Unranked</b> or <b>Ranked</b> right above PLAY.</li>
           <li>Press <b>PLAY</b>. Be the last one standing to win.</li>
         </ol>
       </div>
       <label class="name-row"><span>Your player name</span><input id="nameIn" maxlength="16" placeholder="Type a name" autocomplete="off" spellcheck="false"></label>
       <button class="tut-card" id="tutBtn" type="button"><span class="tut-badge" id="tutBadge" hidden>Recommended for new players</span><b>Tutorial</b><span>Learn to move, build, loot and fight in a few minutes</span></button>
-      <h3 class="step"><i>1</i>Pick a mode</h3>
-      <div class="opt-grid" id="modeGrid">
-        <button class="opt" data-mode="solo"><em>100 players</em><b>Battle Royale · Solo</b><span>Everyone for themselves. Drop from the bus, grab loot, stay out of the storm, be the last one left.</span></button>
-        <button class="opt" data-mode="duos"><em>Teams of 2</em><b>Battle Royale · Duos</b><span>Team up with a friend from your room, or a bot partner.</span></button>
-        <button class="opt" data-mode="squads"><em>Teams of 4</em><b>Battle Royale · Squads</b><span>You lead three bot teammates who fight alongside you.</span></button>
-        <button class="opt" data-mode="rumble"><em>16 vs 16</em><b>Storm Rumble</b><span>You come back after every elimination. First team to 40 wins.</span><i class="tag">Good for practice</i></button>
-      </div>
-      <h3 class="step"><i>2</i>Combat style</h3>
-      <div class="seg" id="buildSeg">
-        <button data-build="1"><b>Build</b><span>Walls, ramps and floors</span></button>
-        <button data-build="0"><b>No-Build</b><span>Easier to learn</span></button>
-      </div>
-      <div class="hint" id="buildHint"></div>
-      <h3 class="step"><i>3</i>Island</h3>
+      <h3>Island</h3>
       <div class="isl-grid" id="islGrid"></div>
       <div class="hint" id="islNote"></div>
-      <label class="check"><input type="checkbox" id="rankedChk"><span><b>Ranked</b> <span class="hint">Optional. Tougher bots, and you win or lose rank points.</span></span></label>
       <h3>Play with friends <span class="h-opt">optional</span></h3>
       <div class="mp" id="mpBox"></div>
       <details class="ctl" id="ctlBox">
@@ -838,7 +853,33 @@ details.ctl .hint{margin-top:8px}
     </section>
   </div>
 
-  <div class="lb-foot"><button id="readyBtn" title="Start a match (Enter)"><span class="rb-main">PLAY</span></button></div>
+  <div class="lb-foot" id="lbFoot">
+    <div class="mode-menu" id="modeMenu" hidden role="dialog" aria-label="Choose a mode">
+      <div class="mm-head"><b>Choose a mode</b><button class="mm-x" id="modeDone" type="button" aria-label="Close">Done</button></div>
+      <h3>Battle Royale</h3>
+      <div class="opt-grid" id="modeGrid">
+        <button class="opt" data-mode="solo"><em>100 players</em><b>Battle Royale · Solo</b><span>Everyone for themselves. Drop from the bus, grab loot, stay out of the storm, be the last one left.</span></button>
+        <button class="opt" data-mode="duos"><em>Teams of 2</em><b>Battle Royale · Duos</b><span>Team up with a friend from your room, or a bot partner.</span></button>
+        <button class="opt" data-mode="squads"><em>Teams of 4</em><b>Battle Royale · Squads</b><span>You lead three bot teammates who fight alongside you.</span></button>
+        <h3>Other modes</h3>
+        <button class="opt" data-mode="rumble"><em>16 vs 16</em><b>Storm Rumble</b><span>You come back after every elimination. First team to 40 wins.</span><i class="tag">Good for practice</i></button>
+      </div>
+      <h3>Combat style</h3>
+      <div class="seg" id="buildSeg">
+        <button data-build="1"><b>Build</b><span>Walls, ramps and floors</span></button>
+        <button data-build="0"><b>No-Build</b><span>Easier to learn</span></button>
+      </div>
+      <div class="hint" id="buildHint"></div>
+    </div>
+    <div class="mode-bar">
+      <button class="mode-cur" id="modeBtn" type="button" title="Change mode" aria-haspopup="dialog" aria-controls="modeMenu"><span class="mc-k">Mode</span><b id="modeName">Battle Royale</b><span class="mc-sub" id="modeSub"></span><i class="mc-chev" aria-hidden="true"></i></button>
+      <div class="rank-seg" id="rankSeg" role="radiogroup" aria-label="Unranked or Ranked">
+        <button type="button" data-ranked="0" role="radio" title="Casual matches. Your rank does not change.">Unranked</button>
+        <button type="button" data-ranked="1" role="radio" title="Tougher bots, and you win or lose rank points.">Ranked</button>
+      </div>
+    </div>
+    <button id="readyBtn" title="Start a match (Enter)"><span class="rb-main">PLAY</span></button>
+  </div>
   <div id="buildTag"></div>
 </div>
 
@@ -1024,7 +1065,7 @@ details.ctl .hint{margin-top:8px}
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js"></script>
 <script async src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>
-const BUILD_ID = '1119-1437';
+const BUILD_ID = '1119-1522';
 'use strict';
 // =====================================================================
 //  FORTDAY — core utilities, data tables, profile, audio
@@ -3312,7 +3353,7 @@ function computePose(a, P, t) {
 
 // ---------------------------------------------------------------- body geometry (shared by the instanced bots and the detailed rig)
 // Skeleton (metres, feet at 0): hips 0.95, knee 0.51, shoulders 1.48, head centre 1.79.
-const BODY_SCALE = 1.1;   // every character is drawn (and hit) 10% larger than the base skeleton
+const BODY_SCALE = 1.0;   // characters are drawn (and hit) at their real ~1.9 m height, so a 3.84 m wall stands about twice as tall as you
 const SK = { hipY: 0.95, hipX: 0.1, thigh: 0.44, shin: 0.42, shY: 0.53, shX: 0.235, upper: 0.29, fore: 0.26, headY: 0.84 };
 function limbGeo(r0, r1, len, seg = 9, N = 3) {
   const pts = [];
@@ -4938,7 +4979,21 @@ function actorTick(a, dt) {
 // =====================================================================
 // Build tiles in Fortnite-style proportions: 5.12 m wide and 3.84 m tall (wider than tall), ramps rise one storey per tile
 const T = 5.12, TH = 3.84, CONE_H = TH * 0.5;
+// A freshly placed piece is see-through and firms up to solid over this many seconds (sturdier materials take longer)
+const BUILD_TIME = { wood: 1.4, brick: 2.0, metal: 2.6 }, FADE_STEPS = 12;
 const Build = {
+  fades: {}, lines: {}, edgeGeo: {},
+  // shared see-through copies of each material at a few opacity steps, so many pieces can fade without a material each
+  fadeMat(mat, i) {
+    const L = this.fades[mat] || (this.fades[mat] = []);
+    if (!L[i]) { const m = MAT[mat].clone(); m.transparent = true; m.depthWrite = false; m.opacity = 0.28 + 0.6 * i / (FADE_STEPS - 1); L[i] = m; }
+    return L[i];
+  },
+  buildEdge(k, mat) {
+    const g = this.edgeGeo[k] || (this.edgeGeo[k] = new THREE.EdgesGeometry(GEO[k], 25));
+    const lm = this.lines[mat] || (this.lines[mat] = new THREE.LineBasicMaterial({ color: new THREE.Color(MATS[mat].color).lerp(new THREE.Color(0xffffff), 0.55), transparent: true, opacity: 0.85, depthWrite: false }));
+    return new THREE.LineSegments(g, lm);
+  },
   active: false, piece: 'wall', pieces: [], map: new Map(), ghosts: null, tgt: null, lastKey: null, lastCol: null, placeCD: 0,
   init() {
     this.ghosts = { wall: new THREE.Mesh(GEO.wall, MAT.ghost), floor: new THREE.Mesh(GEO.floor, MAT.ghost), rampX: new THREE.Mesh(GEO.rampX, MAT.ghost), rampZ: new THREE.Mesh(GEO.rampZ, MAT.ghost), cone: new THREE.Mesh(GEO.cone, MAT.ghost) };
@@ -5008,15 +5063,16 @@ const Build = {
       a.mat = alt; if (a === player) HUD.dirty = true;
     }
     a.mats[a.mat] -= 10;
-    const k = this.geoKey(t), mesh = new THREE.Mesh(GEO[k], MAT[a.mat]); this.pose(t, mesh);
-    mesh.castShadow = true; mesh.receiveShadow = true; mesh.scale.setScalar(0.4); scene.add(mesh);
+    const k = this.geoKey(t), mesh = new THREE.Mesh(GEO[k], this.fadeMat(a.mat, 0)); this.pose(t, mesh);
+    mesh.castShadow = false; mesh.receiveShadow = true; mesh.scale.setScalar(0.4); mesh.renderOrder = 2; scene.add(mesh);
+    const edge = this.buildEdge(k, a.mat); edge.renderOrder = 3; mesh.add(edge);   // bright outline while it is still see-through
     const y0 = t.gy * TH; let col;
     if (t.type === 'wall') col = t.dir === 0 ? { minX: t.gx * T, maxX: (t.gx + 1) * T, minZ: t.gz * T - 0.15, maxZ: t.gz * T + 0.15, minY: y0, maxY: y0 + TH } : { minX: t.gx * T - 0.15, maxX: t.gx * T + 0.15, minZ: t.gz * T, maxZ: (t.gz + 1) * T, minY: y0, maxY: y0 + TH };
     else if (t.type === 'floor') col = { minX: t.gx * T, maxX: (t.gx + 1) * T, minZ: t.gz * T, maxZ: (t.gz + 1) * T, minY: y0 - 0.12, maxY: y0 + 0.12 };
     else if (t.type === 'cone') col = { kind: 'ramp', cone: true, minX: t.gx * T, maxX: (t.gx + 1) * T, minZ: t.gz * T, maxZ: (t.gz + 1) * T, minY: y0, maxY: y0 + CONE_H, y0, rise: CONE_H, dir: 0 };   // walkable like a ramp, sloping up to the middle
     else col = { kind: 'ramp', minX: t.gx * T, maxX: (t.gx + 1) * T, minZ: t.gz * T, maxZ: (t.gz + 1) * T, minY: y0, maxY: y0 + TH, y0, rise: TH, dir: t.dir };
     col.kind = col.kind || 'piece'; col.mat = a.mat;
-    const p = { type: t.type, key: t.key, mat: a.mat, hp: MATS[a.mat].hp, maxHp: MATS[a.mat].hp, mesh, col, owner: a, anim: 0.14, x: mesh.position.x, y: mesh.position.y, z: mesh.position.z };
+    const p = { type: t.type, key: t.key, mat: a.mat, hp: MATS[a.mat].hp, maxHp: MATS[a.mat].hp, mesh, col, owner: a, anim: 0.14, x: mesh.position.x, y: mesh.position.y, z: mesh.position.z, build: 0, buildT: BUILD_TIME[a.mat] || 1.6, edge };
     col.piece = p; Grid.add(col);
     this.pieces.push(p); this.map.set(t.key, p);
     if (a === player || Sfx.vol(p.x, p.y, p.z) > 0.25) Sfx.build();
@@ -5042,7 +5098,14 @@ const Build = {
   update(dt) {
     this.vt = (this.vt || 0) - dt;
     if (this.vt <= 0) { this.vt = 0.3; const cp = camera.position, f = View.far + 12, f2 = f * f; for (const p of this.pieces) if (p.mesh) p.mesh.visible = (p.x - cp.x) ** 2 + (p.z - cp.z) ** 2 < f2; }   // pieces lost in the fog are not drawn
-    for (const p of this.pieces) if (p.anim > 0) { p.anim -= dt; p.mesh.scale.setScalar(p.anim > 0 ? 1 - p.anim / 0.14 * 0.6 : 1); }
+    for (const p of this.pieces) {
+      if (p.anim > 0) { p.anim -= dt; p.mesh.scale.setScalar(p.anim > 0 ? 1 - p.anim / 0.14 * 0.6 : 1); }
+      if (p.build < 1) {   // see-through while it builds, then solid
+        p.build = Math.min(1, p.build + dt / p.buildT);
+        if (p.build >= 1) { p.mesh.material = MAT[p.mat]; p.mesh.castShadow = true; p.mesh.renderOrder = 0; if (p.edge) { p.mesh.remove(p.edge); p.edge = null; } }
+        else p.mesh.material = this.fadeMat(p.mat, Math.min(FADE_STEPS - 1, Math.floor(p.build * p.build * FADE_STEPS)));
+      }
+    }
     this.placeCD -= dt;
     this.hideGhost();
     if (!this.active || !player || !player.alive || player.crawl || player.state !== 'ground' || player.vehicle || !Match.build) { this.tgt = null; return; }
@@ -7813,6 +7876,7 @@ const Net = {
     const rb = $('readyBtn'), waiting = this.state === 'room' && !this.isHost;
     rb.disabled = waiting; { const main = waiting ? 'WAITING FOR HOST' : this.state === 'room' ? 'START MATCH · ' + this.members.length + (this.members.length === 1 ? ' PLAYER' : ' PLAYERS') : 'PLAY', sub = waiting ? 'The host picks the mode and starts the match' : typeof Lobby !== 'undefined' ? Lobby.summary() : '', key = main + '|' + sub;
       if (rb.dataset.k !== key) { rb.dataset.k = key; rb.innerHTML = '<span class="rb-main">' + esc(main) + '</span><span class="rb-sub">' + esc(sub) + '</span>'; } }
+    if (typeof Lobby !== 'undefined' && $('modeBtn')) Lobby.modeBar();   // guests can't change the mode, and rooms play unranked
     if (sig === this.sig) return; this.sig = sig;
     const err = this.err ? `<div class="mp-err">${esc(this.err)}</div>` : '';
     if (!this.supported) { box.innerHTML = '<div class="hint">Multiplayer works on the website version of FortDay. This copy plays against bots.</div>'; return; }
@@ -9345,12 +9409,24 @@ const Lobby = {
     const d = Profile.d, m = { solo: 'Solo', duos: 'Duos', squads: 'Squads', rumble: 'Storm Rumble' }[d.mode] || 'Solo', th = THEMES[MapRotation.current()];
     return [m, d.build ? 'Build' : 'No-Build', th ? th.name : '', d.ranked && d.mode !== 'rumble' && Net.state !== 'room' ? 'Ranked' : ''].filter(Boolean).join(' · ');
   },
+  // the mode card and the Unranked / Ranked switch next to PLAY
+  modeBar() {
+    const d = Profile.d, room = typeof Net !== 'undefined' && Net.state === 'room', guest = room && !Net.isHost, br = d.mode !== 'rumble';
+    $('modeName').textContent = br ? 'Battle Royale' : 'Storm Rumble';
+    $('modeSub').textContent = [{ solo: 'Solo', duos: 'Duos', squads: 'Squads', rumble: '16 vs 16' }[d.mode] || 'Solo', d.build ? 'Build' : 'No-Build'].join(' · ');
+    $('modeBtn').disabled = guest; $('modeBtn').title = guest ? 'The host picks the mode' : 'Change mode';
+    const off = !br || room, ranked = !!d.ranked && !off;
+    for (const b of $('rankSeg').children) { const on = (b.dataset.ranked === '1') === ranked; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); b.disabled = off && b.dataset.ranked === '1'; }
+    $('rankSeg').title = !br ? 'Storm Rumble is always unranked' : room ? 'Matches with friends are unranked' : '';
+    $('lbFoot').classList.toggle('ranked', ranked);
+    if (guest && !$('modeMenu').hidden) $('modeMenu').hidden = true;
+  },
   bindUI() {
     // Enter starts the match from the lobby (not while typing, or while a menu or the opening is up)
     addEventListener('keydown', e => {
       if (e.key !== 'Enter' || e.repeat || Match.state !== 'lobby' || $('lobby').classList.contains('intro')) return;
       const t = e.target; if (t && t.closest && t.closest('input, textarea, select, button, a, summary')) return;
-      if (!$('settings').hidden || !$('tutAsk').hidden || $('readyBtn').disabled) return;
+      if (!$('settings').hidden || !$('tutAsk').hidden || !$('modeMenu').hidden || $('readyBtn').disabled) return;
       e.preventDefault(); $('readyBtn').click();
     });
     $('tabs').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; this.tab = b.dataset.tab; this.refresh(); });
@@ -9359,7 +9435,13 @@ const Lobby = {
     $('islGrid').addEventListener('click', e => { const b = e.target.closest('[data-isl]'); if (!b) return; if (b.dataset.isl !== MapRotation.current()) { Sfx.init(); $('islNote').textContent = THEMES[b.dataset.isl].name + ' is locked. Only ' + THEMES[MapRotation.current()].name + ' is open right now.'; return; } Profile.d.theme = b.dataset.isl; Profile.save(); this.refresh(); });
     $('nameIn').addEventListener('input', e => { Profile.d.name = e.target.value.trim().slice(0, 16); Profile.save(); const m = $('mpName'); if (m) m.value = Profile.d.name; });
     $('nameIn').addEventListener('keydown', e => e.stopPropagation());
-    $('rankedChk').addEventListener('change', e => { Profile.d.ranked = e.target.checked; Profile.save(); this.refresh(); });
+    // mode picker and Unranked / Ranked, right above PLAY
+    const menu = $('modeMenu'), openMenu = on => { menu.hidden = !on; $('modeBtn').setAttribute('aria-expanded', on); $('lbFoot').classList.toggle('menu-on', on); };
+    $('modeBtn').addEventListener('click', () => { Sfx.init(); openMenu(menu.hidden); });
+    $('modeDone').addEventListener('click', () => openMenu(false));
+    addEventListener('pointerdown', e => { if (!menu.hidden && !e.target.closest('#lbFoot')) openMenu(false); });
+    addEventListener('keydown', e => { if (e.key === 'Escape' && !menu.hidden) { e.stopImmediatePropagation(); openMenu(false); } }, true);
+    $('rankSeg').addEventListener('click', e => { const b = e.target.closest('[data-ranked]'); if (!b || b.disabled) return; Profile.d.ranked = b.dataset.ranked === '1'; Profile.save(); Sfx.init(); this.refresh(); });
     $('catRow').addEventListener('click', e => { const b = e.target.closest('[data-cat]'); if (!b) return; this.cat = b.dataset.cat; this.refresh(); });
     $('itemGrid').addEventListener('click', e => {
       const b = e.target.closest('[data-id]'); if (!b) return; const item = cosById(this.cat, b.dataset.id);
@@ -9530,7 +9612,7 @@ const Lobby = {
     const cur = MapRotation.current(), nxt = MapRotation.next(); if (d.theme !== cur) { d.theme = cur; Profile.save(); }
     $('islGrid').innerHTML = THEME_ORDER.map(k => { const t = THEMES[k], open = k === cur; return `<button class="isl ${open ? 'on' : 'locked'}" data-isl="${k}" style="--sw:${t.swatch}" aria-disabled="${!open}">${open ? '' : '<i class="isl-lock" aria-hidden="true"></i>'}<b>${t.name}</b><span>${open ? 'Open now · closes in ' + MapRotation.left() : k === nxt ? 'Opens in ' + MapRotation.left() : 'Locked'}</span></button>`; }).join('');
     $('islNote').textContent = MapRotation.start() ? THEMES[cur].name + ' is open for ' + MapRotation.left() + ', then ' + THEMES[nxt].name + ' opens and ' + THEMES[cur].name + ' closes.' : 'Every player starts on Greenvale. After 30 days the next island opens and this one closes.';
-    $('rankedChk').checked = !!d.ranked; $('rankedChk').disabled = d.mode === 'rumble';
+    this.modeBar();
     if (this.tab === 'locker') this.lockerView();
     if (this.tab === 'pass') {
       const rw = passRewards();

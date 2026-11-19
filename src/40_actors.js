@@ -70,7 +70,7 @@ function computePose(a, P, t) {
 
 // ---------------------------------------------------------------- body geometry (shared by the instanced bots and the detailed rig)
 // Skeleton (metres, feet at 0): hips 0.95, knee 0.51, shoulders 1.48, head centre 1.79.
-const BODY_SCALE = 1.1;   // every character is drawn (and hit) 10% larger than the base skeleton
+const BODY_SCALE = 1.0;   // characters are drawn (and hit) at their real ~1.9 m height, so a 3.84 m wall stands about twice as tall as you
 const SK = { hipY: 0.95, hipX: 0.1, thigh: 0.44, shin: 0.42, shY: 0.53, shX: 0.235, upper: 0.29, fore: 0.26, headY: 0.84 };
 function limbGeo(r0, r1, len, seg = 9, N = 3) {
   const pts = [];

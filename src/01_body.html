@@ -40,29 +40,15 @@
         <b>Welcome to FortDay!</b>
         <ol>
           <li>New here? Take the quick <b>Tutorial</b> just below.</li>
-          <li>Pick a <b>mode</b>, a <b>combat style</b> and an <b>island</b>.</li>
+          <li>Pick your <b>mode</b> and <b>Unranked</b> or <b>Ranked</b> right above PLAY.</li>
           <li>Press <b>PLAY</b>. Be the last one standing to win.</li>
         </ol>
       </div>
       <label class="name-row"><span>Your player name</span><input id="nameIn" maxlength="16" placeholder="Type a name" autocomplete="off" spellcheck="false"></label>
       <button class="tut-card" id="tutBtn" type="button"><span class="tut-badge" id="tutBadge" hidden>Recommended for new players</span><b>Tutorial</b><span>Learn to move, build, loot and fight in a few minutes</span></button>
-      <h3 class="step"><i>1</i>Pick a mode</h3>
-      <div class="opt-grid" id="modeGrid">
-        <button class="opt" data-mode="solo"><em>100 players</em><b>Battle Royale · Solo</b><span>Everyone for themselves. Drop from the bus, grab loot, stay out of the storm, be the last one left.</span></button>
-        <button class="opt" data-mode="duos"><em>Teams of 2</em><b>Battle Royale · Duos</b><span>Team up with a friend from your room, or a bot partner.</span></button>
-        <button class="opt" data-mode="squads"><em>Teams of 4</em><b>Battle Royale · Squads</b><span>You lead three bot teammates who fight alongside you.</span></button>
-        <button class="opt" data-mode="rumble"><em>16 vs 16</em><b>Storm Rumble</b><span>You come back after every elimination. First team to 40 wins.</span><i class="tag">Good for practice</i></button>
-      </div>
-      <h3 class="step"><i>2</i>Combat style</h3>
-      <div class="seg" id="buildSeg">
-        <button data-build="1"><b>Build</b><span>Walls, ramps and floors</span></button>
-        <button data-build="0"><b>No-Build</b><span>Easier to learn</span></button>
-      </div>
-      <div class="hint" id="buildHint"></div>
-      <h3 class="step"><i>3</i>Island</h3>
+      <h3>Island</h3>
       <div class="isl-grid" id="islGrid"></div>
       <div class="hint" id="islNote"></div>
-      <label class="check"><input type="checkbox" id="rankedChk"><span><b>Ranked</b> <span class="hint">Optional. Tougher bots, and you win or lose rank points.</span></span></label>
       <h3>Play with friends <span class="h-opt">optional</span></h3>
       <div class="mp" id="mpBox"></div>
       <details class="ctl" id="ctlBox">
@@ -169,7 +155,33 @@
     </section>
   </div>
 
-  <div class="lb-foot"><button id="readyBtn" title="Start a match (Enter)"><span class="rb-main">PLAY</span></button></div>
+  <div class="lb-foot" id="lbFoot">
+    <div class="mode-menu" id="modeMenu" hidden role="dialog" aria-label="Choose a mode">
+      <div class="mm-head"><b>Choose a mode</b><button class="mm-x" id="modeDone" type="button" aria-label="Close">Done</button></div>
+      <h3>Battle Royale</h3>
+      <div class="opt-grid" id="modeGrid">
+        <button class="opt" data-mode="solo"><em>100 players</em><b>Battle Royale · Solo</b><span>Everyone for themselves. Drop from the bus, grab loot, stay out of the storm, be the last one left.</span></button>
+        <button class="opt" data-mode="duos"><em>Teams of 2</em><b>Battle Royale · Duos</b><span>Team up with a friend from your room, or a bot partner.</span></button>
+        <button class="opt" data-mode="squads"><em>Teams of 4</em><b>Battle Royale · Squads</b><span>You lead three bot teammates who fight alongside you.</span></button>
+        <h3>Other modes</h3>
+        <button class="opt" data-mode="rumble"><em>16 vs 16</em><b>Storm Rumble</b><span>You come back after every elimination. First team to 40 wins.</span><i class="tag">Good for practice</i></button>
+      </div>
+      <h3>Combat style</h3>
+      <div class="seg" id="buildSeg">
+        <button data-build="1"><b>Build</b><span>Walls, ramps and floors</span></button>
+        <button data-build="0"><b>No-Build</b><span>Easier to learn</span></button>
+      </div>
+      <div class="hint" id="buildHint"></div>
+    </div>
+    <div class="mode-bar">
+      <button class="mode-cur" id="modeBtn" type="button" title="Change mode" aria-haspopup="dialog" aria-controls="modeMenu"><span class="mc-k">Mode</span><b id="modeName">Battle Royale</b><span class="mc-sub" id="modeSub"></span><i class="mc-chev" aria-hidden="true"></i></button>
+      <div class="rank-seg" id="rankSeg" role="radiogroup" aria-label="Unranked or Ranked">
+        <button type="button" data-ranked="0" role="radio" title="Casual matches. Your rank does not change.">Unranked</button>
+        <button type="button" data-ranked="1" role="radio" title="Tougher bots, and you win or lose rank points.">Ranked</button>
+      </div>
+    </div>
+    <button id="readyBtn" title="Start a match (Enter)"><span class="rb-main">PLAY</span></button>
+  </div>
   <div id="buildTag"></div>
 </div>
 
