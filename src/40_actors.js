@@ -297,8 +297,8 @@ function dreadsModel(o, head, noCap) {
     const p = new V(RX * 0.97 * sp * sx, cy + 0.01 + RY * 0.97 * cp, CZ + RZ * 0.97 * sp * cz);
     const nrm = new V(p.x / (RX * RX), (p.y - cy) / (RY * RY), (p.z - CZ) / (RZ * RZ)).normalize();
     const front = cz > 0.35 && phi > 0.35, back = cz < -0.3;
-    const len = front ? 0.16 + rnd() * 0.05 : back ? 0.42 + rnd() * 0.12 : phi < 0.6 ? 0.34 + rnd() * 0.08 : 0.36 + rnd() * 0.1;
-    lock(p, nrm, len, 0.0085 + rnd() * 0.002, sx >= 0 ? 1 : -1, front);
+    const len = 0.5 * (front ? 0.16 + rnd() * 0.05 : back ? 0.42 + rnd() * 0.12 : phi < 0.6 ? 0.34 + rnd() * 0.08 : 0.36 + rnd() * 0.1);   // half length
+    lock(p, nrm, len, 1.05 * (0.0085 + rnd() * 0.002), sx >= 0 ? 1 : -1, front);   // 5% thicker
   }
   head.add(mergedColored(L));
 }
