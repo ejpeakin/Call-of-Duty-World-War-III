@@ -102,7 +102,7 @@ function initEngine() {
   canvas.addEventListener('webglcontextrestored', () => { const el = document.getElementById('problemBar'); if (el && el.dataset.gl) el.remove(); });
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
   scene = new THREE.Scene();
-  camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.1, 1700);
+  camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.1, 1700);
   hemi = new THREE.HemisphereLight(0xffffff, 0x445533, 0.6); scene.add(hemi);
   sun = new THREE.DirectionalLight(0xffffff, 0.9); sun.castShadow = true;
   sun.shadow.mapSize.set(IS_TOUCH || GFX.fast ? 1024 : 2048, IS_TOUCH || GFX.fast ? 1024 : 2048);

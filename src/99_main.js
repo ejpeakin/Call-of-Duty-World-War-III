@@ -30,7 +30,7 @@ function boot() {
   $('dLobbyBtn').addEventListener('click', () => { Match.showResults(); });
   $('rLobbyBtn').addEventListener('click', () => Match.toLobby());
   $('sensIn').value = Profile.d.sens; $('sensIn').addEventListener('input', e => { Profile.d.sens = +e.target.value; Profile.save(); });
-  { const f = clamp(+Profile.d.fov || 75, 60, 100); $('fovIn').value = f; $('fovVal').textContent = f; }
+  { const f = clamp(+Profile.d.fov || 70, 60, 100); $('fovIn').value = f; $('fovVal').textContent = f; }
   $('fovIn').addEventListener('input', e => { Profile.d.fov = +e.target.value; $('fovVal').textContent = Profile.d.fov; Profile.save(); });
   $('shadowChk').checked = !!Profile.d.shadows; $('shadowChk').addEventListener('change', e => { Profile.d.shadows = e.target.checked; sun.castShadow = GFX.shadows(); Profile.save(); });
   $('perfChk').checked = !!Profile.d.perf; $('perfChk').addEventListener('change', e => { Perf.set(e.target.checked); $('shadowChk').disabled = e.target.checked; $('gfxNote').textContent = e.target.checked ? 'Performance Mode is on. Edge smoothing turns off after you reload the page.' : 'Performance Mode is off. Edge smoothing comes back after you reload the page.'; });

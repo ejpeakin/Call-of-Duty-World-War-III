@@ -277,7 +277,7 @@ const Cam = {
     else if (a.state === 'sky' || a.state === 'glide') { dist = 7.5; side = 0; up = 1.2; py = 1.5; }
     else if (this.scoped) { dist = 0; side = 0; up = 0; py = 1.72; }
     else if (a === player && a.input.ads) { const w = a.inv[a.slot], wt = w && w.kind === 'weapon' ? WEAPONS[w.wid].type : '', sg = wt === 'shotgun', sm = wt === 'smg'; dist = sg ? 1.75 : sm ? 1.65 : 2.0; side = sg ? 0.78 : sm ? 0.7 : 0.72; up = sg ? 0.16 : sm ? 0.14 : 0.12; py = 1.62; }
-    else { dist = 3.5; side = 0.82; up = 0.28; py = 1.62; }
+    else { dist = 2.7; side = 0.8; up = 0.24; py = 1.62; }   // close over-the-shoulder view: your character fills about half the screen's height
     if (a.crouchK > 0 && !a.vehicle && a.state === 'ground' && !this.scoped) py = lerp(py, 1.12, a.crouchK);   // crouching lowers the camera
     if (a.crawl && !a.vehicle && a.state === 'ground') { py = 0.6; dist = Math.max(dist, 3.2); up = 0.5; }
     if (innerHeight > innerWidth * 1.2 && !this.scoped) { dist *= 1.35; side *= 0.6; }
@@ -299,7 +299,7 @@ const Cam = {
     this.t0 = Math.max(0, (px - cx) * fx + (pyy - cy) * fy + (pz - cz) * fz);
     this.ready = a === player;
     const sprint = a.input.sprint && a.input.f > 0 && a.state === 'ground';
-    const base = clamp(+Profile.d.fov || 75, 60, 100), zk = base / 75;   // field of view from Settings; aiming zooms by the same amount at any setting
+    const base = clamp(+Profile.d.fov || 70, 60, 100), zk = base / 70;   // field of view from Settings (70 unless changed); aiming zooms by the same amount at any setting
     this.fov(dt, this.scoped ? (this.scopeKind === 'smg' ? 56 : 22) : (a === player && a.input.ads && !a.vehicle) ? zk * (it && it.kind === 'weapon' && wstat(it).type === 'shotgun' ? 64 : it && it.kind === 'weapon' && wstat(it).type === 'smg' ? 52 : 58) : sprint ? base + 5 : a.vehicle ? base + 5 : base);
   },
   fov(dt, target) { if (Math.abs(camera.fov - target) > 0.1) { camera.fov = lerp(camera.fov, target, Math.min(1, dt * 12)); camera.updateProjectionMatrix(); } },
