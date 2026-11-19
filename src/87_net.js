@@ -379,6 +379,11 @@ const Net = {
       }
       else if (d.k === 'rbt') { const t = this.ids.get(d.id); if (!t || t.alive) return; if (t.human) this.send(t.human, d); else if (!t.remote) Match.reboot(t, d.tw | 0, String(d.by || me.name).slice(0, 24)); }
       else if (d.k === 'rbc') { Reboot.cool(d.tw | 0); this.toGuests({ k: 'rbc', tw: d.tw | 0 }, from); }
+      else if (d.k === 'chat') {   // team chat: only the sender's teammates get it
+        const t = Chat.clean(d.t); if (!t) return; const msg = { k: 'chat', t, n: me.name };
+        if (player && player.team === me.team) Chat.receive(me.name, t);
+        for (const [cid, a] of this.humans) if (cid !== from && a.team === me.team) this.send(cid, msg);
+      }
       else if (d.k === 'bye') this.dropHuman(from);
       else if (['bp', 'bd', 'hv', 'sb', 'sl', 'shot', 'rk'].includes(d.k)) { d.id = me.id; this.applyWorld(d); this.toGuests(d, from, d.k === 'shot' || d.k === 'rk' || d.k === 'sl' ? me.pos : null, NET_RANGE); }
       return;
@@ -393,6 +398,7 @@ const Net = {
     }
     else if (d.k === 'dmg') { if (player && player.alive) damageActor(player, clamp(+d.dmg || 0, 0, 400), this.ids.get(d.src) || null, d.o || {}); }
     else if (d.k === 'end') { if (Match.state === 'play') { HUD.toast('The host ended the match'); Match.showResults(); } }
+    else if (d.k === 'chat') Chat.receive(d.n, d.t);
     else if (d.k === 'rbt') { if (player && d.id === player.id && !player.alive) Match.reboot(player, d.tw | 0, String(d.by || '').slice(0, 24)); }
     else if (d.k === 'rbc') Reboot.cool(d.tw | 0);
     else this.applyWorld(d);

@@ -18,7 +18,7 @@ const HUD = {
     $('mats').innerHTML = MAT_ORDER.map(m => `<div class="mat" data-m="${m}"><i style="background:${hexCss(MATS[m].color)}"></i><span>0</span></div>`).join('');
   },
   startMatch() {
-    $('hud').hidden = false; $('killfeed').innerHTML = ''; this.dirty = true; this.last = {};
+    $('hud').hidden = false; $('killfeed').innerHTML = ''; Chat.render(); this.dirty = true; this.last = {};
     $('scoreBox').hidden = Match.mode !== 'rumble'; $('aliveLbl').textContent = Match.mode === 'rumble' ? 'to win' : 'left';
     $('mats').style.display = Match.build ? '' : 'none'; $('buildbar').style.display = Match.build && !Input.touch.on ? '' : 'none';
     $('teamList').style.display = Match.mode === 'squads' || Match.mode === 'duos' ? '' : 'none';

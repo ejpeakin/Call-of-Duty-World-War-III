@@ -208,7 +208,7 @@ const Match = {
     genWorld(this.theme); Reboot.setup(this.mode);
     if (this.mode !== 'tutorial') { const cs = W.chests.filter(c => c.kind === 'chest'); for (let i = 0; i < KATANAS_PER_MATCH && cs.length; i++) cs.splice(Math.floor(Math.random() * cs.length), 1)[0].katana = true; }
     $('ldFill').style.width = '80%';
-    actors.length = 0; nextId = 1; ElimFX.clear(); CharPool.clear(); BotRig.hideAll(); Trails.clear(); SprintWind.clear();
+    actors.length = 0; nextId = 1; ElimFX.clear(); CharPool.clear(); BotRig.hideAll(); Trails.clear(); SprintWind.clear(); Chat.clear();
     if (Net.guest) Net.guestSetup(); else {
     Net.humans.clear();
     player = newActor({ name: 'You', isPlayer: true, team: 0 });
@@ -413,7 +413,7 @@ const Match = {
     this.state = 'lobby'; $('results').hidden = true; $('death').hidden = true; $('pause').hidden = true; $('hud').hidden = true; $('bigmap').hidden = true; $('clickHint').hidden = true;
     if (document.pointerLockElement) document.exitPointerLock();
     if (Bus.mesh) Bus.mesh.visible = false; stormMesh.visible = false; Build.hideGhost();
-    LiveEvent.init('rumble'); Lightning.clear(); ElimFX.clear(); CharPool.clear(); BotRig.hideAll(); Trails.clear(); SprintWind.clear(); Creatures.clear(); actors.length = 0; player = null;
+    LiveEvent.init('rumble'); Lightning.clear(); ElimFX.clear(); CharPool.clear(); BotRig.hideAll(); Trails.clear(); SprintWind.clear(); Chat.clear(); Creatures.clear(); actors.length = 0; player = null;
     $('lobby').hidden = false; Lobby.refresh();
   },
 };

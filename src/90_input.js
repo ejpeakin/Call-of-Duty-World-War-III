@@ -77,8 +77,8 @@ const Input = {
     cv.addEventListener('wheel', e => { if (Match.state === 'play') { this.wheel += Math.sign(e.deltaY); e.preventDefault(); } }, { passive: false });
     document.addEventListener('pointerlockchange', () => {
       this.locked = document.pointerLockElement === cv;
-      $('clickHint').hidden = this.locked || this.coarse || this.touch.on || Match.state !== 'play' || Match.paused || !$('death').hidden || !$('tutEnd').hidden || Victory.on || Match.ending;
-      if (!this.locked && Match.state === 'play' && !Match.paused && !this.coarse && !this.touch.on && $('death').hidden && $('results').hidden && $('tutEnd').hidden && !Inv.on && !Match.ending) togglePause(true);
+      $('clickHint').hidden = this.locked || this.coarse || this.touch.on || Match.state !== 'play' || Match.paused || !$('death').hidden || !$('tutEnd').hidden || Victory.on || Match.ending || Chat.on;
+      if (!this.locked && Match.state === 'play' && !Match.paused && !this.coarse && !this.touch.on && $('death').hidden && $('results').hidden && $('tutEnd').hidden && !Inv.on && !Match.ending && !Chat.on) togglePause(true);
     });
     document.addEventListener('pointerlockerror', () => { this.free = true; $('clickHint').hidden = true; });
     this.initTouch();
