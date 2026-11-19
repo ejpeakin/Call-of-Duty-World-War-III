@@ -21,6 +21,12 @@ The host's browser runs the bots, storm and loot, and each player's browser runs
 
 Cars, sharks and the Skywhale event are switched off in shared matches.
 
+## Accounts, friends and party invites
+
+Players can make an account (email, password and a unique player name), add friends by player name, and invite friends to their party.
+Friends who are online get requests and invites instantly in the game, and everyone also gets an email; an emailed party invite has a link that joins the room.
+This runs on Supabase and a Gmail account, and stays switched off until they're set up: follow [supabase/SETUP.md](supabase/SETUP.md).
+
 ## Multiplayer on school networks
 
 Some networks block direct browser-to-browser links, and players then see "Could not connect to that room". A TURN relay fixes that by passing the game messages through a server on the normal secure web port. To turn it on, put the relay details from a TURN provider into `NET_TURN` at the top of `src/87_net.js`, then run `bash build.sh` and push. Whatever goes there is visible to anyone who opens the page, so use a free plan with a usage limit.

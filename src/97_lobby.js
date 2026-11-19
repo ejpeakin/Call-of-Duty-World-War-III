@@ -47,7 +47,7 @@ const Lobby = {
     else { this.camX = 0; this.cam.position.set(0, 1.2 + L, 11.7 + L); this.cam.lookAt(0, -0.9 + L, 0); }
   },
   openParty() {
-    Sfx.init(); const box = $('partyBox'); box.open = true; box.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    Sfx.init(); const box = Social.me ? $('socBox') : $('partyBox'); box.open = true; box.scrollIntoView({ block: 'nearest', behavior: 'smooth' });   // signed in: pick a friend to invite
     const f = $('mpCode') || $('mpName'); if (f) setTimeout(() => f.focus(), 50);
   },
   // friends from your room stand on the party spots; the name plate and + buttons follow the 3D stage

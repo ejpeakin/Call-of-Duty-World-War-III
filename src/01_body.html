@@ -20,6 +20,7 @@
 <!-- ================= LOBBY ================= -->
 <div id="lobby">
   <!-- name over your character and the party spots beside you; Lobby.render moves these to follow the 3D stage -->
+  <div id="notes" aria-live="polite"></div>
   <div id="stageUI">
     <label class="name-plate" id="namePlate" title="Click to change your name"><input id="nameIn" maxlength="16" placeholder="Type your name" autocomplete="off" spellcheck="false" aria-label="Your player name"></label>
   </div>
@@ -49,6 +50,30 @@
         </ol>
       </div>
       <button class="tut-card" id="tutBtn" type="button"><span class="tut-badge" id="tutBadge" hidden>Recommended for new players</span><b>Tutorial</b><span>Learn to move, build, loot and fight in a few minutes</span></button>
+      <details class="w-card soc" id="socBox" hidden>
+        <summary><span class="w-k">Friends <i class="soc-badge" id="socBadge" hidden></i></span><b id="socSum">Sign in</b><span class="w-sub" id="socSub">Make an account to add friends</span></summary>
+        <div class="soc-auth" id="socAuth">
+          <div class="seg soc-tabs" id="socTabs"><button type="button" data-soc-mode="in" class="on">Sign in</button><button type="button" data-soc-mode="up">Create account</button></div>
+          <label class="soc-f" id="socNameRow" hidden><span>Player name</span><input id="socName" maxlength="16" autocomplete="username" spellcheck="false" placeholder="3–16 letters, numbers or _"></label>
+          <label class="soc-f"><span>Email</span><input id="socEmail" type="email" autocomplete="email" spellcheck="false" placeholder="you@example.com"></label>
+          <label class="soc-f"><span>Password</span><input id="socPass" type="password" autocomplete="current-password" placeholder="At least 8 characters"></label>
+          <button class="buy equip soc-go" id="socGo" type="button">Sign in</button>
+          <button class="soc-link" id="socForgot" type="button">Forgot your password?</button>
+          <p class="hint">Your email is only used to sign in and to tell you about friend requests and party invites. Other players never see it.</p>
+        </div>
+        <div class="soc-auth" id="socReset" hidden>
+          <label class="soc-f"><span>New password</span><input id="socNewPass" type="password" autocomplete="new-password" placeholder="At least 8 characters"></label>
+          <button class="buy equip soc-go" id="socSetPass" type="button">Save new password</button>
+        </div>
+        <div class="soc-in" id="socIn" hidden>
+          <div class="soc-find"><input id="socFind" maxlength="16" placeholder="Find a player by name" autocomplete="off" spellcheck="false"><button type="button" id="socFindBtn">Search</button></div>
+          <div class="soc-list" id="socFound"></div>
+          <div class="soc-list" id="socLists"></div>
+          <label class="check soc-mail"><input type="checkbox" id="socNotify"><span>Email me friend requests and party invites</span></label>
+          <button class="soc-link" id="socOut" type="button">Sign out</button>
+        </div>
+        <div class="soc-msg" id="socMsg" role="status" aria-live="polite"></div>
+      </details>
       <details class="w-card" id="islBox">
         <summary><span class="w-k">Island</span><b id="islSum">Greenvale</b><span class="w-sub" id="islSub"></span></summary>
         <div class="isl-grid" id="islGrid"></div>

@@ -35,12 +35,22 @@ Your session may be out of date: the other person can push while you work.
 | Controls and camera | `src/90_input.js` |
 | HUD | `src/95_hud.js` |
 | Multiplayer rooms | `src/87_net.js`, `server.js` |
+| Accounts, friends, party invites | `src/89_social.js`, `supabase/` |
 
 ### Things to keep consistent
 
 - Build tiles are 5.12 m wide and 3.84 m tall (`T`, `TH` in `src/70_build.js`). Characters are about 1.9 m tall (`BODY_SCALE = 1.0` in `src/40_actors.js`), so a wall is about twice a player's height. Keep that proportion.
 - A placed build starts see-through and turns solid over `BUILD_TIME` seconds (`src/70_build.js`).
 - FortDay is its own game. Don't copy names, characters, art, music or the look of existing games.
+
+## Accounts, friends and party invites (Supabase)
+
+- These stay off until `SOCIAL.url` and `SOCIAL.key` are filled in at the top of `src/89_social.js`. Until then the Friends card is hidden and the account library isn't loaded. Setup steps for the humans: `supabase/SETUP.md`.
+- `SOCIAL.key` is the public anon / publishable key. Never put the `service_role` / secret key, the Gmail app password or the database password in this repo: `index.html` is public.
+- Editing `supabase/schema.sql` does **not** change the live database. Someone has to run it in Supabase's SQL Editor, so keep it safe to run again (`create … if not exists`, `create or replace`, `drop policy if exists`). Tell the user when it needs re-running.
+- Editing `supabase/functions/notify/index.ts` does nothing until it's deployed again in Supabase. Tell the user.
+- Email addresses never reach the page. Only the `notify` function reads them. Players see each other's player names only.
+- To test schema changes in a cloud session, start the local Postgres 16 (`pg_ctlcluster 16 main start`) and mimic Supabase: an `auth.users` table, `auth.uid()` reading `current_setting('request.jwt.claim.sub', true)`, the `anon`, `authenticated` and `service_role` roles, and a `supabase_realtime` publication. Then run the schema and call the functions as different players with `set role authenticated` and `set request.jwt.claim.sub`.
 
 ## Checking that it runs
 
