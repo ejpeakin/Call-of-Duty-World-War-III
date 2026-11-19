@@ -1,7 +1,7 @@
 // =====================================================================
 //  Physics: ground, collision, movement, mantling, water
 // =====================================================================
-const GRAV = 28, JUMP = 9.4, STEP = 0.6, SPRINT_BOOST = 1.2;   // sprinting is 20% faster than it used to be (about 10 m/s)
+const GRAV = 28, JUMP = 9.4, STEP = 0.6, SPRINT_BOOST = 1.3;   // sprinting is 20% faster than it used to be (about 10 m/s)
 const _cands = [], _cands2 = [], _cands3 = [];
 
 function rampY(c, x, z) {
@@ -87,7 +87,7 @@ function physicsActor(a, dt) {
     if (sprint && a.onGround) { a.stamina = Math.max(0, a.stamina - 22 * dt); a.stamRest = 0.9; if (a.stamina <= 0) a.exhausted = true; }
     else { a.stamRest = (a.stamRest || 0) - dt; if (a.stamRest <= 0) a.stamina = Math.min(100, a.stamina + 20 * dt); }
     if (a.exhausted && a.stamina >= 25) a.exhausted = false;
-    speed = sprint ? (Match.build ? 8.4 : 8.9) * SPRINT_BOOST : 6.0;
+    speed = sprint ? (Match.build ? 8.4 : 8.9) * SPRINT_BOOST : 6.6;   // running 6.6 m/s (was 6.0)
     if (inp.ads) speed = 4.0;
     if (a.useT > 0) speed = Math.min(speed, 3.0);
     if (a.inWater) speed *= 0.6;

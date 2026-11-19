@@ -37,6 +37,13 @@ const P2P = {
     return Promise.race([f, t]);
   },
   pid(code) { return 'fortday-room-v1-' + code.toLowerCase(); },
+  // a name nobody else in the room has (case doesn't matter): "Ejay" then "Ejay 2", "Ejay 3"...
+  uniq(r, cid, name) {
+    const taken = new Set([...r.members.values()].filter(m => m.id !== cid).map(m => String(m.name).toLowerCase()));
+    if (!taken.has(name.toLowerCase())) return name;
+    for (let k = 2; k < 99; k++) { const n = name.slice(0, 13) + ' ' + k; if (!taken.has(n.toLowerCase())) return n; }
+    return name;
+  },
   clean(v, n) { return String(v == null ? '' : v).replace(/[^\w \-'.!]/g, '').trim().slice(0, n); },
   reset() { const p = this.peer; this.peer = null; this.conn = null; this.hosting = false; this.room = null; this.parts.clear(); clearTimeout(this.joinT); if (p) try { p.destroy(); } catch (e) { /* already gone */ } },
   why(e) {
@@ -82,11 +89,11 @@ const P2P = {
     if (m.t === 'join') {
       if (conn.cid) return;
       if (r.members.size >= 8) { this.put(conn, JSON.stringify({ t: 'error', msg: 'That room is full.' })); setTimeout(() => conn.close(), 800); return; }
-      conn.cid = this.nextId++; r.members.set(conn.cid, { id: conn.cid, conn, name: this.clean(m.name, 16) || 'Player', eq: m.eq && typeof m.eq === 'object' ? m.eq : {} }); this.tell(); return;
+      conn.cid = this.nextId++; r.members.set(conn.cid, { id: conn.cid, conn, name: this.uniq(r, conn.cid, this.clean(m.name, 16) || 'Player'), eq: m.eq && typeof m.eq === 'object' ? m.eq : {} }); this.tell(); return;
     }
     if (!conn.cid) return;
     if (m.t === 'x') this.relay(conn.cid, m.to, m.d);
-    else if (m.t === 'me') { const mm = r.members.get(conn.cid); if (mm) { mm.name = this.clean(m.name, 16) || mm.name; mm.eq = m.eq && typeof m.eq === 'object' ? m.eq : mm.eq; this.tell(); } }
+    else if (m.t === 'me') { const mm = r.members.get(conn.cid); if (mm) { mm.name = this.uniq(r, conn.cid, this.clean(m.name, 16) || mm.name); mm.eq = m.eq && typeof m.eq === 'object' ? m.eq : mm.eq; this.tell(); } }
     else if (m.t === 'leave') { this.lose(conn); try { conn.close(); } catch (e) { /* gone */ } }
   },
   relay(from, to, d) {
@@ -122,7 +129,7 @@ const P2P = {
   send(o) {
     if (this.hosting) {
       if (o.t === 'x') this.relay(1, o.to, o.d);
-      else if (o.t === 'me') { const mm = this.room && this.room.members.get(1); if (mm) { mm.name = o.name; mm.eq = o.eq; this.tell(); } }
+      else if (o.t === 'me') { const mm = this.room && this.room.members.get(1); if (mm) { mm.name = this.uniq(this.room, 1, this.clean(o.name, 16) || 'Host'); mm.eq = o.eq; this.tell(); } }
       else if (o.t === 'leave') { const r = this.room; if (r) for (const m of r.members.values()) if (m.conn) this.put(m.conn, '{"t":"closed"}'); this.room = null; this.hosting = false; const p = this.peer; this.peer = null; setTimeout(() => { if (p) try { p.destroy(); } catch (e) { /* gone */ } }, 600); }
       return;
     }

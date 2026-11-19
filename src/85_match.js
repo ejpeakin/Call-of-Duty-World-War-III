@@ -208,6 +208,7 @@ const Match = {
     genWorld(this.theme); Reboot.setup(this.mode);
     if (this.mode !== 'tutorial') { const cs = W.chests.filter(c => c.kind === 'chest'); for (let i = 0; i < KATANAS_PER_MATCH && cs.length; i++) cs.splice(Math.floor(Math.random() * cs.length), 1)[0].katana = true; }
     $('ldFill').style.width = '80%';
+    usedNames.clear(); usedNames.add(String(Profile.d.name || 'You').toLowerCase()); for (const m of Net.members || []) usedNames.add(String(m.name).toLowerCase());
     actors.length = 0; nextId = 1; ElimFX.clear(); CharPool.clear(); BotRig.hideAll(); Trails.clear(); SprintWind.clear(); Chat.clear();
     if (Net.guest) Net.guestSetup(); else {
     Net.humans.clear();

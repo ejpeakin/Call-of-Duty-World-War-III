@@ -4,7 +4,11 @@
 const actors = []; let player = null; let nextId = 1;
 const NAME_A = ['Turbo', 'Pixel', 'Rusty', 'Neon', 'Sly', 'Mega', 'Frosty', 'Lucky', 'Silent', 'Wild', 'Cosmic', 'Salty', 'Captain', 'Sneaky', 'Goofy', 'Shadow', 'Blaze', 'Mossy', 'Quantum', 'Sir', 'Dizzy', 'Crispy', 'Atomic', 'Velvet'];
 const NAME_B = ['Otter', 'Llama', 'Noodle', 'Falcon', 'Badger', 'Taco', 'Wizard', 'Moose', 'Panda', 'Comet', 'Pickle', 'Viper', 'Yeti', 'Gecko', 'Ninja', 'Biscuit', 'Raccoon', 'Kraken', 'Waffle', 'Lynx', 'Muffin', 'Ferret', 'Toucan', 'Walrus'];
-function botName() { let n = pick(NAME_A) + pick(NAME_B); if (Math.random() < 0.45) n += rndi(1, 99); return n; }
+const usedNames = new Set();   // names already in this match (lower case), so every name is used once
+function botName() {
+  for (let k = 0; k < 60; k++) { let n = pick(NAME_A) + pick(NAME_B); if (Math.random() < 0.45 || k > 20) n += rndi(1, 99); if (!usedNames.has(n.toLowerCase())) { usedNames.add(n.toLowerCase()); return n; } }
+  let n; do { n = 'Player' + rndi(100, 9999); } while (usedNames.has(n.toLowerCase())); usedNames.add(n.toLowerCase()); return n;
+}
 
 function newActor(o) {
   const a = {
