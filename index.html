@@ -435,6 +435,7 @@ body.touch #chatHint,body.pad #chatHint{display:none}
 #tFire{width:84px;height:84px;right:calc(26px + var(--sr));bottom:calc(150px + var(--sb));background:rgba(47,134,255,.45)!important}
 #tAim{width:56px;height:56px;right:calc(124px + var(--sr));bottom:calc(196px + var(--sb))}
 #tJump{width:62px;height:62px;right:calc(120px + var(--sr));bottom:calc(112px + var(--sb))}
+#tCrouch{width:52px;height:52px;right:calc(196px + var(--sr));bottom:calc(84px + var(--sb));font-size:10px}
 #tReload{width:48px;height:48px;right:calc(36px + var(--sr));bottom:calc(250px + var(--sb))}
 #tUse{width:52px;height:52px;right:calc(190px + var(--sr));bottom:calc(150px + var(--sb))}
 #tBuild{width:52px;height:52px;right:calc(98px + var(--sr));bottom:calc(264px + var(--sb))}
@@ -720,9 +721,8 @@ details.w-card summary b{grid-column:1;font-family:var(--f-display);font-weight:
 .w-sub{grid-column:1;font-size:12px;color:var(--mute)}
 details.w-card .isl-grid{margin-bottom:8px}
 @media (min-width: 761px){
-  #lobby.play-view{grid-template-columns:minmax(250px,290px) 1fr minmax(320px,400px)}
-  #lobby.play-view .side{grid-column:1;grid-row:2 / 4;align-self:start;max-height:100%}
-  #lobby.play-view .lb-foot{grid-column:3;grid-row:3}
+  #lobby.play-view{grid-template-columns:1fr minmax(320px,400px)}
+  #lobby.play-view .side{grid-column:2;grid-row:2;align-self:start;max-height:100%}
   #lobby.play-view #tab-play{background:none;border:0;border-radius:0;padding:0 4px 2px 0;gap:10px;backdrop-filter:none;-webkit-backdrop-filter:none}
   #lobby.play-view details.ctl{background:var(--panel);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
   #lobby.play-view .welcome{background:linear-gradient(135deg,rgba(40,100,190,.9),rgba(14,40,92,.9))}
@@ -825,16 +825,8 @@ details.soc summary .w-k{display:flex;align-items:center;gap:6px}
 
   <div class="side">
     <section class="panel" id="tab-play">
-      <div class="welcome" id="welcome" hidden>
-        <b>Welcome to FortDay!</b>
-        <ol>
-          <li>New here? Take the quick <b>Tutorial</b> just below.</li>
-          <li>Pick your <b>mode</b> and <b>Unranked</b> or <b>Ranked</b> right above PLAY.</li>
-          <li>Press <b>PLAY</b>. Be the last one standing to win.</li>
-        </ol>
-      </div>
       <button class="tut-card" id="tutBtn" type="button"><span class="tut-badge" id="tutBadge" hidden>Recommended for new players</span><b>Tutorial</b><span>Learn to move, build, loot and fight in a few minutes</span></button>
-      <details class="w-card soc" id="socBox" hidden>
+      <details class="w-card soc" id="socBox" hidden open>
         <summary><span class="w-k">Friends <i class="soc-badge" id="socBadge" hidden></i></span><b id="socSum">Sign in</b><span class="w-sub" id="socSub">Make an account to add friends</span></summary>
         <div class="soc-auth" id="socAuth">
           <div class="seg soc-tabs" id="socTabs"><button type="button" data-soc-mode="in" class="on">Sign in</button><button type="button" data-soc-mode="up">Create account</button></div>
@@ -858,28 +850,10 @@ details.soc summary .w-k{display:flex;align-items:center;gap:6px}
         </div>
         <div class="soc-msg" id="socMsg" role="status" aria-live="polite"></div>
       </details>
-      <details class="w-card" id="islBox">
-        <summary><span class="w-k">Island</span><b id="islSum">Greenvale</b><span class="w-sub" id="islSub"></span></summary>
-        <div class="isl-grid" id="islGrid"></div>
-        <div class="hint" id="islNote"></div>
-      </details>
       <details class="w-card" id="partyBox">
         <summary><span class="w-k">Party</span><b id="partySum">Play with friends</b><span class="w-sub" id="partySub">Make a room and share its code</span></summary>
         <div class="mp" id="mpBox"></div>
       </details>
-      <details class="ctl" id="ctlBox">
-        <summary>Controls</summary>
-        <div class="ctl-grid" id="kbHint"></div>
-        <div class="hint">Change any key in <b>Settings</b> (top right).</div>
-        <h4>Controller</h4>
-        <div class="ctl-grid">
-          <span>Shoot</span><span><kbd>RT</kbd></span><span>Aim</span><span><kbd>LT</kbd></span><span>Jump</span><span><kbd>A</kbd></span>
-          <span>Pick up / reload</span><span><kbd>X</kbd></span><span>Harvesting tool</span><span><kbd>Y</kbd></span><span>Switch slots</span><span><kbd>LB</kbd> <kbd>RB</kbd></span>
-          <span>Build</span><span><kbd>B</kbd></span><span>Sprint</span><span><kbd>L3</kbd></span>
-        </div>
-        <div class="hint">Plug a controller in and press any button.</div>
-      </details>
-      <div class="hint credit">Car model: <a href="https://sketchfab.com/3d-models/goodbye-and-good-riddance-nissan-car-fbx-ba71611bcba3445db89287411ca85c87" target="_blank" rel="noopener" style="color:inherit">“Goodbye And Good Riddance Nissan Car FBX”</a> by PixelGTT, licensed <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener" style="color:inherit">CC BY 4.0</a>. Badges removed and paint recolored.</div>
     </section>
 
     <section class="panel shop" id="tab-locker" hidden>
@@ -1054,6 +1028,7 @@ details.soc summary .w-k{display:flex;align-items:center;gap:6px}
     <div class="tb" id="tFire">FIRE</div>
     <div class="tb" id="tAim">AIM</div>
     <div class="tb" id="tJump">JUMP</div>
+    <div class="tb" id="tCrouch">CROUCH</div>
     <div class="tb" id="tReload">RELOAD</div>
     <div class="tb" id="tUse">USE</div>
     <div class="tb" id="tBuild">BUILD</div>
@@ -1096,6 +1071,7 @@ details.soc summary .w-k{display:flex;align-items:center;gap:6px}
   <div class="card set-card">
     <h2>Settings</h2>
     <div class="sens"><label for="sensIn">Look sensitivity</label><input type="range" id="sensIn" min="0.3" max="2.5" step="0.05"></div>
+    <div class="sens"><label for="fovIn">Field of view <b class="num" id="fovVal">75</b></label><input type="range" id="fovIn" min="60" max="100" step="1"></div>
     <label class="check perf-row"><input type="checkbox" id="perfChk"><span><b>Performance Mode</b><span class="hint">Best for Chromebooks. Turns off shadows, grass and extra effects, draws less in the distance and keeps the lobby still.</span></span></label>
     <div class="sens"><label for="gfxSel">Graphics</label><select id="gfxSel"><option value="auto">Auto (recommended)</option><option value="fast">Fast: lighter, for slow computers</option><option value="pretty">Pretty: sharper, needs a strong computer</option></select></div>
     <div class="hint" id="gfxNote"></div>
@@ -1109,7 +1085,15 @@ details.soc summary .w-k{display:flex;align-items:center;gap:6px}
     <div class="hint">Click a key, then press the new key or mouse button. If another action already uses it, the two swap.</div>
     <div class="kb-list" id="kbList"></div>
     <div class="hint kb-msg" id="kbMsg" role="status"></div>
+    <h3 class="set-h">Controller</h3>
+    <div class="ctl-grid">
+      <span>Shoot</span><span><kbd>RT</kbd></span><span>Aim</span><span><kbd>LT</kbd></span><span>Jump</span><span><kbd>A</kbd></span>
+      <span>Pick up / reload</span><span><kbd>X</kbd></span><span>Harvesting tool</span><span><kbd>Y</kbd></span><span>Switch slots</span><span><kbd>LB</kbd> <kbd>RB</kbd></span>
+      <span>Build</span><span><kbd>B</kbd></span><span>Sprint</span><span><kbd>L3</kbd></span><span>Crouch</span><span><kbd>R3</kbd></span>
+    </div>
+    <div class="hint">Plug a controller in and press any button.</div>
     <div class="btn-row"><button class="btn" id="kbReset">Reset keys</button><button class="btn pri" id="setDone">Done</button></div>
+    <div class="hint credit">Car model: <a href="https://sketchfab.com/3d-models/goodbye-and-good-riddance-nissan-car-fbx-ba71611bcba3445db89287411ca85c87" target="_blank" rel="noopener" style="color:inherit">“Goodbye And Good Riddance Nissan Car FBX”</a> by PixelGTT, licensed <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener" style="color:inherit">CC BY 4.0</a>. Badges removed and paint recolored.</div>
   </div>
 </div>
 
@@ -1181,7 +1165,7 @@ details.soc summary .w-k{display:flex;align-items:center;gap:6px}
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js"></script>
 <script async src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>
-const BUILD_ID = '1119-1738';
+const BUILD_ID = '1119-1809';
 'use strict';
 // =====================================================================
 //  FORTDAY — core utilities, data tables, profile, audio
@@ -1345,7 +1329,7 @@ const THEME_ORDER = ['greenvale', 'floodtide', 'neon', 'olympia', 'dune'];
 // controllers keep working whatever a player binds; Keys translates the real key or mouse button they press.
 const KEY_ACTIONS = [
   ['forward', 'Move forward', 'KeyW'], ['back', 'Move back', 'KeyS'], ['left', 'Move left', 'KeyA'], ['right', 'Move right', 'KeyD'],
-  ['jump', 'Jump / leave bus / glider', 'Space'], ['sprint', 'Sprint', 'ShiftLeft'],
+  ['jump', 'Jump / leave bus / glider', 'Space'], ['sprint', 'Sprint', 'ShiftLeft'], ['crouch', 'Crouch (hold)', 'AltLeft'],
   ['fire', 'Fire / harvest / build', 'Mouse0'], ['ads', 'Aim / scope (hold)', 'Mouse2'], ['scope', 'Scope in / out (press)', 'KeyV'], ['reload', 'Reload', 'KeyR'], ['use', 'Pick up / open / drive', 'KeyE'],
   ['slot1', 'Harvesting tool', 'Digit1'], ['slot2', 'Slot 2', 'Digit2'], ['slot3', 'Slot 3', 'Digit3'], ['slot4', 'Slot 4', 'Digit4'], ['slot5', 'Slot 5', 'Digit5'], ['slot6', 'Slot 6', 'Digit6'],
   ['build', 'Build mode on / off', 'KeyQ'], ['wall', 'Build wall', 'KeyZ'], ['ramp', 'Build ramp', 'KeyX'], ['floor', 'Build floor', 'KeyC'], ['cone', 'Build cone (roof)', 'KeyF'], ['material', 'Switch material', 'KeyG'],
@@ -3448,6 +3432,7 @@ function computePose(a, P, t) {
     P.legL[0] = sw; P.legR[0] = -sw; P.bob = Math.abs(Math.cos(a.walkPhase)) * 0.05 * run;
     P.kL = 0.08 + Math.max(0, sw) * 1.1 + run * 0.12; P.kR = 0.08 + Math.max(0, -sw) * 1.1 + run * 0.12;
   } else { P.legL[0] = 0.5; P.legR[0] = -0.3; P.kL = 0.95; P.kR = 0.45; }
+  if (a.crouchK > 0.01 && a.onGround) { const k = a.crouchK; P.legL[0] = lerp(P.legL[0], 0.85, k); P.legR[0] = lerp(P.legR[0], 0.85, k); P.kL = lerp(P.kL, 1.6, k); P.kR = lerp(P.kR, 1.6, k); P.bob -= 0.3 * k; }
   if (a.emote) { emotePose(a.emote, a.emoteT, P); return P; }
   if (a.mantleT > 0) { P.aL[0] = -2.6; P.aR[0] = -2.6; P.eL = P.eR = -0.4; P.legL[0] = 0.9; P.kL = 1.2; return P; }
   const it = a.inv[a.slot];
@@ -4495,7 +4480,8 @@ function physicsActor(a, dt) {
   else if (a.state === 'glide') { speed = 17; accel = 2.2; a.vel.y = lerp(a.vel.y, -8.5, Math.min(1, dt * 3)); }
   else {
     // stamina: sprinting drains it, it refills shortly after you stop; run dry and you can't sprint until a quarter is back
-    const sprint = inp.sprint && inp.f > 0.3 && !inp.ads && !a.exhausted && !a.inWater && !a.crawl && Math.hypot(a.vel.x, a.vel.z) > 1;
+    a.crouch = !!inp.crouch && !a.crawl && !a.inWater && !a.vehicle && !a.emote;
+    const sprint = inp.sprint && inp.f > 0.3 && !inp.ads && !a.crouch && !a.exhausted && !a.inWater && !a.crawl && Math.hypot(a.vel.x, a.vel.z) > 1;
     if (sprint && a.onGround) { a.stamina = Math.max(0, a.stamina - 22 * dt); a.stamRest = 0.9; if (a.stamina <= 0) a.exhausted = true; }
     else { a.stamRest = (a.stamRest || 0) - dt; if (a.stamRest <= 0) a.stamina = Math.min(100, a.stamina + 20 * dt); }
     if (a.exhausted && a.stamina >= 25) a.exhausted = false;
@@ -4506,9 +4492,11 @@ function physicsActor(a, dt) {
     if (a.slowT > 0) speed *= 0.5;
     if (a.boss) speed *= 0.8;
     if (a.crawl) speed = Math.min(speed, 1.8);   // crawling
+    if (a.crouch) speed = Math.min(speed, 3.3);   // crouch-walking
     accel = a.onGround || a.inWater ? 14 : 3.5;
     a.vel.y -= GRAV * dt;
   }
+  a.crouchK = clamp((a.crouchK || 0) + ((a.crouch && a.state === 'ground' ? 1 : 0) - (a.crouchK || 0)) * Math.min(1, dt * 12), 0, 1);   // eases in and out
   const k = Math.min(1, accel * dt);
   a.vel.x += (mx * speed - a.vel.x) * k; a.vel.z += (mz * speed - a.vel.z) * k;
   if (inp.jump && !a.crawl && a.state === 'ground' && (a.onGround || a.inWater) && a.jumpCD <= 0) {
@@ -4770,6 +4758,7 @@ function fireWeapon(a) {
   const moving = Math.hypot(a.vel.x, a.vel.z) > 1.5;
   let spread = a.input.ads ? st.ads : st.spread;
   if (moving) spread *= 1.35; if (!a.onGround && !a.inWater) spread *= 1.6;
+  if (a.crouch && a.onGround) spread *= 0.75;   // crouching steadies your aim
   if (a.ai) spread += a.ai.err;
   if (a === player && st.scope && a.input.ads) spread = 0;
   const mz = muzzlePos(a, _v3);
@@ -4955,7 +4944,7 @@ const Rockets = {
     for (let i = this.list.length - 1; i >= 0; i--) {
       const r = this.list[i]; r.life -= dt; const step = r.sp * dt;
       const h = raycast(r.x, r.y, r.z, r.dx, r.dy, r.dz, step, r.owner, true);
-      if (h.type || r.life <= 0) { explode(h.type ? h.x : r.x, h.type ? h.y : r.y, h.type ? h.z : r.z, r.owner, r.st, r.vis); scene.remove(r.m); this.list.splice(i, 1); continue; }
+      if (h.type || r.life <= 0) { scene.remove(r.m); this.list.splice(i, 1); explode(h.type ? h.x : r.x, h.type ? h.y : r.y, h.type ? h.z : r.z, r.owner, r.st, r.vis); continue; }   // gone before it bursts, so a bad burst can't repeat every frame
       r.x += r.dx * step; r.y += r.dy * step; r.z += r.dz * step; r.m.position.set(r.x, r.y, r.z);
       if (r.st.shock) { const k = 1 + Math.sin(performance.now() / 40) * 0.18; r.m.scale.setScalar(k); FX.burst(r.x - r.dx * 0.5, r.y, r.z - r.dz * 0.5, 0x45d4ff, 1, 0.6, 0.35, 0.1, 0); }   // crackling energy orb
       else FX.burst(r.x - r.dx, r.y - r.dy, r.z - r.dz, 0xcfcfcf, 1, 0.5, 0.5, 0.25, -1);
@@ -6585,7 +6574,7 @@ const CharModel = {
     if (prev && prev !== act) { if (fade > 0) act.crossFadeFrom(prev, fade, false); else prev.stop(); }
     layer.cur = name; layer.act = act; return act;
   },
-  TWIST: ['pelvis', 'spine_01', 'spine_02', 'spine_03', 'neck_01', 'upperarm_l', 'lowerarm_l', 'hand_l', 'upperarm_r', 'lowerarm_r', 'hand_r'],   // re-set every frame (procedural turns and the two-hand grip)
+  TWIST: ['pelvis', 'spine_01', 'spine_02', 'spine_03', 'neck_01', 'upperarm_l', 'lowerarm_l', 'hand_l', 'upperarm_r', 'lowerarm_r', 'hand_r', 'thigh_l', 'calf_l', 'foot_l', 'thigh_r', 'calf_r', 'foot_r'],   // re-set every frame (procedural turns and the two-hand grip)
   reset(R) { if (R.pure) this.TWIST.forEach((n, i) => R.B[n].quaternion.copy(R.pure[i])); R.mixer.stopAllAction(); R.L.cur = R.U.cur = null; R.L.act = R.U.act = null; R.st.fresh = true; R.st.legYaw = 0; R.st.rev = false; R.st.vy = null; },
   emoteClip: { groove: 'Dance_Body_Roll', robot: 'Dance_Charleston', jacks: 'Jumping_Jacks', wave: 'Greeting', airguitar: 'Dance_Simple', micdrop: 'Victory' },
   // a crawling player glows red so everyone can see they are hurt
@@ -6666,6 +6655,18 @@ const CharModel = {
     turn(B.spine_03, Y_AXIS, -st.legYaw * 0.2); turn(B.spine_03, X_AXIS, -pitch * 0.33 * st.aim); Q.multiply(B.spine_03.quaternion);
     if (!full) turn(B.neck_01, X_AXIS, -pitch * 0.45 * (1 - st.aim));
     // skydiving: lie flat, or tip nose-down into a dive (turning about the chest, not the feet)
+    // ---- crouch: bend at the hips and knees (feet stay under the hips and flat), lean forward a little, and drop the body
+    const ck = !full && a.state === 'ground' ? a.crouchK || 0 : 0;
+    if (ck > 0.01) {
+      R.root.updateMatrixWorld(true);
+      if (!R.legLen) { const p1 = B.thigh_l.getWorldPosition(new THREE.Vector3()), p2 = B.calf_l.getWorldPosition(new THREE.Vector3()), p3 = B.foot_l.getWorldPosition(new THREE.Vector3()); R.legLen = (p1.distanceTo(p2) + p2.distanceTo(p3)) / R.root.scale.y; }
+      const right = _cmV2.copy(X_AXIS).applyQuaternion(R.root.getWorldQuaternion(_cmQ3));   // the character's right, in the world
+      const bend = (bone, ang) => { bone.parent.getWorldQuaternion(_cmQ3).invert(); _cmV.copy(right).applyQuaternion(_cmQ3); _cmQ2.setFromAxisAngle(_cmV, ang); bone.quaternion.premultiply(_cmQ2); bone.updateMatrixWorld(true); };
+      const th = 0.9 * ck;
+      bend(B.spine_01, 0.28 * ck);
+      for (const sd of ['_l', '_r']) { bend(B['thigh' + sd], -th); bend(B['calf' + sd], 2 * th); bend(B['foot' + sd], -th); }
+      oy -= R.legLen * (1 - Math.cos(th));
+    }
     if (a.state === 'sky') { const tilt = 0.08 + (a.dive || 0) * 1.05, h = 1.3; R.body.rotation.x = tilt; R.body.position.set(0, h - h * Math.cos(tilt), -h * Math.sin(tilt)); }
     else { R.body.rotation.x = 0; R.body.position.set(0, oy, 0); }
     R.root.updateMatrixWorld(true);
@@ -6701,7 +6702,7 @@ const CharModel = {
     R.pick.visible = showPick; R.held.visible = showHeld; R.glider.visible = glider;
   },
 };
-const _cmQ = new THREE.Quaternion(), _cmQi = new THREE.Quaternion(), _cmQ2 = new THREE.Quaternion(), _cmV = new THREE.Vector3();
+const _cmQ = new THREE.Quaternion(), _cmQi = new THREE.Quaternion(), _cmQ2 = new THREE.Quaternion(), _cmQ3 = new THREE.Quaternion(), _cmV = new THREE.Vector3(), _cmV2 = new THREE.Vector3();
 // How each weapon type is held (body space, metres): `at` = where the gun's grip sits relative to the right shoulder,
 // `rh`/`lh` = where the right/left wrist goes on the gun (gun space: grip at 0, barrel along +z). Pistols stay one-handed.
 const GRIP = {
@@ -8738,9 +8739,9 @@ const Input = {
   mouseSeen: false,
   get coarse() { return IS_TOUCH && !this.mouseSeen; },   // a touch device that has not used a mouse or trackpad
   keys: {}, pressed: new Set(), mdx: 0, mdy: 0, lmb: false, rmb: false, wheel: 0, locked: false,
-  touch: { on: false, mx: 0, mz: 0, fire: false, ads: false, jump: false, stickId: null, lookId: null, sx: 0, sy: 0, lx: 0, ly: 0 },
+  touch: { on: false, mx: 0, mz: 0, fire: false, ads: false, jump: false, crouch: false, stickId: null, lookId: null, sx: 0, sy: 0, lx: 0, ly: 0 },
   // game controller (standard layout): sticks move and look, triggers aim and fire, face buttons act
-  pad: { gp: null, on: false, mx: 0, mz: 0, lx: 0, ly: 0, fire: false, ads: false, jump: false, sprint: false, prev: [], hit: [], navT: 0, focus: null, lastSlot: 1 },
+  pad: { gp: null, on: false, mx: 0, mz: 0, lx: 0, ly: 0, fire: false, ads: false, jump: false, sprint: false, crouch: false, prev: [], hit: [], navT: 0, focus: null, lastSlot: 1 },
   pollPad() {
     const pd = this.pad; let gp = null; pd.hit.length = 0;
     try { const list = navigator.getGamepads ? navigator.getGamepads() : []; for (const g of list) if (g && g.connected && g.buttons.length >= 10 && g.axes.length >= 4) { gp = g; break; } } catch (e) { /* not allowed here */ }
@@ -8870,6 +8871,7 @@ const Input = {
     btn('tFire', () => { t.fire = true; }, () => { t.fire = false; });
     btn('tAim', () => { t.ads = !t.ads; $('tAim').style.background = t.ads ? 'rgba(58,168,255,.5)' : ''; });
     btn('tJump', () => { t.jump = true; this.pressed.add('Space'); }, () => { t.jump = false; });
+    btn('tCrouch', () => { t.crouch = !t.crouch; $('tCrouch').style.background = t.crouch ? 'rgba(58,168,255,.5)' : ''; });
     btn('tReload', () => this.pressed.add('KeyR'));
     btn('tUse', () => this.pressed.add('KeyE'));
     btn('tBuild', () => this.pressed.add('TouchBuild'));
@@ -9010,6 +9012,7 @@ const Cam = {
     else if (this.scoped) { dist = 0; side = 0; up = 0; py = 1.72; }
     else if (a === player && a.input.ads) { const w = a.inv[a.slot], wt = w && w.kind === 'weapon' ? WEAPONS[w.wid].type : '', sg = wt === 'shotgun', sm = wt === 'smg'; dist = sg ? 1.75 : sm ? 1.65 : 2.0; side = sg ? 0.78 : sm ? 0.7 : 0.72; up = sg ? 0.16 : sm ? 0.14 : 0.12; py = 1.62; }
     else { dist = 3.5; side = 0.82; up = 0.28; py = 1.62; }
+    if (a.crouchK > 0 && !a.vehicle && a.state === 'ground' && !this.scoped) py = lerp(py, 1.12, a.crouchK);   // crouching lowers the camera
     if (a.crawl && !a.vehicle && a.state === 'ground') { py = 0.6; dist = Math.max(dist, 3.2); up = 0.5; }
     if (innerHeight > innerWidth * 1.2 && !this.scoped) { dist *= 1.35; side *= 0.6; }
     if (a.emote && a === player) { dist = 4.2; side = 0; }
@@ -9030,7 +9033,8 @@ const Cam = {
     this.t0 = Math.max(0, (px - cx) * fx + (pyy - cy) * fy + (pz - cz) * fz);
     this.ready = a === player;
     const sprint = a.input.sprint && a.input.f > 0 && a.state === 'ground';
-    this.fov(dt, this.scoped ? (this.scopeKind === 'smg' ? 56 : 22) : (a === player && a.input.ads && !a.vehicle) ? (it && it.kind === 'weapon' && wstat(it).type === 'shotgun' ? 64 : it && it.kind === 'weapon' && wstat(it).type === 'smg' ? 52 : 58) : sprint ? 80 : a.vehicle ? 80 : 75);
+    const base = clamp(+Profile.d.fov || 75, 60, 100), zk = base / 75;   // field of view from Settings; aiming zooms by the same amount at any setting
+    this.fov(dt, this.scoped ? (this.scopeKind === 'smg' ? 56 : 22) : (a === player && a.input.ads && !a.vehicle) ? zk * (it && it.kind === 'weapon' && wstat(it).type === 'shotgun' ? 64 : it && it.kind === 'weapon' && wstat(it).type === 'smg' ? 52 : 58) : sprint ? base + 5 : a.vehicle ? base + 5 : base);
   },
   fov(dt, target) { if (Math.abs(camera.fov - target) > 0.1) { camera.fov = lerp(camera.fov, target, Math.min(1, dt * 12)); camera.updateProjectionMatrix(); } },
 };
@@ -9087,6 +9091,7 @@ function updatePlayer(dt) {
       else if (i === 8 || i === 12) P.add('KeyM');
       else if (i === 9) { togglePause(); P.clear(); return; }
       else if (i === 10) pd.sprint = !pd.sprint;
+      else if (i === 11) pd.crouch = !pd.crouch;   // right stick click: crouch on / off
       else if (i === 13) P.add('KeyB');
       else if (i === 14) P.add('KeyG');
       else if (i === 15) P.add('TouchBuild');
@@ -9105,6 +9110,8 @@ function updatePlayer(dt) {
   inp.f = clamp(f, -1, 1); inp.r = clamp(r, -1, 1);
   inp.sprint = H('sprint') || (tc.on && Math.hypot(tc.mx, tc.mz) > 0.92) || pd.sprint;
   inp.jump = H('jump') || tc.jump || pd.jump;
+  inp.crouch = H('crouch') || tc.crouch || pd.crouch;
+  if (inp.jump) { tc.crouch = false; pd.crouch = false; if ($('tCrouch')) $('tCrouch').style.background = ''; }   // jumping stands you up
   inp.fire = H('fire') || tc.fire || pd.fire;
   // the scope key toggles aiming; it drops when you switch away, sprint, build, crawl or get in a car
   if (P.has('KeyV')) { const w = a.inv[a.slot]; Input.scoped = !Input.scoped && !!w && w.kind === 'weapon'; }
@@ -9834,7 +9841,10 @@ const Lobby = {
   lift: 0, camX: 1.3,
   place() {
     const wide = innerWidth > 760, L = this.lift || 0, play = this.tab === 'play';
-    if (wide && play) { const x = this.camX = -0.55; this.cam.position.set(x, 1.55, 8.6); this.cam.lookAt(x, 1.0, 0); }   // Play: you in the middle with a party spot each side
+    if (wide && play) {   // Play: you in the middle of the space left of the panel, with a party spot each side
+      const side = (($('lbFoot') && $('lbFoot').offsetWidth) || 400) + 28, wpp = 2 * 8.6 * Math.tan(this.cam.fov * Math.PI / 360) / innerHeight;
+      const x = this.camX = side / 2 * wpp; this.cam.position.set(x, 1.55, 8.6); this.cam.lookAt(x, 1.0, 0);
+    }
     else if (wide) { this.camX = 1.3; this.cam.position.set(1.3, 1.5 + L, 6.6 + L * 0.8); this.cam.lookAt(1.3, 1.15 + L, 0); }
     else { this.camX = 0; this.cam.position.set(0, 1.2 + L, 11.7 + L); this.cam.lookAt(0, -0.9 + L, 0); }
   },
@@ -9902,8 +9912,8 @@ const Lobby = {
   },
   // what PLAY will start, in plain words (shown on the button)
   summary() {
-    const d = Profile.d, m = { solo: 'Solo', duos: 'Duos', squads: 'Squads', rumble: 'Storm Rumble' }[d.mode] || 'Solo', th = THEMES[MapRotation.current()];
-    return [m, d.build ? 'Build' : 'No-Build', th ? th.name : '', d.ranked && d.mode !== 'rumble' && Net.state !== 'room' ? 'Ranked' : ''].filter(Boolean).join(' · ');
+    const d = Profile.d, m = { solo: 'Solo', duos: 'Duos', squads: 'Squads', rumble: 'Storm Rumble' }[d.mode] || 'Solo';
+    return [m, d.build ? 'Build' : 'No-Build', d.ranked && d.mode !== 'rumble' && Net.state !== 'room' ? 'Ranked' : ''].filter(Boolean).join(' · ');
   },
   // the mode card and the Unranked / Ranked switch next to PLAY
   modeBar() {
@@ -9928,7 +9938,6 @@ const Lobby = {
     $('tabs').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; this.tab = b.dataset.tab; this.refresh(); });
     $('modeGrid').addEventListener('click', e => { const b = e.target.closest('[data-mode]'); if (!b) return; Profile.d.mode = b.dataset.mode; Profile.save(); this.refresh(); });
     $('buildSeg').addEventListener('click', e => { const b = e.target.closest('[data-build]'); if (!b) return; Profile.d.build = b.dataset.build === '1'; Profile.save(); this.refresh(); });
-    $('islGrid').addEventListener('click', e => { const b = e.target.closest('[data-isl]'); if (!b) return; if (b.dataset.isl !== MapRotation.current()) { Sfx.init(); $('islNote').textContent = THEMES[b.dataset.isl].name + ' is locked. Only ' + THEMES[MapRotation.current()].name + ' is open right now.'; return; } Profile.d.theme = b.dataset.isl; Profile.save(); this.refresh(); });
     $('nameIn').addEventListener('input', e => { Profile.d.name = e.target.value.trim().slice(0, 16); Profile.save(); const m = $('mpName'); if (m) m.value = Profile.d.name; });
     $('nameIn').addEventListener('keydown', e => e.stopPropagation());
     // mode picker and Unranked / Ranked, right above PLAY
@@ -10068,12 +10077,8 @@ const Lobby = {
   refresh() {
     const d = Profile.d;
     Net.render(); $('buildTag').textContent = 'build ' + BUILD_ID;
-    { const k = a => '<kbd>' + esc(Keys.of(a)) + '</kbd>';
-      const rows = [['Move', k('forward') + k('left') + k('back') + k('right')], ['Shoot', k('fire')], ['Aim', k('ads') + ' hold, or ' + k('scope') + ' to toggle'], ['Jump', k('jump')], ['Sprint', k('sprint')], ['Pick up / open', k('use')], ['Reload', k('reload')],
-        ['Build', k('wall') + ' wall ' + k('ramp') + ' ramp ' + k('floor') + ' floor ' + k('cone') + ' cone'], ['Building material', k('material')], ['Map', k('map')], ['Move items', k('inventory')], ['Emote', k('emote')]];
-      const kh = rows.map(([n, v]) => '<span>' + n + '</span><span>' + v + '</span>').join(''); if ($('kbHint').innerHTML !== kh) $('kbHint').innerHTML = kh; }
-    { const fresh = !d.matches && !d.tutDone, newish = !d.tutDone && (d.matches || 0) < 3;
-      $('welcome').hidden = !fresh; $('tutBadge').hidden = !newish; $('tutBtn').classList.toggle('new', newish); $('tutBtn').classList.toggle('small', !newish); }
+    { const newish = !d.tutDone && (d.matches || 0) < 3;
+      $('tutBtn').hidden = !!d.tutDone; $('tutBadge').hidden = !newish; $('tutBtn').classList.toggle('new', newish); $('tutBtn').classList.toggle('small', !newish); }
     { const el = $('coinLbl'), nv = d.coins.toLocaleString(); if (el.textContent !== nv && el.textContent !== '0') { const box = el.parentElement; box.classList.remove('bump'); void box.offsetWidth; box.classList.add('bump'); } el.textContent = nv; }   // the FortBux counter bounces when it changes
     [...$('tabs').children].forEach(b => b.classList.toggle('on', b.dataset.tab === this.tab));
     if (this.tab === 'players' && !Players.link()) this.tab = 'play';
@@ -10110,10 +10115,7 @@ const Lobby = {
     [...$('modeGrid').children].forEach(b => b.classList.toggle('on', b.dataset.mode === d.mode));
     [...$('buildSeg').children].forEach(b => b.classList.toggle('on', (b.dataset.build === '1') === d.build));
     $('buildHint').textContent = d.build ? 'Harvest wood, brick and metal with your tool, then throw up walls, ramps and floors mid-fight.' : 'No construction. Use natural cover, mantle up ledges, and lean on a 50-point overshield that regenerates when you are out of combat.';
-    const cur = MapRotation.current(), nxt = MapRotation.next(); if (d.theme !== cur) { d.theme = cur; Profile.save(); }
-    $('islGrid').innerHTML = THEME_ORDER.map(k => { const t = THEMES[k], open = k === cur; return `<button class="isl ${open ? 'on' : 'locked'}" data-isl="${k}" style="--sw:${t.swatch}" aria-disabled="${!open}">${open ? '' : '<i class="isl-lock" aria-hidden="true"></i>'}<b>${t.name}</b><span>${open ? 'Open now · closes in ' + MapRotation.left() : k === nxt ? 'Opens in ' + MapRotation.left() : 'Locked'}</span></button>`; }).join('');
-    $('islSum').textContent = THEMES[cur].name; $('islSub').textContent = 'Open now · closes in ' + MapRotation.left();
-    $('islNote').textContent = MapRotation.start() ? THEMES[cur].name + ' is open for ' + MapRotation.left() + ', then ' + THEMES[nxt].name + ' opens and ' + THEMES[cur].name + ' closes.' : 'Every player starts on Greenvale. After 30 days the next island opens and this one closes.';
+    const cur = MapRotation.current(); if (d.theme !== cur) { d.theme = cur; Profile.save(); }   // the open island (it changes every 30 days)
     this.modeBar();
     if (this.tab === 'locker') this.lockerView();
     if (this.tab === 'pass') {
@@ -10249,6 +10251,8 @@ function boot() {
   $('dLobbyBtn').addEventListener('click', () => { Match.showResults(); });
   $('rLobbyBtn').addEventListener('click', () => Match.toLobby());
   $('sensIn').value = Profile.d.sens; $('sensIn').addEventListener('input', e => { Profile.d.sens = +e.target.value; Profile.save(); });
+  { const f = clamp(+Profile.d.fov || 75, 60, 100); $('fovIn').value = f; $('fovVal').textContent = f; }
+  $('fovIn').addEventListener('input', e => { Profile.d.fov = +e.target.value; $('fovVal').textContent = Profile.d.fov; Profile.save(); });
   $('shadowChk').checked = !!Profile.d.shadows; $('shadowChk').addEventListener('change', e => { Profile.d.shadows = e.target.checked; sun.castShadow = GFX.shadows(); Profile.save(); });
   $('perfChk').checked = !!Profile.d.perf; $('perfChk').addEventListener('change', e => { Perf.set(e.target.checked); $('shadowChk').disabled = e.target.checked; $('gfxNote').textContent = e.target.checked ? 'Performance Mode is on. Edge smoothing turns off after you reload the page.' : 'Performance Mode is off. Edge smoothing comes back after you reload the page.'; });
   $('shadowChk').disabled = !!Profile.d.perf;
@@ -10329,6 +10333,17 @@ setInterval(() => {
   let n = Math.min(24, Math.floor((performance.now() - lastFrame) / 50));
   while (n-- > 0) step(lastFrame + 50);
 }, 250);
+// One broken part of the game must not freeze the whole match. Each part runs on its own: an error in one is
+// reported (once per kind, with the part's name) and skipped for that frame, while everything else keeps going.
+const Guard = {
+  seen: new Set(),
+  run(name, fn) { try { fn(); } catch (e) { this.report(name, e); } },
+  report(name, e) {
+    const m = name + ': ' + (e && e.message ? e.message : e); Diag.log(m);
+    if (this.seen.has(m)) return; this.seen.add(m); console.error('[' + name + ']', e);
+    if (this.seen.size <= 3) showProblem('Part of the game hit an error (' + m + ') and skipped it, so the match kept going. If something looks wrong, send a screenshot of this.');
+  },
+};
 function step(now) {
   let dt = Math.min(0.05, Math.max(0.0005, (now - lastFrame) / 1000)); lastFrame = now;
   Input.pollPad();
@@ -10338,28 +10353,28 @@ function step(now) {
   if (Match.paused && !Net.inMatch) { renderer.render(scene, camera); return; }   // a shared match keeps running while you are in the menu
   gameTime += dt;
   if (Match.state === 'play') {
-    if (Match.paused) { if (player) { player.input.f = player.input.r = 0; player.input.fire = player.input.jump = false; } Input.pressed.clear(); Input.mdx = Input.mdy = 0; } else updatePlayer(dt);
-    for (let i = 0; i < actors.length; i++) { const a = actors[i]; if (a.ai && a.alive && !a.remote) updateBot(a, dt); }
-    for (let i = 0; i < actors.length; i++) { const a = actors[i]; if (a.remote) Net.tickRemote(a, dt); else { actorTick(a, dt); physicsActor(a, dt); } }
-    Vehicles.update(dt);
-    Creatures.update(dt);
-    Rockets.update(dt);
-    Match.update(dt); Net.update(dt); Tutorial.update(dt); Reboot.update(dt);
-    Interact.find();
+    if (Match.paused) { if (player) { player.input.f = player.input.r = 0; player.input.fire = player.input.jump = false; } Input.pressed.clear(); Input.mdx = Input.mdy = 0; } else Guard.run('player', () => updatePlayer(dt));
+    for (let i = 0; i < actors.length; i++) { const a = actors[i]; if (a.ai && a.alive && !a.remote) { try { updateBot(a, dt); } catch (e) { Guard.report('bots', e); } } }
+    for (let i = 0; i < actors.length; i++) { const a = actors[i]; try { if (a.remote) Net.tickRemote(a, dt); else { actorTick(a, dt); physicsActor(a, dt); } } catch (e) { Guard.report('movement', e); } }
+    Guard.run('cars', () => Vehicles.update(dt));
+    Guard.run('creatures', () => Creatures.update(dt));
+    Guard.run('rockets', () => Rockets.update(dt));
+    Guard.run('match', () => Match.update(dt)); Guard.run('online', () => Net.update(dt)); Guard.run('tutorial', () => Tutorial.update(dt)); Guard.run('reboot', () => Reboot.update(dt));
+    Guard.run('interact', () => Interact.find());
   }
-  Pickups.update(dt); Build.update(dt); FX.update(dt); flushStaticBreaks();
-  Cam.update(dt); View.update();
+  Guard.run('loot', () => Pickups.update(dt)); Guard.run('builds', () => Build.update(dt)); Guard.run('effects', () => FX.update(dt)); Guard.run('breaks', () => flushStaticBreaks());
+  Guard.run('camera', () => Cam.update(dt)); Guard.run('view', () => View.update());
   const v = Cam.view || player;
   if (PlayerRig && player) {
     const show = (player.alive || player._dissolveAt > Match.time) && player.state !== 'bus' && !player.vehicle && !Cam.scoped;
     PlayerRig.root.visible = show;
-    if (show) animateRig(PlayerRig, player, dt, gameTime);
+    if (show) Guard.run('your character', () => animateRig(PlayerRig, player, dt, gameTime));
   }
-  BotRig.update(gameTime);
-  CharPool.update(dt);
-  ElimFX.update(dt);
-  Trails.update(); SprintWind.update(dt);
-  Nature.update(dt);
+  Guard.run('bot bodies', () => BotRig.update(gameTime));
+  Guard.run('characters', () => CharPool.update(dt));
+  Guard.run('eliminations', () => ElimFX.update(dt));
+  Guard.run('trails', () => { Trails.update(); SprintWind.update(dt); });
+  Guard.run('nature', () => Nature.update(dt));
   sky.position.copy(camera.position); stars.position.copy(camera.position);
   if (v) {
     const f = v.state === 'bus' ? Bus.pos : v.pos;
@@ -10376,7 +10391,7 @@ function step(now) {
     if (inStorm) { scene.fog.near = Math.min(scene.fog.near, 18); scene.fog.far = Math.min(scene.fog.far, 110); }
     if (hemi) hemi.intensity = th.hemiI * (inStorm ? 0.7 : 1) + Lightning.flash * 0.3 * Lightning.near;
   }
-  if (Match.state === 'play' || Match.state === 'results') { HUD.update(dt); Waypoints.update(); Chat.update(); }
+  if (Match.state === 'play' || Match.state === 'results') { Guard.run('hud', () => HUD.update(dt)); Guard.run('markers', () => Waypoints.update()); Guard.run('chat', () => Chat.update()); }
   if (Inv.on && (Match.state !== 'play' || Match.paused || !player || !player.alive)) Inv.close();
   renderer.render(scene, camera);
 }

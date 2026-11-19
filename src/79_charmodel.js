@@ -595,7 +595,7 @@ const CharModel = {
     if (prev && prev !== act) { if (fade > 0) act.crossFadeFrom(prev, fade, false); else prev.stop(); }
     layer.cur = name; layer.act = act; return act;
   },
-  TWIST: ['pelvis', 'spine_01', 'spine_02', 'spine_03', 'neck_01', 'upperarm_l', 'lowerarm_l', 'hand_l', 'upperarm_r', 'lowerarm_r', 'hand_r'],   // re-set every frame (procedural turns and the two-hand grip)
+  TWIST: ['pelvis', 'spine_01', 'spine_02', 'spine_03', 'neck_01', 'upperarm_l', 'lowerarm_l', 'hand_l', 'upperarm_r', 'lowerarm_r', 'hand_r', 'thigh_l', 'calf_l', 'foot_l', 'thigh_r', 'calf_r', 'foot_r'],   // re-set every frame (procedural turns and the two-hand grip)
   reset(R) { if (R.pure) this.TWIST.forEach((n, i) => R.B[n].quaternion.copy(R.pure[i])); R.mixer.stopAllAction(); R.L.cur = R.U.cur = null; R.L.act = R.U.act = null; R.st.fresh = true; R.st.legYaw = 0; R.st.rev = false; R.st.vy = null; },
   emoteClip: { groove: 'Dance_Body_Roll', robot: 'Dance_Charleston', jacks: 'Jumping_Jacks', wave: 'Greeting', airguitar: 'Dance_Simple', micdrop: 'Victory' },
   // a crawling player glows red so everyone can see they are hurt
@@ -676,6 +676,18 @@ const CharModel = {
     turn(B.spine_03, Y_AXIS, -st.legYaw * 0.2); turn(B.spine_03, X_AXIS, -pitch * 0.33 * st.aim); Q.multiply(B.spine_03.quaternion);
     if (!full) turn(B.neck_01, X_AXIS, -pitch * 0.45 * (1 - st.aim));
     // skydiving: lie flat, or tip nose-down into a dive (turning about the chest, not the feet)
+    // ---- crouch: bend at the hips and knees (feet stay under the hips and flat), lean forward a little, and drop the body
+    const ck = !full && a.state === 'ground' ? a.crouchK || 0 : 0;
+    if (ck > 0.01) {
+      R.root.updateMatrixWorld(true);
+      if (!R.legLen) { const p1 = B.thigh_l.getWorldPosition(new THREE.Vector3()), p2 = B.calf_l.getWorldPosition(new THREE.Vector3()), p3 = B.foot_l.getWorldPosition(new THREE.Vector3()); R.legLen = (p1.distanceTo(p2) + p2.distanceTo(p3)) / R.root.scale.y; }
+      const right = _cmV2.copy(X_AXIS).applyQuaternion(R.root.getWorldQuaternion(_cmQ3));   // the character's right, in the world
+      const bend = (bone, ang) => { bone.parent.getWorldQuaternion(_cmQ3).invert(); _cmV.copy(right).applyQuaternion(_cmQ3); _cmQ2.setFromAxisAngle(_cmV, ang); bone.quaternion.premultiply(_cmQ2); bone.updateMatrixWorld(true); };
+      const th = 0.9 * ck;
+      bend(B.spine_01, 0.28 * ck);
+      for (const sd of ['_l', '_r']) { bend(B['thigh' + sd], -th); bend(B['calf' + sd], 2 * th); bend(B['foot' + sd], -th); }
+      oy -= R.legLen * (1 - Math.cos(th));
+    }
     if (a.state === 'sky') { const tilt = 0.08 + (a.dive || 0) * 1.05, h = 1.3; R.body.rotation.x = tilt; R.body.position.set(0, h - h * Math.cos(tilt), -h * Math.sin(tilt)); }
     else { R.body.rotation.x = 0; R.body.position.set(0, oy, 0); }
     R.root.updateMatrixWorld(true);
@@ -711,7 +723,7 @@ const CharModel = {
     R.pick.visible = showPick; R.held.visible = showHeld; R.glider.visible = glider;
   },
 };
-const _cmQ = new THREE.Quaternion(), _cmQi = new THREE.Quaternion(), _cmQ2 = new THREE.Quaternion(), _cmV = new THREE.Vector3();
+const _cmQ = new THREE.Quaternion(), _cmQi = new THREE.Quaternion(), _cmQ2 = new THREE.Quaternion(), _cmQ3 = new THREE.Quaternion(), _cmV = new THREE.Vector3(), _cmV2 = new THREE.Vector3();
 // How each weapon type is held (body space, metres): `at` = where the gun's grip sits relative to the right shoulder,
 // `rh`/`lh` = where the right/left wrist goes on the gun (gun space: grip at 0, barrel along +z). Pistols stay one-handed.
 const GRIP = {

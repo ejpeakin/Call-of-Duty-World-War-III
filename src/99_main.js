@@ -30,6 +30,8 @@ function boot() {
   $('dLobbyBtn').addEventListener('click', () => { Match.showResults(); });
   $('rLobbyBtn').addEventListener('click', () => Match.toLobby());
   $('sensIn').value = Profile.d.sens; $('sensIn').addEventListener('input', e => { Profile.d.sens = +e.target.value; Profile.save(); });
+  { const f = clamp(+Profile.d.fov || 75, 60, 100); $('fovIn').value = f; $('fovVal').textContent = f; }
+  $('fovIn').addEventListener('input', e => { Profile.d.fov = +e.target.value; $('fovVal').textContent = Profile.d.fov; Profile.save(); });
   $('shadowChk').checked = !!Profile.d.shadows; $('shadowChk').addEventListener('change', e => { Profile.d.shadows = e.target.checked; sun.castShadow = GFX.shadows(); Profile.save(); });
   $('perfChk').checked = !!Profile.d.perf; $('perfChk').addEventListener('change', e => { Perf.set(e.target.checked); $('shadowChk').disabled = e.target.checked; $('gfxNote').textContent = e.target.checked ? 'Performance Mode is on. Edge smoothing turns off after you reload the page.' : 'Performance Mode is off. Edge smoothing comes back after you reload the page.'; });
   $('shadowChk').disabled = !!Profile.d.perf;
@@ -110,6 +112,17 @@ setInterval(() => {
   let n = Math.min(24, Math.floor((performance.now() - lastFrame) / 50));
   while (n-- > 0) step(lastFrame + 50);
 }, 250);
+// One broken part of the game must not freeze the whole match. Each part runs on its own: an error in one is
+// reported (once per kind, with the part's name) and skipped for that frame, while everything else keeps going.
+const Guard = {
+  seen: new Set(),
+  run(name, fn) { try { fn(); } catch (e) { this.report(name, e); } },
+  report(name, e) {
+    const m = name + ': ' + (e && e.message ? e.message : e); Diag.log(m);
+    if (this.seen.has(m)) return; this.seen.add(m); console.error('[' + name + ']', e);
+    if (this.seen.size <= 3) showProblem('Part of the game hit an error (' + m + ') and skipped it, so the match kept going. If something looks wrong, send a screenshot of this.');
+  },
+};
 function step(now) {
   let dt = Math.min(0.05, Math.max(0.0005, (now - lastFrame) / 1000)); lastFrame = now;
   Input.pollPad();
@@ -119,28 +132,28 @@ function step(now) {
   if (Match.paused && !Net.inMatch) { renderer.render(scene, camera); return; }   // a shared match keeps running while you are in the menu
   gameTime += dt;
   if (Match.state === 'play') {
-    if (Match.paused) { if (player) { player.input.f = player.input.r = 0; player.input.fire = player.input.jump = false; } Input.pressed.clear(); Input.mdx = Input.mdy = 0; } else updatePlayer(dt);
-    for (let i = 0; i < actors.length; i++) { const a = actors[i]; if (a.ai && a.alive && !a.remote) updateBot(a, dt); }
-    for (let i = 0; i < actors.length; i++) { const a = actors[i]; if (a.remote) Net.tickRemote(a, dt); else { actorTick(a, dt); physicsActor(a, dt); } }
-    Vehicles.update(dt);
-    Creatures.update(dt);
-    Rockets.update(dt);
-    Match.update(dt); Net.update(dt); Tutorial.update(dt); Reboot.update(dt);
-    Interact.find();
+    if (Match.paused) { if (player) { player.input.f = player.input.r = 0; player.input.fire = player.input.jump = false; } Input.pressed.clear(); Input.mdx = Input.mdy = 0; } else Guard.run('player', () => updatePlayer(dt));
+    for (let i = 0; i < actors.length; i++) { const a = actors[i]; if (a.ai && a.alive && !a.remote) { try { updateBot(a, dt); } catch (e) { Guard.report('bots', e); } } }
+    for (let i = 0; i < actors.length; i++) { const a = actors[i]; try { if (a.remote) Net.tickRemote(a, dt); else { actorTick(a, dt); physicsActor(a, dt); } } catch (e) { Guard.report('movement', e); } }
+    Guard.run('cars', () => Vehicles.update(dt));
+    Guard.run('creatures', () => Creatures.update(dt));
+    Guard.run('rockets', () => Rockets.update(dt));
+    Guard.run('match', () => Match.update(dt)); Guard.run('online', () => Net.update(dt)); Guard.run('tutorial', () => Tutorial.update(dt)); Guard.run('reboot', () => Reboot.update(dt));
+    Guard.run('interact', () => Interact.find());
   }
-  Pickups.update(dt); Build.update(dt); FX.update(dt); flushStaticBreaks();
-  Cam.update(dt); View.update();
+  Guard.run('loot', () => Pickups.update(dt)); Guard.run('builds', () => Build.update(dt)); Guard.run('effects', () => FX.update(dt)); Guard.run('breaks', () => flushStaticBreaks());
+  Guard.run('camera', () => Cam.update(dt)); Guard.run('view', () => View.update());
   const v = Cam.view || player;
   if (PlayerRig && player) {
     const show = (player.alive || player._dissolveAt > Match.time) && player.state !== 'bus' && !player.vehicle && !Cam.scoped;
     PlayerRig.root.visible = show;
-    if (show) animateRig(PlayerRig, player, dt, gameTime);
+    if (show) Guard.run('your character', () => animateRig(PlayerRig, player, dt, gameTime));
   }
-  BotRig.update(gameTime);
-  CharPool.update(dt);
-  ElimFX.update(dt);
-  Trails.update(); SprintWind.update(dt);
-  Nature.update(dt);
+  Guard.run('bot bodies', () => BotRig.update(gameTime));
+  Guard.run('characters', () => CharPool.update(dt));
+  Guard.run('eliminations', () => ElimFX.update(dt));
+  Guard.run('trails', () => { Trails.update(); SprintWind.update(dt); });
+  Guard.run('nature', () => Nature.update(dt));
   sky.position.copy(camera.position); stars.position.copy(camera.position);
   if (v) {
     const f = v.state === 'bus' ? Bus.pos : v.pos;
@@ -157,7 +170,7 @@ function step(now) {
     if (inStorm) { scene.fog.near = Math.min(scene.fog.near, 18); scene.fog.far = Math.min(scene.fog.far, 110); }
     if (hemi) hemi.intensity = th.hemiI * (inStorm ? 0.7 : 1) + Lightning.flash * 0.3 * Lightning.near;
   }
-  if (Match.state === 'play' || Match.state === 'results') { HUD.update(dt); Waypoints.update(); Chat.update(); }
+  if (Match.state === 'play' || Match.state === 'results') { Guard.run('hud', () => HUD.update(dt)); Guard.run('markers', () => Waypoints.update()); Guard.run('chat', () => Chat.update()); }
   if (Inv.on && (Match.state !== 'play' || Match.paused || !player || !player.alive)) Inv.close();
   renderer.render(scene, camera);
 }

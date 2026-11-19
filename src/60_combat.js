@@ -159,6 +159,7 @@ function fireWeapon(a) {
   const moving = Math.hypot(a.vel.x, a.vel.z) > 1.5;
   let spread = a.input.ads ? st.ads : st.spread;
   if (moving) spread *= 1.35; if (!a.onGround && !a.inWater) spread *= 1.6;
+  if (a.crouch && a.onGround) spread *= 0.75;   // crouching steadies your aim
   if (a.ai) spread += a.ai.err;
   if (a === player && st.scope && a.input.ads) spread = 0;
   const mz = muzzlePos(a, _v3);
@@ -344,7 +345,7 @@ const Rockets = {
     for (let i = this.list.length - 1; i >= 0; i--) {
       const r = this.list[i]; r.life -= dt; const step = r.sp * dt;
       const h = raycast(r.x, r.y, r.z, r.dx, r.dy, r.dz, step, r.owner, true);
-      if (h.type || r.life <= 0) { explode(h.type ? h.x : r.x, h.type ? h.y : r.y, h.type ? h.z : r.z, r.owner, r.st, r.vis); scene.remove(r.m); this.list.splice(i, 1); continue; }
+      if (h.type || r.life <= 0) { scene.remove(r.m); this.list.splice(i, 1); explode(h.type ? h.x : r.x, h.type ? h.y : r.y, h.type ? h.z : r.z, r.owner, r.st, r.vis); continue; }   // gone before it bursts, so a bad burst can't repeat every frame
       r.x += r.dx * step; r.y += r.dy * step; r.z += r.dz * step; r.m.position.set(r.x, r.y, r.z);
       if (r.st.shock) { const k = 1 + Math.sin(performance.now() / 40) * 0.18; r.m.scale.setScalar(k); FX.burst(r.x - r.dx * 0.5, r.y, r.z - r.dz * 0.5, 0x45d4ff, 1, 0.6, 0.35, 0.1, 0); }   // crackling energy orb
       else FX.burst(r.x - r.dx, r.y - r.dy, r.z - r.dz, 0xcfcfcf, 1, 0.5, 0.5, 0.25, -1);

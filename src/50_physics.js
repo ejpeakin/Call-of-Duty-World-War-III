@@ -83,7 +83,8 @@ function physicsActor(a, dt) {
   else if (a.state === 'glide') { speed = 17; accel = 2.2; a.vel.y = lerp(a.vel.y, -8.5, Math.min(1, dt * 3)); }
   else {
     // stamina: sprinting drains it, it refills shortly after you stop; run dry and you can't sprint until a quarter is back
-    const sprint = inp.sprint && inp.f > 0.3 && !inp.ads && !a.exhausted && !a.inWater && !a.crawl && Math.hypot(a.vel.x, a.vel.z) > 1;
+    a.crouch = !!inp.crouch && !a.crawl && !a.inWater && !a.vehicle && !a.emote;
+    const sprint = inp.sprint && inp.f > 0.3 && !inp.ads && !a.crouch && !a.exhausted && !a.inWater && !a.crawl && Math.hypot(a.vel.x, a.vel.z) > 1;
     if (sprint && a.onGround) { a.stamina = Math.max(0, a.stamina - 22 * dt); a.stamRest = 0.9; if (a.stamina <= 0) a.exhausted = true; }
     else { a.stamRest = (a.stamRest || 0) - dt; if (a.stamRest <= 0) a.stamina = Math.min(100, a.stamina + 20 * dt); }
     if (a.exhausted && a.stamina >= 25) a.exhausted = false;
@@ -94,9 +95,11 @@ function physicsActor(a, dt) {
     if (a.slowT > 0) speed *= 0.5;
     if (a.boss) speed *= 0.8;
     if (a.crawl) speed = Math.min(speed, 1.8);   // crawling
+    if (a.crouch) speed = Math.min(speed, 3.3);   // crouch-walking
     accel = a.onGround || a.inWater ? 14 : 3.5;
     a.vel.y -= GRAV * dt;
   }
+  a.crouchK = clamp((a.crouchK || 0) + ((a.crouch && a.state === 'ground' ? 1 : 0) - (a.crouchK || 0)) * Math.min(1, dt * 12), 0, 1);   // eases in and out
   const k = Math.min(1, accel * dt);
   a.vel.x += (mx * speed - a.vel.x) * k; a.vel.z += (mz * speed - a.vel.z) * k;
   if (inp.jump && !a.crawl && a.state === 'ground' && (a.onGround || a.inWater) && a.jumpCD <= 0) {

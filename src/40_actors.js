@@ -49,6 +49,7 @@ function computePose(a, P, t) {
     P.legL[0] = sw; P.legR[0] = -sw; P.bob = Math.abs(Math.cos(a.walkPhase)) * 0.05 * run;
     P.kL = 0.08 + Math.max(0, sw) * 1.1 + run * 0.12; P.kR = 0.08 + Math.max(0, -sw) * 1.1 + run * 0.12;
   } else { P.legL[0] = 0.5; P.legR[0] = -0.3; P.kL = 0.95; P.kR = 0.45; }
+  if (a.crouchK > 0.01 && a.onGround) { const k = a.crouchK; P.legL[0] = lerp(P.legL[0], 0.85, k); P.legR[0] = lerp(P.legR[0], 0.85, k); P.kL = lerp(P.kL, 1.6, k); P.kR = lerp(P.kR, 1.6, k); P.bob -= 0.3 * k; }
   if (a.emote) { emotePose(a.emote, a.emoteT, P); return P; }
   if (a.mantleT > 0) { P.aL[0] = -2.6; P.aR[0] = -2.6; P.eL = P.eR = -0.4; P.legL[0] = 0.9; P.kL = 1.2; return P; }
   const it = a.inv[a.slot];

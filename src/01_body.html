@@ -41,16 +41,8 @@
 
   <div class="side">
     <section class="panel" id="tab-play">
-      <div class="welcome" id="welcome" hidden>
-        <b>Welcome to FortDay!</b>
-        <ol>
-          <li>New here? Take the quick <b>Tutorial</b> just below.</li>
-          <li>Pick your <b>mode</b> and <b>Unranked</b> or <b>Ranked</b> right above PLAY.</li>
-          <li>Press <b>PLAY</b>. Be the last one standing to win.</li>
-        </ol>
-      </div>
       <button class="tut-card" id="tutBtn" type="button"><span class="tut-badge" id="tutBadge" hidden>Recommended for new players</span><b>Tutorial</b><span>Learn to move, build, loot and fight in a few minutes</span></button>
-      <details class="w-card soc" id="socBox" hidden>
+      <details class="w-card soc" id="socBox" hidden open>
         <summary><span class="w-k">Friends <i class="soc-badge" id="socBadge" hidden></i></span><b id="socSum">Sign in</b><span class="w-sub" id="socSub">Make an account to add friends</span></summary>
         <div class="soc-auth" id="socAuth">
           <div class="seg soc-tabs" id="socTabs"><button type="button" data-soc-mode="in" class="on">Sign in</button><button type="button" data-soc-mode="up">Create account</button></div>
@@ -74,28 +66,10 @@
         </div>
         <div class="soc-msg" id="socMsg" role="status" aria-live="polite"></div>
       </details>
-      <details class="w-card" id="islBox">
-        <summary><span class="w-k">Island</span><b id="islSum">Greenvale</b><span class="w-sub" id="islSub"></span></summary>
-        <div class="isl-grid" id="islGrid"></div>
-        <div class="hint" id="islNote"></div>
-      </details>
       <details class="w-card" id="partyBox">
         <summary><span class="w-k">Party</span><b id="partySum">Play with friends</b><span class="w-sub" id="partySub">Make a room and share its code</span></summary>
         <div class="mp" id="mpBox"></div>
       </details>
-      <details class="ctl" id="ctlBox">
-        <summary>Controls</summary>
-        <div class="ctl-grid" id="kbHint"></div>
-        <div class="hint">Change any key in <b>Settings</b> (top right).</div>
-        <h4>Controller</h4>
-        <div class="ctl-grid">
-          <span>Shoot</span><span><kbd>RT</kbd></span><span>Aim</span><span><kbd>LT</kbd></span><span>Jump</span><span><kbd>A</kbd></span>
-          <span>Pick up / reload</span><span><kbd>X</kbd></span><span>Harvesting tool</span><span><kbd>Y</kbd></span><span>Switch slots</span><span><kbd>LB</kbd> <kbd>RB</kbd></span>
-          <span>Build</span><span><kbd>B</kbd></span><span>Sprint</span><span><kbd>L3</kbd></span>
-        </div>
-        <div class="hint">Plug a controller in and press any button.</div>
-      </details>
-      <div class="hint credit">Car model: <a href="https://sketchfab.com/3d-models/goodbye-and-good-riddance-nissan-car-fbx-ba71611bcba3445db89287411ca85c87" target="_blank" rel="noopener" style="color:inherit">“Goodbye And Good Riddance Nissan Car FBX”</a> by PixelGTT, licensed <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener" style="color:inherit">CC BY 4.0</a>. Badges removed and paint recolored.</div>
     </section>
 
     <section class="panel shop" id="tab-locker" hidden>
@@ -270,6 +244,7 @@
     <div class="tb" id="tFire">FIRE</div>
     <div class="tb" id="tAim">AIM</div>
     <div class="tb" id="tJump">JUMP</div>
+    <div class="tb" id="tCrouch">CROUCH</div>
     <div class="tb" id="tReload">RELOAD</div>
     <div class="tb" id="tUse">USE</div>
     <div class="tb" id="tBuild">BUILD</div>
@@ -312,6 +287,7 @@
   <div class="card set-card">
     <h2>Settings</h2>
     <div class="sens"><label for="sensIn">Look sensitivity</label><input type="range" id="sensIn" min="0.3" max="2.5" step="0.05"></div>
+    <div class="sens"><label for="fovIn">Field of view <b class="num" id="fovVal">75</b></label><input type="range" id="fovIn" min="60" max="100" step="1"></div>
     <label class="check perf-row"><input type="checkbox" id="perfChk"><span><b>Performance Mode</b><span class="hint">Best for Chromebooks. Turns off shadows, grass and extra effects, draws less in the distance and keeps the lobby still.</span></span></label>
     <div class="sens"><label for="gfxSel">Graphics</label><select id="gfxSel"><option value="auto">Auto (recommended)</option><option value="fast">Fast: lighter, for slow computers</option><option value="pretty">Pretty: sharper, needs a strong computer</option></select></div>
     <div class="hint" id="gfxNote"></div>
@@ -325,7 +301,15 @@
     <div class="hint">Click a key, then press the new key or mouse button. If another action already uses it, the two swap.</div>
     <div class="kb-list" id="kbList"></div>
     <div class="hint kb-msg" id="kbMsg" role="status"></div>
+    <h3 class="set-h">Controller</h3>
+    <div class="ctl-grid">
+      <span>Shoot</span><span><kbd>RT</kbd></span><span>Aim</span><span><kbd>LT</kbd></span><span>Jump</span><span><kbd>A</kbd></span>
+      <span>Pick up / reload</span><span><kbd>X</kbd></span><span>Harvesting tool</span><span><kbd>Y</kbd></span><span>Switch slots</span><span><kbd>LB</kbd> <kbd>RB</kbd></span>
+      <span>Build</span><span><kbd>B</kbd></span><span>Sprint</span><span><kbd>L3</kbd></span><span>Crouch</span><span><kbd>R3</kbd></span>
+    </div>
+    <div class="hint">Plug a controller in and press any button.</div>
     <div class="btn-row"><button class="btn" id="kbReset">Reset keys</button><button class="btn pri" id="setDone">Done</button></div>
+    <div class="hint credit">Car model: <a href="https://sketchfab.com/3d-models/goodbye-and-good-riddance-nissan-car-fbx-ba71611bcba3445db89287411ca85c87" target="_blank" rel="noopener" style="color:inherit">“Goodbye And Good Riddance Nissan Car FBX”</a> by PixelGTT, licensed <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener" style="color:inherit">CC BY 4.0</a>. Badges removed and paint recolored.</div>
   </div>
 </div>
 

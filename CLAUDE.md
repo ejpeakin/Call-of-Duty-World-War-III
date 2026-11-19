@@ -27,12 +27,12 @@ Your session may be out of date: the other person can push while you work.
 
 | What | Files |
 |---|---|
-| Lobby (Play tab, mode picker, Unranked/Ranked, party spots, Locker, Shop, Pass) | `src/97_lobby.js`, `src/01_body.html`, `src/00_head.html` |
+| Lobby (Play tab: Friends and Party panel on the right, mode picker + Unranked/Ranked + PLAY under it, party spots by your character; Locker, Shop, Pass) | `src/97_lobby.js`, `src/01_body.html`, `src/00_head.html` |
 | Building (walls, ramps, floors, cones) | `src/70_build.js` |
 | Characters and their size | `src/40_actors.js`, `src/79_charmodel.js` |
 | Weapons and combat | `src/10_core.js` (weapon stats), `src/41_guns.js`, `src/60_combat.js` |
 | Match flow, bus, storm | `src/85_match.js` |
-| Controls and camera | `src/90_input.js` |
+| Controls and camera (crouch, field of view from Settings) | `src/90_input.js`, `src/50_physics.js` |
 | HUD | `src/95_hud.js` |
 | Multiplayer rooms | `src/87_net.js`, `server.js` |
 | Accounts, friends, party invites | `src/89_social.js`, `supabase/` |
@@ -42,6 +42,9 @@ Your session may be out of date: the other person can push while you work.
 - Build tiles are 5.12 m wide and 3.84 m tall (`T`, `TH` in `src/70_build.js`). Characters are about 1.9 m tall (`BODY_SCALE = 1.0` in `src/40_actors.js`), so a wall is about twice a player's height. Keep that proportion.
 - A placed build starts see-through and turns solid over `BUILD_TIME` seconds (`src/70_build.js`).
 - FortDay is its own game. Don't copy names, characters, art, music or the look of existing games.
+- Every part of the per-frame update in `step()` (`src/99_main.js`) runs inside `Guard`, so an error in one part is reported (once, with its name) and skipped instead of freezing the whole match. Wrap any new per-frame system the same way.
+- Crouch is held on Alt by default (not Ctrl: Ctrl+W closes the browser tab and a page can't stop it), the right stick click on a controller, and the CROUCH touch button. The pose is bent procedurally in `src/79_charmodel.js` because the character model has no crouch animation.
+- The car model's CC BY 4.0 credit must stay visible somewhere; it's at the bottom of Settings.
 
 ## Accounts, friends and party invites (Supabase)
 

@@ -5,9 +5,9 @@ const Input = {
   mouseSeen: false,
   get coarse() { return IS_TOUCH && !this.mouseSeen; },   // a touch device that has not used a mouse or trackpad
   keys: {}, pressed: new Set(), mdx: 0, mdy: 0, lmb: false, rmb: false, wheel: 0, locked: false,
-  touch: { on: false, mx: 0, mz: 0, fire: false, ads: false, jump: false, stickId: null, lookId: null, sx: 0, sy: 0, lx: 0, ly: 0 },
+  touch: { on: false, mx: 0, mz: 0, fire: false, ads: false, jump: false, crouch: false, stickId: null, lookId: null, sx: 0, sy: 0, lx: 0, ly: 0 },
   // game controller (standard layout): sticks move and look, triggers aim and fire, face buttons act
-  pad: { gp: null, on: false, mx: 0, mz: 0, lx: 0, ly: 0, fire: false, ads: false, jump: false, sprint: false, prev: [], hit: [], navT: 0, focus: null, lastSlot: 1 },
+  pad: { gp: null, on: false, mx: 0, mz: 0, lx: 0, ly: 0, fire: false, ads: false, jump: false, sprint: false, crouch: false, prev: [], hit: [], navT: 0, focus: null, lastSlot: 1 },
   pollPad() {
     const pd = this.pad; let gp = null; pd.hit.length = 0;
     try { const list = navigator.getGamepads ? navigator.getGamepads() : []; for (const g of list) if (g && g.connected && g.buttons.length >= 10 && g.axes.length >= 4) { gp = g; break; } } catch (e) { /* not allowed here */ }
@@ -137,6 +137,7 @@ const Input = {
     btn('tFire', () => { t.fire = true; }, () => { t.fire = false; });
     btn('tAim', () => { t.ads = !t.ads; $('tAim').style.background = t.ads ? 'rgba(58,168,255,.5)' : ''; });
     btn('tJump', () => { t.jump = true; this.pressed.add('Space'); }, () => { t.jump = false; });
+    btn('tCrouch', () => { t.crouch = !t.crouch; $('tCrouch').style.background = t.crouch ? 'rgba(58,168,255,.5)' : ''; });
     btn('tReload', () => this.pressed.add('KeyR'));
     btn('tUse', () => this.pressed.add('KeyE'));
     btn('tBuild', () => this.pressed.add('TouchBuild'));
@@ -277,6 +278,7 @@ const Cam = {
     else if (this.scoped) { dist = 0; side = 0; up = 0; py = 1.72; }
     else if (a === player && a.input.ads) { const w = a.inv[a.slot], wt = w && w.kind === 'weapon' ? WEAPONS[w.wid].type : '', sg = wt === 'shotgun', sm = wt === 'smg'; dist = sg ? 1.75 : sm ? 1.65 : 2.0; side = sg ? 0.78 : sm ? 0.7 : 0.72; up = sg ? 0.16 : sm ? 0.14 : 0.12; py = 1.62; }
     else { dist = 3.5; side = 0.82; up = 0.28; py = 1.62; }
+    if (a.crouchK > 0 && !a.vehicle && a.state === 'ground' && !this.scoped) py = lerp(py, 1.12, a.crouchK);   // crouching lowers the camera
     if (a.crawl && !a.vehicle && a.state === 'ground') { py = 0.6; dist = Math.max(dist, 3.2); up = 0.5; }
     if (innerHeight > innerWidth * 1.2 && !this.scoped) { dist *= 1.35; side *= 0.6; }
     if (a.emote && a === player) { dist = 4.2; side = 0; }
@@ -297,7 +299,8 @@ const Cam = {
     this.t0 = Math.max(0, (px - cx) * fx + (pyy - cy) * fy + (pz - cz) * fz);
     this.ready = a === player;
     const sprint = a.input.sprint && a.input.f > 0 && a.state === 'ground';
-    this.fov(dt, this.scoped ? (this.scopeKind === 'smg' ? 56 : 22) : (a === player && a.input.ads && !a.vehicle) ? (it && it.kind === 'weapon' && wstat(it).type === 'shotgun' ? 64 : it && it.kind === 'weapon' && wstat(it).type === 'smg' ? 52 : 58) : sprint ? 80 : a.vehicle ? 80 : 75);
+    const base = clamp(+Profile.d.fov || 75, 60, 100), zk = base / 75;   // field of view from Settings; aiming zooms by the same amount at any setting
+    this.fov(dt, this.scoped ? (this.scopeKind === 'smg' ? 56 : 22) : (a === player && a.input.ads && !a.vehicle) ? zk * (it && it.kind === 'weapon' && wstat(it).type === 'shotgun' ? 64 : it && it.kind === 'weapon' && wstat(it).type === 'smg' ? 52 : 58) : sprint ? base + 5 : a.vehicle ? base + 5 : base);
   },
   fov(dt, target) { if (Math.abs(camera.fov - target) > 0.1) { camera.fov = lerp(camera.fov, target, Math.min(1, dt * 12)); camera.updateProjectionMatrix(); } },
 };
@@ -354,6 +357,7 @@ function updatePlayer(dt) {
       else if (i === 8 || i === 12) P.add('KeyM');
       else if (i === 9) { togglePause(); P.clear(); return; }
       else if (i === 10) pd.sprint = !pd.sprint;
+      else if (i === 11) pd.crouch = !pd.crouch;   // right stick click: crouch on / off
       else if (i === 13) P.add('KeyB');
       else if (i === 14) P.add('KeyG');
       else if (i === 15) P.add('TouchBuild');
@@ -372,6 +376,8 @@ function updatePlayer(dt) {
   inp.f = clamp(f, -1, 1); inp.r = clamp(r, -1, 1);
   inp.sprint = H('sprint') || (tc.on && Math.hypot(tc.mx, tc.mz) > 0.92) || pd.sprint;
   inp.jump = H('jump') || tc.jump || pd.jump;
+  inp.crouch = H('crouch') || tc.crouch || pd.crouch;
+  if (inp.jump) { tc.crouch = false; pd.crouch = false; if ($('tCrouch')) $('tCrouch').style.background = ''; }   // jumping stands you up
   inp.fire = H('fire') || tc.fire || pd.fire;
   // the scope key toggles aiming; it drops when you switch away, sprint, build, crawl or get in a car
   if (P.has('KeyV')) { const w = a.inv[a.slot]; Input.scoped = !Input.scoped && !!w && w.kind === 'weapon'; }

@@ -42,7 +42,10 @@ const Lobby = {
   lift: 0, camX: 1.3,
   place() {
     const wide = innerWidth > 760, L = this.lift || 0, play = this.tab === 'play';
-    if (wide && play) { const x = this.camX = -0.55; this.cam.position.set(x, 1.55, 8.6); this.cam.lookAt(x, 1.0, 0); }   // Play: you in the middle with a party spot each side
+    if (wide && play) {   // Play: you in the middle of the space left of the panel, with a party spot each side
+      const side = (($('lbFoot') && $('lbFoot').offsetWidth) || 400) + 28, wpp = 2 * 8.6 * Math.tan(this.cam.fov * Math.PI / 360) / innerHeight;
+      const x = this.camX = side / 2 * wpp; this.cam.position.set(x, 1.55, 8.6); this.cam.lookAt(x, 1.0, 0);
+    }
     else if (wide) { this.camX = 1.3; this.cam.position.set(1.3, 1.5 + L, 6.6 + L * 0.8); this.cam.lookAt(1.3, 1.15 + L, 0); }
     else { this.camX = 0; this.cam.position.set(0, 1.2 + L, 11.7 + L); this.cam.lookAt(0, -0.9 + L, 0); }
   },
@@ -110,8 +113,8 @@ const Lobby = {
   },
   // what PLAY will start, in plain words (shown on the button)
   summary() {
-    const d = Profile.d, m = { solo: 'Solo', duos: 'Duos', squads: 'Squads', rumble: 'Storm Rumble' }[d.mode] || 'Solo', th = THEMES[MapRotation.current()];
-    return [m, d.build ? 'Build' : 'No-Build', th ? th.name : '', d.ranked && d.mode !== 'rumble' && Net.state !== 'room' ? 'Ranked' : ''].filter(Boolean).join(' · ');
+    const d = Profile.d, m = { solo: 'Solo', duos: 'Duos', squads: 'Squads', rumble: 'Storm Rumble' }[d.mode] || 'Solo';
+    return [m, d.build ? 'Build' : 'No-Build', d.ranked && d.mode !== 'rumble' && Net.state !== 'room' ? 'Ranked' : ''].filter(Boolean).join(' · ');
   },
   // the mode card and the Unranked / Ranked switch next to PLAY
   modeBar() {
@@ -136,7 +139,6 @@ const Lobby = {
     $('tabs').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; this.tab = b.dataset.tab; this.refresh(); });
     $('modeGrid').addEventListener('click', e => { const b = e.target.closest('[data-mode]'); if (!b) return; Profile.d.mode = b.dataset.mode; Profile.save(); this.refresh(); });
     $('buildSeg').addEventListener('click', e => { const b = e.target.closest('[data-build]'); if (!b) return; Profile.d.build = b.dataset.build === '1'; Profile.save(); this.refresh(); });
-    $('islGrid').addEventListener('click', e => { const b = e.target.closest('[data-isl]'); if (!b) return; if (b.dataset.isl !== MapRotation.current()) { Sfx.init(); $('islNote').textContent = THEMES[b.dataset.isl].name + ' is locked. Only ' + THEMES[MapRotation.current()].name + ' is open right now.'; return; } Profile.d.theme = b.dataset.isl; Profile.save(); this.refresh(); });
     $('nameIn').addEventListener('input', e => { Profile.d.name = e.target.value.trim().slice(0, 16); Profile.save(); const m = $('mpName'); if (m) m.value = Profile.d.name; });
     $('nameIn').addEventListener('keydown', e => e.stopPropagation());
     // mode picker and Unranked / Ranked, right above PLAY
@@ -276,12 +278,8 @@ const Lobby = {
   refresh() {
     const d = Profile.d;
     Net.render(); $('buildTag').textContent = 'build ' + BUILD_ID;
-    { const k = a => '<kbd>' + esc(Keys.of(a)) + '</kbd>';
-      const rows = [['Move', k('forward') + k('left') + k('back') + k('right')], ['Shoot', k('fire')], ['Aim', k('ads') + ' hold, or ' + k('scope') + ' to toggle'], ['Jump', k('jump')], ['Sprint', k('sprint')], ['Pick up / open', k('use')], ['Reload', k('reload')],
-        ['Build', k('wall') + ' wall ' + k('ramp') + ' ramp ' + k('floor') + ' floor ' + k('cone') + ' cone'], ['Building material', k('material')], ['Map', k('map')], ['Move items', k('inventory')], ['Emote', k('emote')]];
-      const kh = rows.map(([n, v]) => '<span>' + n + '</span><span>' + v + '</span>').join(''); if ($('kbHint').innerHTML !== kh) $('kbHint').innerHTML = kh; }
-    { const fresh = !d.matches && !d.tutDone, newish = !d.tutDone && (d.matches || 0) < 3;
-      $('welcome').hidden = !fresh; $('tutBadge').hidden = !newish; $('tutBtn').classList.toggle('new', newish); $('tutBtn').classList.toggle('small', !newish); }
+    { const newish = !d.tutDone && (d.matches || 0) < 3;
+      $('tutBtn').hidden = !!d.tutDone; $('tutBadge').hidden = !newish; $('tutBtn').classList.toggle('new', newish); $('tutBtn').classList.toggle('small', !newish); }
     { const el = $('coinLbl'), nv = d.coins.toLocaleString(); if (el.textContent !== nv && el.textContent !== '0') { const box = el.parentElement; box.classList.remove('bump'); void box.offsetWidth; box.classList.add('bump'); } el.textContent = nv; }   // the FortBux counter bounces when it changes
     [...$('tabs').children].forEach(b => b.classList.toggle('on', b.dataset.tab === this.tab));
     if (this.tab === 'players' && !Players.link()) this.tab = 'play';
@@ -318,10 +316,7 @@ const Lobby = {
     [...$('modeGrid').children].forEach(b => b.classList.toggle('on', b.dataset.mode === d.mode));
     [...$('buildSeg').children].forEach(b => b.classList.toggle('on', (b.dataset.build === '1') === d.build));
     $('buildHint').textContent = d.build ? 'Harvest wood, brick and metal with your tool, then throw up walls, ramps and floors mid-fight.' : 'No construction. Use natural cover, mantle up ledges, and lean on a 50-point overshield that regenerates when you are out of combat.';
-    const cur = MapRotation.current(), nxt = MapRotation.next(); if (d.theme !== cur) { d.theme = cur; Profile.save(); }
-    $('islGrid').innerHTML = THEME_ORDER.map(k => { const t = THEMES[k], open = k === cur; return `<button class="isl ${open ? 'on' : 'locked'}" data-isl="${k}" style="--sw:${t.swatch}" aria-disabled="${!open}">${open ? '' : '<i class="isl-lock" aria-hidden="true"></i>'}<b>${t.name}</b><span>${open ? 'Open now · closes in ' + MapRotation.left() : k === nxt ? 'Opens in ' + MapRotation.left() : 'Locked'}</span></button>`; }).join('');
-    $('islSum').textContent = THEMES[cur].name; $('islSub').textContent = 'Open now · closes in ' + MapRotation.left();
-    $('islNote').textContent = MapRotation.start() ? THEMES[cur].name + ' is open for ' + MapRotation.left() + ', then ' + THEMES[nxt].name + ' opens and ' + THEMES[cur].name + ' closes.' : 'Every player starts on Greenvale. After 30 days the next island opens and this one closes.';
+    const cur = MapRotation.current(); if (d.theme !== cur) { d.theme = cur; Profile.save(); }   // the open island (it changes every 30 days)
     this.modeBar();
     if (this.tab === 'locker') this.lockerView();
     if (this.tab === 'pass') {
