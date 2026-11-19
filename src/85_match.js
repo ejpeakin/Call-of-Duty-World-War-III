@@ -336,11 +336,13 @@ const Match = {
   },
   finish(winTeam) {
     this.ending = true; this.endT = 3.2; this.hasWinner = true;
+    const bigWin = winTeam === player.team && this.mode !== 'rumble' && this.mode !== 'tutorial';
     if (Net.hosting) Net.emit({ k: 'finish', w: winTeam });
     const win = winTeam === player.team;
     if (this.mode !== 'rumble') { if (win) player.placement = 1; }
     this.result = { win, winTeam };
-    if (win) {
+    if (bigWin) { this.endT = 8.5; Victory.start(); }   // #1: the full celebration (skippable)
+    else if (win) {
       Sfx.win(); HUD.banner(this.mode === 'rumble' ? 'Your team wins the Rumble' : '#1 · Last one standing', this.mode === 'squads' ? 'Your squad survived the storm' : this.mode === 'duos' ? 'You and your partner survived the storm' : 'You outlasted every other player', 4);
       if (player.alive && player.state === 'ground') { player.emote = Profile.d.eq.emote; player.emoteT = 0; }
     } else {
@@ -356,9 +358,11 @@ const Match = {
     if (Bus.active) Bus.update(dt);
     Storm.update(dt); LiveEvent.update(dt);
     if (this.mode === 'rumble' && !this.ending) for (const a of actors) if (!a.alive && !a.npc && !a.remote && a.respawnT > 0) { a.respawnT -= dt; if (a.respawnT <= 0) this.respawn(a, false); }
+    Victory.update(dt);
     if (this.ending) { this.endT -= dt; if (this.endT <= 0) { this.ending = false; this.showResults(); } }
   },
   showResults() {
+    Victory.stop();
     if (this.mode === 'tutorial') { Tutorial.stop(); this.toLobby(); return; }
     if (Net.hosting && !this.hasWinner) Net.emit({ k: 'end' });   // the host runs the match, so it ends for everyone
     this.state = 'results';
@@ -388,7 +392,8 @@ const Match = {
     Profile.save();
     if (newUmb) unl.push(cosById('glider', 'umbrella'));
     $('rPlace').innerHTML = place ? '#' + place + ' <small>of ' + this.teamCount() + '</small>' : (this.score[0] + ' – ' + this.score[1]);
-    $('rTitle').textContent = r.win ? (this.mode === 'rumble' ? 'Rumble won' : 'Last one standing') : (this.mode === 'rumble' ? 'Rumble lost' : 'Match complete');
+    $('results').classList.toggle('win', place === 1 && !!r.win);
+    $('rTitle').textContent = r.win ? (this.mode === 'rumble' ? 'Rumble won' : 'Victory · Last one standing') : (this.mode === 'rumble' ? 'Rumble lost' : 'Match complete');
     $('rSub').textContent = THEMES[this.theme].name + ' · ' + { solo: 'Solo', duos: 'Duos', squads: 'Squads', rumble: 'Storm Rumble', tutorial: 'Tutorial' }[this.mode] + ' · ' + (this.build ? 'Build' : 'No-Build');
     $('rStats').innerHTML = [['Eliminations', p.kills], ['Damage dealt', p.dmgDealt], ['Survived', fmtTime(p.aliveTime)]].map(s => `<div class="stat"><b>${s[1]}</b><span>${s[0]}</span></div>`).join('');
     $('rXp').innerHTML = lines.map(l => `<span class="xpl"><span>${esc(l[0])}</span><b>+${l[1].toLocaleString()} XP</b></span>`).join('')
@@ -400,7 +405,7 @@ const Match = {
     $('death').hidden = true; $('results').hidden = false;
   },
   toLobby() {
-    Tutorial.stop();
+    Tutorial.stop(); Victory.stop();
     if (Net.inMatch) { if (Net.isHost) { if (!this.hasWinner) Net.emit({ k: 'end' }); } else if (this.state === 'play') Net.send('h', { k: 'bye' }); Net.inMatch = false; Net.queue.length = 0; }
     this.state = 'lobby'; $('results').hidden = true; $('death').hidden = true; $('pause').hidden = true; $('hud').hidden = true; $('bigmap').hidden = true; $('clickHint').hidden = true;
     if (document.pointerLockElement) document.exitPointerLock();
@@ -411,6 +416,47 @@ const Match = {
 };
 
 // ---------------------------------------------------------------- lightning along (and inside) the storm
+// ---------------------------------------------------------------- #1 in Battle Royale: the celebration
+const Victory = {
+  on: false, t: 0, fw: [], fwT: 0,
+  init() {
+    const skip = () => { if (this.on && this.t > 1.5 && Match.ending) Match.endT = Math.min(Match.endT, 0.01); };
+    $('winFx').addEventListener('click', skip);
+    addEventListener('keydown', e => { if (this.on && (e.code === 'Space' || e.code === 'Enter' || e.code === 'Escape')) { e.preventDefault(); skip(); } }, true);
+  },
+  start() {
+    const p = player, M = Match; this.on = true; this.t = 0; this.fw = []; this.fwT = 0.5;
+    $('wfSub').textContent = M.mode === 'squads' ? 'Your squad survived the storm' : M.mode === 'duos' ? 'You and your partner survived the storm' : 'You outlasted all ' + (M.teamCount() - 1) + ' other players';
+    $('wfStats').innerHTML = '<span><b>' + p.kills + '</b> elimination' + (p.kills === 1 ? '' : 's') + '</span><span><b>' + Math.round(p.dmgDealt || 0) + '</b> damage</span><span><b>' + fmtTime(p.aliveTime || 0) + '</b> survived</span>';
+    const conf = $('wfConf'), cols = ['#ffd84a', '#ffffff', '#3ff0d0', '#ff7ae0', '#ffb02e', '#7fd8ff']; conf.innerHTML = '';
+    for (let i = 0; i < (Perf.on ? 40 : 80); i++) { const e = document.createElement('i'); e.style.left = (Math.random() * 100) + 'vw'; e.style.background = cols[i % cols.length]; e.style.animationDuration = (2.4 + Math.random() * 3) + 's'; e.style.animationDelay = (-Math.random() * 5) + 's'; conf.appendChild(e); }
+    $('winFx').hidden = false; $('hud').classList.add('cine'); $('clickHint').hidden = true; Build.active = false; Input.scoped = false;
+    if (document.pointerLockElement) document.exitPointerLock();
+    // nobody gets hurt during the celebration; the winners dance
+    for (const a of actors) if (a.alive && a.team === p.team) { a.invuln = 99; if (a.state === 'ground' && !a.vehicle) { a.emote = a === p ? Profile.d.eq.emote : pick(COS.emote.filter(e => e.id && e.id !== 'none')).id; a.emoteT = Math.random() * 0.3; } }
+    Sfx.victory();
+  },
+  stop() { if (!this.on) return; this.on = false; this.fw = []; $('winFx').hidden = true; $('wfConf').innerHTML = ''; $('hud').classList.remove('cine'); },
+  update(dt) {
+    if (!this.on) return; this.t += dt;
+    const v = Cam.view || player; if (!v) return;
+    // fireworks: rockets climb with a sparkling trail, then burst in two colours
+    this.fwT -= dt;
+    if (this.fwT <= 0 && this.t < 7) {
+      this.fwT = (Perf.on ? 0.55 : 0.3) + Math.random() * 0.3; const a = Math.random() * TAU, r = 8 + Math.random() * 16;
+      this.fw.push({ x: v.pos.x + Math.cos(a) * r, y: v.pos.y + 1, z: v.pos.z + Math.sin(a) * r, vy: 26 + Math.random() * 8, top: v.pos.y + 22 + Math.random() * 16, c: pick([0xffd84a, 0x3ff0d0, 0xff7ae0, 0x7fd8ff, 0xffffff, 0xff8a3c]), c2: pick([0xffffff, 0xffd84a, 0xff4d5e, 0x9b6bff]) });
+    }
+    for (let i = this.fw.length - 1; i >= 0; i--) {
+      const f = this.fw[i]; f.y += f.vy * dt; FX.burst(f.x, f.y, f.z, 0xffe6a0, 1, 0.6, 0.35, 0.09, 2);
+      if (f.y >= f.top) {
+        FX.burst(f.x, f.y, f.z, f.c, Perf.on ? 22 : 40, 10, 1.4, 0.22, 3); FX.burst(f.x, f.y, f.z, f.c2, Perf.on ? 10 : 20, 5, 1.1, 0.16, 2); FX.flash(f.x, f.y, f.z, 4, f.c, 0.35);
+        if (Sfx.vol(f.x, f.y, f.z) > 0.05) Sfx.noise(0.2, 260 + Math.random() * 300, 1, 0.14, 'lowpass');
+        this.fw.splice(i, 1);
+      }
+    }
+  },
+};
+
 const Lightning = {
   list: [], t: 2, flash: 0, near: 0,
   clear() { for (const b of this.list) for (const m of b.ms) { scene.remove(m); m.geometry.dispose(); m.material.dispose(); } this.list = []; this.flash = 0; },

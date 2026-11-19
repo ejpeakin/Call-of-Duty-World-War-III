@@ -414,6 +414,28 @@ button:focus-visible{outline:2px solid var(--sun-2);outline-offset:2px}
 .place{font-family:var(--f-display);font-weight:900;font-style:italic;font-size:clamp(46px,12vw,86px);line-height:.9}
 .place small{font-size:.4em;color:var(--mute)}
 .res-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+/* ---- #1 celebration */
+#winFx{position:fixed;inset:0;z-index:38;overflow:hidden;cursor:pointer;background:radial-gradient(ellipse at 50% 22%,rgba(255,200,60,.22) 0%,rgba(255,170,40,.06) 35%,transparent 60%),radial-gradient(ellipse at 50% 50%,transparent 55%,rgba(10,6,0,.45) 100%);animation:tkIn .4s ease-out}
+#winFx .wf-rays{position:absolute;left:50%;top:24%;width:200vmax;height:200vmax;transform:translate(-50%,-50%);background:repeating-conic-gradient(from 0deg,rgba(255,216,74,.16) 0 7deg,transparent 7deg 18deg);animation:tkSpin 22s linear infinite;mask:radial-gradient(circle,#000 0 10%,transparent 40%);-webkit-mask:radial-gradient(circle,#000 0 10%,transparent 40%)}
+.wf-wrap{position:absolute;left:0;right:0;top:max(3vh,var(--st,0px));display:flex;flex-direction:column;align-items:center;text-align:center;gap:2px;pointer-events:none}
+.wf-crown{width:clamp(60px,8vw,100px);height:auto;fill:#ffd84a;stroke:#8a5a00;stroke-width:1.2;filter:drop-shadow(0 4px 0 #a86a00) drop-shadow(0 0 22px rgba(255,200,60,.7));animation:wfDrop .9s cubic-bezier(.2,1.6,.4,1) .15s both}
+.wf-num{font-family:var(--f-display);font-weight:900;font-style:italic;font-size:clamp(52px,10vw,118px);line-height:.85;color:#fff;text-shadow:0 6px 0 #b86a10,0 0 40px rgba(255,190,60,.8);animation:wfPop .7s cubic-bezier(.2,1.5,.4,1) .3s both}
+.wf-title{font-family:var(--f-display);font-weight:900;font-style:italic;font-size:clamp(36px,7vw,86px);line-height:.95;letter-spacing:.06em;background:linear-gradient(100deg,#ffb02e 0%,#ffe36a 30%,#fffbe0 45%,#ffe36a 60%,#ffb02e 100%);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 5px 0 #8a4a00) drop-shadow(0 0 26px rgba(255,180,40,.55));animation:wfPop .7s cubic-bezier(.2,1.5,.4,1) .45s both,wfShine 2.4s ease-in-out 1.2s infinite}
+.wf-sub{margin-top:8px;font:800 clamp(15px,2vw,20px) var(--f-body);color:#fff4d0;text-shadow:0 2px 6px rgba(0,0,0,.7);animation:wfUp .5s ease-out .9s both}
+.wf-stats{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:10px;animation:wfUp .5s ease-out 1.1s both}
+.wf-stats span{padding:6px 12px;border-radius:999px;background:rgba(20,12,0,.55);border:1px solid rgba(255,216,74,.5);font:700 13px var(--f-body);color:#ffe9a6}
+.wf-stats b{color:#fff;font-size:15px;margin-right:3px}
+.wf-skip{margin-top:14px;font:700 12px var(--f-body);color:rgba(255,255,255,.7);text-shadow:0 1px 4px #000;animation:wfUp .4s ease-out 1.6s both}
+@keyframes wfDrop{from{transform:translateY(-140px) rotate(-14deg);opacity:0}to{transform:none;opacity:1}}
+@keyframes wfPop{from{transform:scale(2.4);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes wfUp{from{transform:translateY(14px);opacity:0}to{transform:none;opacity:1}}
+@keyframes wfShine{0%{background-position:100% 0}60%,100%{background-position:-60% 0}}
+#hud.cine > *{opacity:0!important;transition:opacity .4s}
+.r-crown{display:none}
+#results.win .card{border-color:rgba(255,216,74,.85);box-shadow:0 0 0 2px rgba(255,216,74,.35),0 0 70px rgba(255,190,60,.35)}
+#results.win .r-crown{display:block;width:64px;height:auto;margin:0 auto -6px;fill:#ffd84a;filter:drop-shadow(0 3px 0 #a86a00) drop-shadow(0 0 14px rgba(255,200,60,.6))}
+#results.win .place{background:linear-gradient(180deg,#fff6c8,#ffd84a 55%,#ffad33);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 4px 0 #8a4a00)}
+#results.win #rTitle{color:#ffe9a6}
 .unl{display:flex;flex-wrap:wrap;gap:6px}
 .unl span{font-size:12px;font-weight:700;padding:4px 8px;border-radius:8px;background:color-mix(in srgb,var(--rc) 40%,transparent);border:1px solid var(--rc)}
 #bigmap{position:fixed;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;background:rgba(3,10,26,.6);pointer-events:none}
@@ -884,8 +906,21 @@ details.ctl .hint{margin-top:8px}
   </div>
 </div>
 
+<div id="winFx" hidden>
+  <div class="wf-rays"></div>
+  <div class="tk-confetti" id="wfConf"></div>
+  <div class="wf-wrap">
+    <svg class="wf-crown" viewBox="0 0 64 42" aria-hidden="true"><path d="M5 38 L9 11 L21 23 L32 4 L43 23 L55 11 L59 38 Z"/><rect x="5" y="34" width="54" height="6" rx="2"/><circle cx="9" cy="10" r="3.4"/><circle cx="32" cy="4" r="3.4"/><circle cx="55" cy="10" r="3.4"/></svg>
+    <div class="wf-num">#1</div>
+    <div class="wf-title">VICTORY</div>
+    <div class="wf-sub" id="wfSub"></div>
+    <div class="wf-stats" id="wfStats"></div>
+    <div class="wf-skip">Click or press Space to continue</div>
+  </div>
+</div>
 <div class="overlay" id="results" hidden>
   <div class="card">
+    <svg class="r-crown" viewBox="0 0 64 42" aria-hidden="true"><path d="M5 38 L9 11 L21 23 L32 4 L43 23 L55 11 L59 38 Z"/><rect x="5" y="34" width="54" height="6" rx="2"/></svg>
     <div class="place num" id="rPlace">#1</div>
     <h2 id="rTitle">Last one standing</h2>
     <div class="sub" id="rSub"></div>
@@ -930,7 +965,7 @@ details.ctl .hint{margin-top:8px}
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js"></script>
 <script async src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>
-const BUILD_ID = '1119-0006';
+const BUILD_ID = '1119-0013';
 'use strict';
 // =====================================================================
 //  FORTDAY — core utilities, data tables, profile, audio
@@ -1402,6 +1437,13 @@ const Sfx = {
   whale() { this.tone(90, 3.0, 'sine', 0.35, 70); this.tone(140, 2.6, 'sine', 0.2, -40, 0.4); },
   storm() { this.noise(1.2, 220, 0.4, 0.14, 'lowpass'); },
   win() { [523, 659, 784, 1046, 1318].forEach((f, i) => this.tone(f, 0.35, 'triangle', 0.16, 0, i * 0.12)); },
+  // Battle Royale win: a rising fanfare, a held major chord and four drum hits
+  victory() {
+    const N = [523, 659, 784, 1046, 784, 1046, 1318, 1568]; N.forEach((f, i) => this.tone(f, i === N.length - 1 ? 1.1 : 0.2, 'triangle', 0.15, 0, i * 0.11));
+    [262, 330, 392, 523].forEach(f => this.tone(f, 1.8, 'sine', 0.07, 0, 0.88));
+    [523, 659, 784].forEach(f => this.tone(f * 2, 0.9, 'square', 0.025, 0, 0.88));
+    for (let i = 0; i < 4; i++) setTimeout(() => this.noise(0.28, 110, 1, 0.3, 'lowpass'), 880 + i * 230);
+  },
 };
 
 // =====================================================================
@@ -7033,11 +7075,13 @@ const Match = {
   },
   finish(winTeam) {
     this.ending = true; this.endT = 3.2; this.hasWinner = true;
+    const bigWin = winTeam === player.team && this.mode !== 'rumble' && this.mode !== 'tutorial';
     if (Net.hosting) Net.emit({ k: 'finish', w: winTeam });
     const win = winTeam === player.team;
     if (this.mode !== 'rumble') { if (win) player.placement = 1; }
     this.result = { win, winTeam };
-    if (win) {
+    if (bigWin) { this.endT = 8.5; Victory.start(); }   // #1: the full celebration (skippable)
+    else if (win) {
       Sfx.win(); HUD.banner(this.mode === 'rumble' ? 'Your team wins the Rumble' : '#1 · Last one standing', this.mode === 'squads' ? 'Your squad survived the storm' : this.mode === 'duos' ? 'You and your partner survived the storm' : 'You outlasted every other player', 4);
       if (player.alive && player.state === 'ground') { player.emote = Profile.d.eq.emote; player.emoteT = 0; }
     } else {
@@ -7053,9 +7097,11 @@ const Match = {
     if (Bus.active) Bus.update(dt);
     Storm.update(dt); LiveEvent.update(dt);
     if (this.mode === 'rumble' && !this.ending) for (const a of actors) if (!a.alive && !a.npc && !a.remote && a.respawnT > 0) { a.respawnT -= dt; if (a.respawnT <= 0) this.respawn(a, false); }
+    Victory.update(dt);
     if (this.ending) { this.endT -= dt; if (this.endT <= 0) { this.ending = false; this.showResults(); } }
   },
   showResults() {
+    Victory.stop();
     if (this.mode === 'tutorial') { Tutorial.stop(); this.toLobby(); return; }
     if (Net.hosting && !this.hasWinner) Net.emit({ k: 'end' });   // the host runs the match, so it ends for everyone
     this.state = 'results';
@@ -7085,7 +7131,8 @@ const Match = {
     Profile.save();
     if (newUmb) unl.push(cosById('glider', 'umbrella'));
     $('rPlace').innerHTML = place ? '#' + place + ' <small>of ' + this.teamCount() + '</small>' : (this.score[0] + ' – ' + this.score[1]);
-    $('rTitle').textContent = r.win ? (this.mode === 'rumble' ? 'Rumble won' : 'Last one standing') : (this.mode === 'rumble' ? 'Rumble lost' : 'Match complete');
+    $('results').classList.toggle('win', place === 1 && !!r.win);
+    $('rTitle').textContent = r.win ? (this.mode === 'rumble' ? 'Rumble won' : 'Victory · Last one standing') : (this.mode === 'rumble' ? 'Rumble lost' : 'Match complete');
     $('rSub').textContent = THEMES[this.theme].name + ' · ' + { solo: 'Solo', duos: 'Duos', squads: 'Squads', rumble: 'Storm Rumble', tutorial: 'Tutorial' }[this.mode] + ' · ' + (this.build ? 'Build' : 'No-Build');
     $('rStats').innerHTML = [['Eliminations', p.kills], ['Damage dealt', p.dmgDealt], ['Survived', fmtTime(p.aliveTime)]].map(s => `<div class="stat"><b>${s[1]}</b><span>${s[0]}</span></div>`).join('');
     $('rXp').innerHTML = lines.map(l => `<span class="xpl"><span>${esc(l[0])}</span><b>+${l[1].toLocaleString()} XP</b></span>`).join('')
@@ -7097,7 +7144,7 @@ const Match = {
     $('death').hidden = true; $('results').hidden = false;
   },
   toLobby() {
-    Tutorial.stop();
+    Tutorial.stop(); Victory.stop();
     if (Net.inMatch) { if (Net.isHost) { if (!this.hasWinner) Net.emit({ k: 'end' }); } else if (this.state === 'play') Net.send('h', { k: 'bye' }); Net.inMatch = false; Net.queue.length = 0; }
     this.state = 'lobby'; $('results').hidden = true; $('death').hidden = true; $('pause').hidden = true; $('hud').hidden = true; $('bigmap').hidden = true; $('clickHint').hidden = true;
     if (document.pointerLockElement) document.exitPointerLock();
@@ -7108,6 +7155,47 @@ const Match = {
 };
 
 // ---------------------------------------------------------------- lightning along (and inside) the storm
+// ---------------------------------------------------------------- #1 in Battle Royale: the celebration
+const Victory = {
+  on: false, t: 0, fw: [], fwT: 0,
+  init() {
+    const skip = () => { if (this.on && this.t > 1.5 && Match.ending) Match.endT = Math.min(Match.endT, 0.01); };
+    $('winFx').addEventListener('click', skip);
+    addEventListener('keydown', e => { if (this.on && (e.code === 'Space' || e.code === 'Enter' || e.code === 'Escape')) { e.preventDefault(); skip(); } }, true);
+  },
+  start() {
+    const p = player, M = Match; this.on = true; this.t = 0; this.fw = []; this.fwT = 0.5;
+    $('wfSub').textContent = M.mode === 'squads' ? 'Your squad survived the storm' : M.mode === 'duos' ? 'You and your partner survived the storm' : 'You outlasted all ' + (M.teamCount() - 1) + ' other players';
+    $('wfStats').innerHTML = '<span><b>' + p.kills + '</b> elimination' + (p.kills === 1 ? '' : 's') + '</span><span><b>' + Math.round(p.dmgDealt || 0) + '</b> damage</span><span><b>' + fmtTime(p.aliveTime || 0) + '</b> survived</span>';
+    const conf = $('wfConf'), cols = ['#ffd84a', '#ffffff', '#3ff0d0', '#ff7ae0', '#ffb02e', '#7fd8ff']; conf.innerHTML = '';
+    for (let i = 0; i < (Perf.on ? 40 : 80); i++) { const e = document.createElement('i'); e.style.left = (Math.random() * 100) + 'vw'; e.style.background = cols[i % cols.length]; e.style.animationDuration = (2.4 + Math.random() * 3) + 's'; e.style.animationDelay = (-Math.random() * 5) + 's'; conf.appendChild(e); }
+    $('winFx').hidden = false; $('hud').classList.add('cine'); $('clickHint').hidden = true; Build.active = false; Input.scoped = false;
+    if (document.pointerLockElement) document.exitPointerLock();
+    // nobody gets hurt during the celebration; the winners dance
+    for (const a of actors) if (a.alive && a.team === p.team) { a.invuln = 99; if (a.state === 'ground' && !a.vehicle) { a.emote = a === p ? Profile.d.eq.emote : pick(COS.emote.filter(e => e.id && e.id !== 'none')).id; a.emoteT = Math.random() * 0.3; } }
+    Sfx.victory();
+  },
+  stop() { if (!this.on) return; this.on = false; this.fw = []; $('winFx').hidden = true; $('wfConf').innerHTML = ''; $('hud').classList.remove('cine'); },
+  update(dt) {
+    if (!this.on) return; this.t += dt;
+    const v = Cam.view || player; if (!v) return;
+    // fireworks: rockets climb with a sparkling trail, then burst in two colours
+    this.fwT -= dt;
+    if (this.fwT <= 0 && this.t < 7) {
+      this.fwT = (Perf.on ? 0.55 : 0.3) + Math.random() * 0.3; const a = Math.random() * TAU, r = 8 + Math.random() * 16;
+      this.fw.push({ x: v.pos.x + Math.cos(a) * r, y: v.pos.y + 1, z: v.pos.z + Math.sin(a) * r, vy: 26 + Math.random() * 8, top: v.pos.y + 22 + Math.random() * 16, c: pick([0xffd84a, 0x3ff0d0, 0xff7ae0, 0x7fd8ff, 0xffffff, 0xff8a3c]), c2: pick([0xffffff, 0xffd84a, 0xff4d5e, 0x9b6bff]) });
+    }
+    for (let i = this.fw.length - 1; i >= 0; i--) {
+      const f = this.fw[i]; f.y += f.vy * dt; FX.burst(f.x, f.y, f.z, 0xffe6a0, 1, 0.6, 0.35, 0.09, 2);
+      if (f.y >= f.top) {
+        FX.burst(f.x, f.y, f.z, f.c, Perf.on ? 22 : 40, 10, 1.4, 0.22, 3); FX.burst(f.x, f.y, f.z, f.c2, Perf.on ? 10 : 20, 5, 1.1, 0.16, 2); FX.flash(f.x, f.y, f.z, 4, f.c, 0.35);
+        if (Sfx.vol(f.x, f.y, f.z) > 0.05) Sfx.noise(0.2, 260 + Math.random() * 300, 1, 0.14, 'lowpass');
+        this.fw.splice(i, 1);
+      }
+    }
+  },
+};
+
 const Lightning = {
   list: [], t: 2, flash: 0, near: 0,
   clear() { for (const b of this.list) for (const m of b.ms) { scene.remove(m); m.geometry.dispose(); m.material.dispose(); } this.list = []; this.flash = 0; },
@@ -7940,7 +8028,7 @@ const Input = {
     cv.addEventListener('wheel', e => { if (Match.state === 'play') { this.wheel += Math.sign(e.deltaY); e.preventDefault(); } }, { passive: false });
     document.addEventListener('pointerlockchange', () => {
       this.locked = document.pointerLockElement === cv;
-      $('clickHint').hidden = this.locked || this.coarse || this.touch.on || Match.state !== 'play' || Match.paused || !$('death').hidden || !$('tutEnd').hidden;
+      $('clickHint').hidden = this.locked || this.coarse || this.touch.on || Match.state !== 'play' || Match.paused || !$('death').hidden || !$('tutEnd').hidden || Victory.on || Match.ending;
       if (!this.locked && Match.state === 'play' && !Match.paused && !this.coarse && !this.touch.on && $('death').hidden && $('results').hidden && $('tutEnd').hidden && !Inv.on && !Match.ending) togglePause(true);
     });
     document.addEventListener('pointerlockerror', () => { this.free = true; $('clickHint').hidden = true; });
@@ -7952,7 +8040,7 @@ const Input = {
     if (this.coarse || this.touch.on || this.pad.on) return;
     const cv = $('fdView');
     try { const p = cv.requestPointerLock(); if (p && p.catch) p.catch(() => { this.free = true; }); } catch (e) { this.free = true; }
-    setTimeout(() => { if (!this.locked && Match.state === 'play' && !Match.paused && !this.free && $('tutEnd').hidden) $('clickHint').hidden = false; }, 400);
+    setTimeout(() => { if (!this.locked && Match.state === 'play' && !Match.paused && !this.free && $('tutEnd').hidden && !Victory.on) $('clickHint').hidden = false; }, 400);
   },
   initTouch() {
     const t = this.touch, ui = $('touchUI'), stick = $('stick'), knob = stick.querySelector('i');
@@ -8121,6 +8209,12 @@ const Cam = {
       camera.position.set(Bus.pos.x - fx * 34, Bus.pos.y - fy * 34 + 8, Bus.pos.z - fz * 34);
       camera.lookAt(Bus.pos.x, Bus.pos.y + 5, Bus.pos.z); this.ready = false; this.fov(dt, 70); return;
     }
+    if (Victory.on && a.alive) {   // celebration: circle slowly around the winner
+      const ang = (this.vAng0 == null ? (this.vAng0 = a.yaw) : this.vAng0) + Victory.t * 0.32, r = 5.2 + Math.min(1.5, Victory.t * 0.2);
+      camera.position.set(a.pos.x + Math.sin(ang) * r, a.pos.y + 2.0 + Math.sin(Victory.t * 0.5) * 0.3, a.pos.z + Math.cos(ang) * r);
+      camera.lookAt(a.pos.x, a.pos.y + 2.7, a.pos.z); this.ready = false; this.fov(dt, 60); return;   // aim above the head: the winner sits low in the frame, under the title
+    }
+    this.vAng0 = null;
     let yaw = a.yaw, pitch = a.pitch;
     if (a !== player) { this.spYaw += angDiff(this.spYaw, a.yaw) * Math.min(1, dt * 5); this.spPitch = lerp(this.spPitch, a.pitch, Math.min(1, dt * 5)); yaw = this.spYaw; pitch = this.spPitch; }
     else { this.spYaw = yaw; this.spPitch = pitch; }
@@ -8188,6 +8282,7 @@ function togglePause(force) {
 }
 function updatePlayer(dt) {
   const a = player; if (!a) return;
+  if (Victory.on) { const i = a.input; i.f = i.r = 0; i.fire = i.jump = i.ads = i.sprint = false; Input.pressed.clear(); Input.mdx = Input.mdy = 0; Input.wheel = 0; return; }   // celebrating
   const K = Input.keys, P = Input.pressed, tc = Input.touch, inp = a.input;
   const it = a.inv[a.slot];
   const sens = 0.0022 * Profile.d.sens * (inp.ads ? (Cam.scoped ? 0.32 : 0.65) : 1);
@@ -9093,7 +9188,7 @@ function boot() {
   try { CharModel.load(); } catch (e) { console.warn(e); }
   HUD.init();
   Input.init(); Settings.init(); Tutorial.init(); Inv.init();
-  Lobby.init(); Track.init(); Players.init();
+  Lobby.init(); Track.init(); Players.init(); Victory.init();
   // back from the $1 checkout: ?bp=CODE in the address unlocks the Battle Pass, then the code is removed from the address
   (async () => {
     let q; try { q = new URLSearchParams(location.search); } catch (e) { return; }

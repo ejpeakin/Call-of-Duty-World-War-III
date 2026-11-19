@@ -469,4 +469,11 @@ const Sfx = {
   whale() { this.tone(90, 3.0, 'sine', 0.35, 70); this.tone(140, 2.6, 'sine', 0.2, -40, 0.4); },
   storm() { this.noise(1.2, 220, 0.4, 0.14, 'lowpass'); },
   win() { [523, 659, 784, 1046, 1318].forEach((f, i) => this.tone(f, 0.35, 'triangle', 0.16, 0, i * 0.12)); },
+  // Battle Royale win: a rising fanfare, a held major chord and four drum hits
+  victory() {
+    const N = [523, 659, 784, 1046, 784, 1046, 1318, 1568]; N.forEach((f, i) => this.tone(f, i === N.length - 1 ? 1.1 : 0.2, 'triangle', 0.15, 0, i * 0.11));
+    [262, 330, 392, 523].forEach(f => this.tone(f, 1.8, 'sine', 0.07, 0, 0.88));
+    [523, 659, 784].forEach(f => this.tone(f * 2, 0.9, 'square', 0.025, 0, 0.88));
+    for (let i = 0; i < 4; i++) setTimeout(() => this.noise(0.28, 110, 1, 0.3, 'lowpass'), 880 + i * 230);
+  },
 };

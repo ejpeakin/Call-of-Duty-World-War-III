@@ -77,7 +77,7 @@ const Input = {
     cv.addEventListener('wheel', e => { if (Match.state === 'play') { this.wheel += Math.sign(e.deltaY); e.preventDefault(); } }, { passive: false });
     document.addEventListener('pointerlockchange', () => {
       this.locked = document.pointerLockElement === cv;
-      $('clickHint').hidden = this.locked || this.coarse || this.touch.on || Match.state !== 'play' || Match.paused || !$('death').hidden || !$('tutEnd').hidden;
+      $('clickHint').hidden = this.locked || this.coarse || this.touch.on || Match.state !== 'play' || Match.paused || !$('death').hidden || !$('tutEnd').hidden || Victory.on || Match.ending;
       if (!this.locked && Match.state === 'play' && !Match.paused && !this.coarse && !this.touch.on && $('death').hidden && $('results').hidden && $('tutEnd').hidden && !Inv.on && !Match.ending) togglePause(true);
     });
     document.addEventListener('pointerlockerror', () => { this.free = true; $('clickHint').hidden = true; });
@@ -89,7 +89,7 @@ const Input = {
     if (this.coarse || this.touch.on || this.pad.on) return;
     const cv = $('fdView');
     try { const p = cv.requestPointerLock(); if (p && p.catch) p.catch(() => { this.free = true; }); } catch (e) { this.free = true; }
-    setTimeout(() => { if (!this.locked && Match.state === 'play' && !Match.paused && !this.free && $('tutEnd').hidden) $('clickHint').hidden = false; }, 400);
+    setTimeout(() => { if (!this.locked && Match.state === 'play' && !Match.paused && !this.free && $('tutEnd').hidden && !Victory.on) $('clickHint').hidden = false; }, 400);
   },
   initTouch() {
     const t = this.touch, ui = $('touchUI'), stick = $('stick'), knob = stick.querySelector('i');
@@ -258,6 +258,12 @@ const Cam = {
       camera.position.set(Bus.pos.x - fx * 34, Bus.pos.y - fy * 34 + 8, Bus.pos.z - fz * 34);
       camera.lookAt(Bus.pos.x, Bus.pos.y + 5, Bus.pos.z); this.ready = false; this.fov(dt, 70); return;
     }
+    if (Victory.on && a.alive) {   // celebration: circle slowly around the winner
+      const ang = (this.vAng0 == null ? (this.vAng0 = a.yaw) : this.vAng0) + Victory.t * 0.32, r = 5.2 + Math.min(1.5, Victory.t * 0.2);
+      camera.position.set(a.pos.x + Math.sin(ang) * r, a.pos.y + 2.0 + Math.sin(Victory.t * 0.5) * 0.3, a.pos.z + Math.cos(ang) * r);
+      camera.lookAt(a.pos.x, a.pos.y + 2.7, a.pos.z); this.ready = false; this.fov(dt, 60); return;   // aim above the head: the winner sits low in the frame, under the title
+    }
+    this.vAng0 = null;
     let yaw = a.yaw, pitch = a.pitch;
     if (a !== player) { this.spYaw += angDiff(this.spYaw, a.yaw) * Math.min(1, dt * 5); this.spPitch = lerp(this.spPitch, a.pitch, Math.min(1, dt * 5)); yaw = this.spYaw; pitch = this.spPitch; }
     else { this.spYaw = yaw; this.spPitch = pitch; }
@@ -325,6 +331,7 @@ function togglePause(force) {
 }
 function updatePlayer(dt) {
   const a = player; if (!a) return;
+  if (Victory.on) { const i = a.input; i.f = i.r = 0; i.fire = i.jump = i.ads = i.sprint = false; Input.pressed.clear(); Input.mdx = Input.mdy = 0; Input.wheel = 0; return; }   // celebrating
   const K = Input.keys, P = Input.pressed, tc = Input.touch, inp = a.input;
   const it = a.inv[a.slot];
   const sens = 0.0022 * Profile.d.sens * (inp.ads ? (Cam.scoped ? 0.32 : 0.65) : 1);
