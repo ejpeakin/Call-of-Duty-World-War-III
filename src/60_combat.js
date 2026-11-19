@@ -120,6 +120,29 @@ function coneDir(d, spread, out) {
   const a = Math.random() * TAU, r = Math.sqrt(Math.random()) * spread;
   return out.addScaledVector(_su, Math.cos(a) * r).addScaledVector(_sv, Math.sin(a) * r).normalize();
 }
+// Shooting a chest opens it. The shot has to reach the chest: walls, builds and rocks in front of it block it.
+// Players only (bots still walk up and open chests the normal way).
+const CHEST_R = 0.62;
+function shotChest(a, ox, oy, oz, dx, dy, dz, maxT) {
+  if (!a || a.ai || a.remote || Match.state !== 'play') return null;
+  let best = null, bt = maxT;
+  for (const c of W.chests) {
+    if (c.opened || c.falling) continue;
+    const cx = c.x - ox, cy = c.y + 0.45 - oy, cz = c.z - oz, t = cx * dx + cy * dy + cz * dz; if (t < 0 || t > bt + CHEST_R) continue;
+    const q = cx * cx + cy * cy + cz * cz - t * t; if (q > CHEST_R * CHEST_R) continue;
+    const th = t - Math.sqrt(CHEST_R * CHEST_R - q); if (th < bt) { bt = th; best = c; }
+  }
+  return best ? { c: best, t: bt } : null;
+}
+function shootChest(a, c, x, y, z) {
+  FX.burst(x, y, z, c.kind === 'exotic' ? 0x2fe0d0 : 0xffd84a, 4, 3, 0.3, 0.07);
+  openChest(c, a);
+}
+// rockets and shockwaves pop open every chest in the blast
+function blastChests(x, y, z, r, owner) {
+  if (!owner || owner.ai || owner.remote || Match.state !== 'play') return;
+  for (const c of W.chests) if (!c.opened && !c.falling && Math.hypot(c.x - x, c.y + 0.45 - y, c.z - z) < r + CHEST_R && losClear(x, y + 0.3, z, c.x, c.y + 0.5, c.z)) openChest(c, owner);
+}
 function fireWeapon(a) {
   const it = a.inv[a.slot]; const st = wstat(it);
   if (st.melee) { slash(a, it, st); return; }
@@ -144,7 +167,9 @@ function fireWeapon(a) {
     for (let i = 0; i < n; i++) {
       const d = coneDir(AIM.d, spread, _v2);
       const ox = AIM.o.x + AIM.d.x * AIM.t0, oy = AIM.o.y + AIM.d.y * AIM.t0, oz = AIM.o.z + AIM.d.z * AIM.t0;
-      const h = raycast(ox, oy, oz, d.x, d.y, d.z, st.range, a, true);
+      let h = raycast(ox, oy, oz, d.x, d.y, d.z, st.range, a, true);
+      const ch = shotChest(a, ox, oy, oz, d.x, d.y, d.z, h.type ? h.t : st.range);
+      if (ch) { h = { type: 'chest', t: ch.t, x: ox + d.x * ch.t, y: oy + d.y * ch.t, z: oz + d.z * ch.t }; shootChest(a, ch.c, h.x, h.y, h.z); }
       if (i < 3 || i % 3 === 0) { FX.tracer(mz.x, mz.y, mz.z, h.x, h.y, h.z, tcol); if (hits.length < 4) hits.push([r1(h.x), r1(h.y), r1(h.z)]); }
       applyHit(a, st, h, d, n);
     }
@@ -169,6 +194,7 @@ function slash(a, it, st) {
   }
   // builds, cars, rocks and creatures straight ahead
   const cp = Math.cos(a.pitch), h = raycast(a.pos.x, ey, a.pos.z, fx * cp, Math.sin(a.pitch), fz * cp, R + 0.4, a, false);
+  { const ch = shotChest(a, a.pos.x, ey, a.pos.z, fx * cp, Math.sin(a.pitch), fz * cp, h.type ? h.t : R + 0.4); if (ch) { const t = ch.t; shootChest(a, ch.c, a.pos.x + fx * cp * t, ey + Math.sin(a.pitch) * t, a.pos.z + fz * cp * t); } }
   if (h.type === 'col') { const c = h.obj; if (c.piece) Build.damage(c.piece, st.dmg * st.struct, a); else if (c.harv && c.harv.vehicle) Vehicles.damage(c.harv.vehicle, st.dmg * 0.4); FX.burst(h.x, h.y, h.z, MATS[c.mat] ? MATS[c.mat].color : 0xcccccc, 5, 3, 0.35, 0.08); }
   { const cr = Creatures.ray(a.pos.x, ey, a.pos.z, fx, 0, fz, R + 0.6); if (cr) Creatures.damage(cr.c, st.dmg, a, { x: a.pos.x + fx * cr.t, y: ey, z: a.pos.z + fz * cr.t }); }
   FX.slash(a.pos.x + fx * 0.3, ey - 0.15, a.pos.z + fz * 0.3, a.yaw, a.slashSide);
@@ -332,7 +358,7 @@ function shockBurst(x, y, z, owner, st, fxOnly) {
     damageActor(a, st.dmg * (0.5 + f * 0.5) * (a === owner ? 0.25 : 1), a === owner ? null : owner, { x: a.pos.x, y: a.pos.y + 2, z: a.pos.z, w: 'Shockwave Cannon', kx, kz });
     if (!a.remote) shockLaunch(a, kx, kz);
   }
-  Build.explode(x, y, z, st.splash, st.dmg * st.struct);
+  Build.explode(x, y, z, st.splash, st.dmg * st.struct); blastChests(x, y, z, st.splash, owner);
 }
 // thrown up and away by a shockwave (no fall damage from the landing)
 function shockLaunch(a, kx, kz) {
@@ -356,7 +382,7 @@ function explode(x, y, z, owner, st, fxOnly) {
     damageActor(a, st.dmg * f * (a === owner ? 0.5 : 1), a === owner ? null : owner, { x: a.pos.x, y: a.pos.y + 2, z: a.pos.z, w: 'Thunderclap RPG' });
     const inv = 1 / Math.max(0.5, d); a.vel.x += dx * inv * 9 * f; a.vel.z += dz * inv * 9 * f; a.vel.y += 6 * f; a.onGround = false;
   }
-  Build.explode(x, y, z, st.splash + 1.5, st.dmg * st.struct);
+  Build.explode(x, y, z, st.splash + 1.5, st.dmg * st.struct); blastChests(x, y, z, st.splash, owner);
   Vehicles.blast(x, y, z, st.splash + 2, st.dmg * 1.5);
   Creatures.blast(x, y, z, st.splash, st.dmg);
 }

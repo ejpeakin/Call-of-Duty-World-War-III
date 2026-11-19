@@ -392,8 +392,10 @@ body.touch #chatHint,body.pad #chatHint{display:none}
 .dd{position:absolute;left:-60px;top:-160px;width:120px;height:26px;transform-origin:60px 160px;opacity:0;
   background:radial-gradient(60px 13px at 50% 100%,rgba(255,60,60,.85),transparent 70%)}
 #scope{position:absolute;inset:0;background:radial-gradient(circle at 50% 50%,transparent 0,transparent min(34vh,34vw),#000 calc(min(34vh,34vw) + 2px))}
-#scope2{position:absolute;inset:0;pointer-events:none;--R:min(41vh,41vw);background:radial-gradient(circle at 50% 50%,rgba(255,255,255,.04) 0,transparent calc(var(--R) * .6),rgba(0,0,0,.18) calc(var(--R) - 26px),rgba(0,0,0,.75) calc(var(--R) - 6px),#060606 var(--R));animation:tkIn .12s ease-out}
-#scope2 svg{position:absolute;left:50%;top:50%;width:calc(var(--R) * 2);height:calc(var(--R) * 2);transform:translate(-50%,-50%);overflow:visible}
+#scope2{position:absolute;inset:0;pointer-events:none;--R:min(26vh,26vw);animation:tkIn .12s ease-out;
+  background:radial-gradient(circle at 50% 50%,transparent calc(var(--R) * 1.25),rgba(0,0,0,.22) calc(var(--R) * 2.6))}
+#scope2 svg{position:absolute;left:50%;top:50%;width:calc(var(--R) * 2.4);height:calc(var(--R) * 2);transform:translate(-50%,-50%);overflow:visible}
+#scope2 .rd{filter:drop-shadow(0 0 3px rgba(255,40,40,.9))}
 #scope::before,#scope::after{content:"";position:absolute;background:rgba(0,0,0,.85)}
 #scope::before{left:50%;top:0;bottom:0;width:1px}
 #scope::after{top:50%;left:0;right:0;height:1px}
@@ -852,13 +854,11 @@ details.ctl .hint{margin-top:8px}
   <div id="hurtVig"></div>
   <div id="downVig" hidden><b>You are down</b><span id="downTip"></span></div>
   <div id="scope" hidden></div>
-  <div id="scope2" hidden><svg viewBox="-100 -100 200 200" aria-hidden="true">
-    <g stroke="#0a0a0a" fill="none">
-      <line x1="-100" y1="0" x2="-4" y2="0" stroke-width=".7"/><line x1="4" y1="0" x2="100" y2="0" stroke-width=".7"/>
-      <line x1="0" y1="-100" x2="0" y2="-4" stroke-width=".7"/><line x1="0" y1="4" x2="0" y2="100" stroke-width=".7"/>
-      <circle r="2.6" stroke-width=".6"/>
-      <g stroke-width=".6"><line x1="-20" y1="-2" x2="-20" y2="2"/><line x1="20" y1="-2" x2="20" y2="2"/><line x1="-40" y1="-2.6" x2="-40" y2="2.6"/><line x1="40" y1="-2.6" x2="40" y2="2.6"/><line x1="-2" y1="20" x2="2" y2="20"/><line x1="-2.6" y1="40" x2="2.6" y2="40"/><line x1="-2" y1="-20" x2="2" y2="-20"/></g>
-    </g>
+  <div id="scope2" hidden><svg viewBox="-120 -100 240 200" aria-hidden="true">
+    <rect x="-112" y="-80" width="224" height="160" rx="26" fill="rgba(120,170,200,.06)" stroke="#1b1f24" stroke-width="9" stroke-opacity=".88"/>
+    <rect x="-112" y="-80" width="224" height="160" rx="26" fill="none" stroke="#3a414a" stroke-width="2" stroke-opacity=".9"/>
+    <rect x="-34" y="-96" width="68" height="14" rx="4" fill="#1b1f24" fill-opacity=".9"/>
+    <g class="rd"><circle r="20" fill="none" stroke="#ff3434" stroke-width="1.3" stroke-opacity=".85"/><circle r="2.4" fill="#ff2a2a"/></g>
   </svg></div>
   <div id="dmgNums"></div>
   <div id="killfeed"></div>
@@ -1024,7 +1024,7 @@ details.ctl .hint{margin-top:8px}
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js"></script>
 <script async src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>
-const BUILD_ID = '1119-1437';
+const BUILD_ID = '1119-1504';
 'use strict';
 // =====================================================================
 //  FORTDAY — core utilities, data tables, profile, audio
@@ -4574,6 +4574,29 @@ function coneDir(d, spread, out) {
   const a = Math.random() * TAU, r = Math.sqrt(Math.random()) * spread;
   return out.addScaledVector(_su, Math.cos(a) * r).addScaledVector(_sv, Math.sin(a) * r).normalize();
 }
+// Shooting a chest opens it. The shot has to reach the chest: walls, builds and rocks in front of it block it.
+// Players only (bots still walk up and open chests the normal way).
+const CHEST_R = 0.62;
+function shotChest(a, ox, oy, oz, dx, dy, dz, maxT) {
+  if (!a || a.ai || a.remote || Match.state !== 'play') return null;
+  let best = null, bt = maxT;
+  for (const c of W.chests) {
+    if (c.opened || c.falling) continue;
+    const cx = c.x - ox, cy = c.y + 0.45 - oy, cz = c.z - oz, t = cx * dx + cy * dy + cz * dz; if (t < 0 || t > bt + CHEST_R) continue;
+    const q = cx * cx + cy * cy + cz * cz - t * t; if (q > CHEST_R * CHEST_R) continue;
+    const th = t - Math.sqrt(CHEST_R * CHEST_R - q); if (th < bt) { bt = th; best = c; }
+  }
+  return best ? { c: best, t: bt } : null;
+}
+function shootChest(a, c, x, y, z) {
+  FX.burst(x, y, z, c.kind === 'exotic' ? 0x2fe0d0 : 0xffd84a, 4, 3, 0.3, 0.07);
+  openChest(c, a);
+}
+// rockets and shockwaves pop open every chest in the blast
+function blastChests(x, y, z, r, owner) {
+  if (!owner || owner.ai || owner.remote || Match.state !== 'play') return;
+  for (const c of W.chests) if (!c.opened && !c.falling && Math.hypot(c.x - x, c.y + 0.45 - y, c.z - z) < r + CHEST_R && losClear(x, y + 0.3, z, c.x, c.y + 0.5, c.z)) openChest(c, owner);
+}
 function fireWeapon(a) {
   const it = a.inv[a.slot]; const st = wstat(it);
   if (st.melee) { slash(a, it, st); return; }
@@ -4598,7 +4621,9 @@ function fireWeapon(a) {
     for (let i = 0; i < n; i++) {
       const d = coneDir(AIM.d, spread, _v2);
       const ox = AIM.o.x + AIM.d.x * AIM.t0, oy = AIM.o.y + AIM.d.y * AIM.t0, oz = AIM.o.z + AIM.d.z * AIM.t0;
-      const h = raycast(ox, oy, oz, d.x, d.y, d.z, st.range, a, true);
+      let h = raycast(ox, oy, oz, d.x, d.y, d.z, st.range, a, true);
+      const ch = shotChest(a, ox, oy, oz, d.x, d.y, d.z, h.type ? h.t : st.range);
+      if (ch) { h = { type: 'chest', t: ch.t, x: ox + d.x * ch.t, y: oy + d.y * ch.t, z: oz + d.z * ch.t }; shootChest(a, ch.c, h.x, h.y, h.z); }
       if (i < 3 || i % 3 === 0) { FX.tracer(mz.x, mz.y, mz.z, h.x, h.y, h.z, tcol); if (hits.length < 4) hits.push([r1(h.x), r1(h.y), r1(h.z)]); }
       applyHit(a, st, h, d, n);
     }
@@ -4623,6 +4648,7 @@ function slash(a, it, st) {
   }
   // builds, cars, rocks and creatures straight ahead
   const cp = Math.cos(a.pitch), h = raycast(a.pos.x, ey, a.pos.z, fx * cp, Math.sin(a.pitch), fz * cp, R + 0.4, a, false);
+  { const ch = shotChest(a, a.pos.x, ey, a.pos.z, fx * cp, Math.sin(a.pitch), fz * cp, h.type ? h.t : R + 0.4); if (ch) { const t = ch.t; shootChest(a, ch.c, a.pos.x + fx * cp * t, ey + Math.sin(a.pitch) * t, a.pos.z + fz * cp * t); } }
   if (h.type === 'col') { const c = h.obj; if (c.piece) Build.damage(c.piece, st.dmg * st.struct, a); else if (c.harv && c.harv.vehicle) Vehicles.damage(c.harv.vehicle, st.dmg * 0.4); FX.burst(h.x, h.y, h.z, MATS[c.mat] ? MATS[c.mat].color : 0xcccccc, 5, 3, 0.35, 0.08); }
   { const cr = Creatures.ray(a.pos.x, ey, a.pos.z, fx, 0, fz, R + 0.6); if (cr) Creatures.damage(cr.c, st.dmg, a, { x: a.pos.x + fx * cr.t, y: ey, z: a.pos.z + fz * cr.t }); }
   FX.slash(a.pos.x + fx * 0.3, ey - 0.15, a.pos.z + fz * 0.3, a.yaw, a.slashSide);
@@ -4786,7 +4812,7 @@ function shockBurst(x, y, z, owner, st, fxOnly) {
     damageActor(a, st.dmg * (0.5 + f * 0.5) * (a === owner ? 0.25 : 1), a === owner ? null : owner, { x: a.pos.x, y: a.pos.y + 2, z: a.pos.z, w: 'Shockwave Cannon', kx, kz });
     if (!a.remote) shockLaunch(a, kx, kz);
   }
-  Build.explode(x, y, z, st.splash, st.dmg * st.struct);
+  Build.explode(x, y, z, st.splash, st.dmg * st.struct); blastChests(x, y, z, st.splash, owner);
 }
 // thrown up and away by a shockwave (no fall damage from the landing)
 function shockLaunch(a, kx, kz) {
@@ -4810,7 +4836,7 @@ function explode(x, y, z, owner, st, fxOnly) {
     damageActor(a, st.dmg * f * (a === owner ? 0.5 : 1), a === owner ? null : owner, { x: a.pos.x, y: a.pos.y + 2, z: a.pos.z, w: 'Thunderclap RPG' });
     const inv = 1 / Math.max(0.5, d); a.vel.x += dx * inv * 9 * f; a.vel.z += dz * inv * 9 * f; a.vel.y += 6 * f; a.onGround = false;
   }
-  Build.explode(x, y, z, st.splash + 1.5, st.dmg * st.struct);
+  Build.explode(x, y, z, st.splash + 1.5, st.dmg * st.struct); blastChests(x, y, z, st.splash, owner);
   Vehicles.blast(x, y, z, st.splash + 2, st.dmg * 1.5);
   Creatures.blast(x, y, z, st.splash, st.dmg);
 }
@@ -8514,7 +8540,7 @@ const Cam = {
     this.t0 = Math.max(0, (px - cx) * fx + (pyy - cy) * fy + (pz - cz) * fz);
     this.ready = a === player;
     const sprint = a.input.sprint && a.input.f > 0 && a.state === 'ground';
-    this.fov(dt, this.scoped ? (this.scopeKind === 'smg' ? 40 : 22) : (a === player && a.input.ads && !a.vehicle) ? (it && it.kind === 'weapon' && wstat(it).type === 'shotgun' ? 64 : it && it.kind === 'weapon' && wstat(it).type === 'smg' ? 52 : 58) : sprint ? 80 : a.vehicle ? 80 : 75);
+    this.fov(dt, this.scoped ? (this.scopeKind === 'smg' ? 56 : 22) : (a === player && a.input.ads && !a.vehicle) ? (it && it.kind === 'weapon' && wstat(it).type === 'shotgun' ? 64 : it && it.kind === 'weapon' && wstat(it).type === 'smg' ? 52 : 58) : sprint ? 80 : a.vehicle ? 80 : 75);
   },
   fov(dt, target) { if (Math.abs(camera.fov - target) > 0.1) { camera.fov = lerp(camera.fov, target, Math.min(1, dt * 12)); camera.updateProjectionMatrix(); } },
 };
@@ -8552,13 +8578,13 @@ function updatePlayer(dt) {
   if (Victory.on) { const i = a.input; i.f = i.r = 0; i.fire = i.jump = i.ads = i.sprint = false; Input.pressed.clear(); Input.mdx = Input.mdy = 0; Input.wheel = 0; return; }   // celebrating
   const K = Input.keys, P = Input.pressed, tc = Input.touch, inp = a.input;
   const it = a.inv[a.slot];
-  const sens = 0.0022 * Profile.d.sens * (inp.ads ? (Cam.scoped ? (Cam.scopeKind === 'smg' ? 0.5 : 0.32) : 0.65) : 1);
+  const sens = 0.0022 * Profile.d.sens * (inp.ads ? (Cam.scoped ? (Cam.scopeKind === 'smg' ? 0.72 : 0.32) : 0.65) : 1);
   let mdx = Input.mdx, mdy = Input.mdy; Input.mdx = Input.mdy = 0;
   if (K.ArrowLeft) mdx -= 600 * dt; if (K.ArrowRight) mdx += 600 * dt; if (K.ArrowUp) mdy -= 400 * dt; if (K.ArrowDown) mdy += 400 * dt;
   a.yaw -= mdx * sens; a.pitch = clamp(a.pitch - mdy * sens, -1.45, 1.45);
   const pd = Input.pad;
   if (pd.on) {
-    const ls = (inp.ads ? (Cam.scoped ? (Cam.scopeKind === 'smg' ? 0.48 : 0.3) : 0.6) : 1) * Profile.d.sens, cv = v => Math.sign(v) * Math.pow(Math.abs(v), 1.7);
+    const ls = (inp.ads ? (Cam.scoped ? (Cam.scopeKind === 'smg' ? 0.7 : 0.3) : 0.6) : 1) * Profile.d.sens, cv = v => Math.sign(v) * Math.pow(Math.abs(v), 1.7);
     a.yaw -= cv(pd.lx) * 3.5 * ls * dt; a.pitch = clamp(a.pitch - cv(pd.ly) * 2.3 * ls * dt, -1.45, 1.45);
     if (a.slot) pd.lastSlot = a.slot;
     for (const i of pd.hit) {
