@@ -134,20 +134,27 @@ function shotChest(a, ox, oy, oz, dx, dy, dz, maxT) {
   }
   return best ? { c: best, t: bt } : null;
 }
+// It takes CHEST_SHOTS hits to break a chest open. One trigger pull counts once (a shotgun blast is one hit, not ten).
+const CHEST_SHOTS = 3; let SHOT_N = 0;
 function shootChest(a, c, x, y, z) {
+  if (c.shotId === SHOT_N) return; c.shotId = SHOT_N;
+  c.shots = (c.shots || 0) + 1;
   FX.burst(x, y, z, c.kind === 'exotic' ? 0x2fe0d0 : 0xffd84a, 4, 3, 0.3, 0.07);
-  openChest(c, a);
+  if (c.shots >= CHEST_SHOTS) { openChest(c, a); return; }
+  if (c.mesh) c.mesh.userData.hitT = 0.35;
+  if (a === player) { Sfx.tone(480 + c.shots * 160, 0.07, 'square', 0.06); HUD.dmgNum(c.x, c.y + 1.3, c.z, c.shots + '/' + CHEST_SHOTS, 'chest'); }
 }
 // rockets and shockwaves pop open every chest in the blast
 function blastChests(x, y, z, r, owner) {
   if (!owner || owner.ai || owner.remote || Match.state !== 'play') return;
-  for (const c of W.chests) if (!c.opened && !c.falling && Math.hypot(c.x - x, c.y + 0.45 - y, c.z - z) < r + CHEST_R && losClear(x, y + 0.3, z, c.x, c.y + 0.5, c.z)) openChest(c, owner);
+  SHOT_N++;   // a blast is one hit on each chest it reaches
+  for (const c of W.chests) if (!c.opened && !c.falling && Math.hypot(c.x - x, c.y + 0.45 - y, c.z - z) < r + CHEST_R && losClear(x, y + 0.3, z, c.x, c.y + 0.5, c.z)) shootChest(owner, c, c.x, c.y + 0.5, c.z);
 }
 function fireWeapon(a) {
   const it = a.inv[a.slot]; const st = wstat(it);
   if (st.melee) { slash(a, it, st); return; }
   if (it.mag <= 0) { startReload(a); return; }
-  it.mag--; a.fireCD = 1 / st.rate; a.emote = null; a.lastShotT = Match.time;
+  it.mag--; a.fireCD = 1 / st.rate; a.emote = null; a.lastShotT = Match.time; SHOT_N++;
   aimRay(a, AIM);
   const moving = Math.hypot(a.vel.x, a.vel.z) > 1.5;
   let spread = a.input.ads ? st.ads : st.spread;
@@ -181,7 +188,7 @@ function fireWeapon(a) {
 }
 // Japanese Katana: one swing cuts everyone in front of you within reach (and builds in the way)
 function slash(a, it, st) {
-  a.fireCD = 1 / st.rate; a.emote = null; a.lastShotT = Match.time; a.slashT = 0.28; a.slashSide = -(a.slashSide || 1);
+  a.fireCD = 1 / st.rate; a.emote = null; a.lastShotT = Match.time; a.slashT = 0.28; SHOT_N++; a.slashSide = -(a.slashSide || 1);
   const fx = Math.sin(a.yaw), fz = Math.cos(a.yaw), s = a.scale || 1, ey = a.pos.y + 1.3 * s, R = st.range * s; let hits = 0;
   for (const t of actors) {
     if (t === a || !t.alive || t.state === 'bus' || t.vehicle || t.team === a.team) continue;

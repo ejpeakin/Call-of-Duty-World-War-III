@@ -36,7 +36,7 @@ const HUD = {
   dmgNum(x, y, z, val, kind) {
     const n = this.nums.find(n => n.t <= 0) || this.nums[0];
     n.t = 0.9; n.x = x + rnd(-0.3, 0.3); n.y = y; n.z = z; n.el.textContent = val; n.el.style.display = 'block';
-    n.el.style.color = { head: '#ffd84a', shield: '#7cc8ff', hp: '#ffffff', mat: '#d9f7c4', build: '#c9c0b0' }[kind] || '#fff';
+    n.el.style.color = { head: '#ffd84a', shield: '#7cc8ff', hp: '#ffffff', mat: '#d9f7c4', build: '#c9c0b0', chest: '#ffd84a' }[kind] || '#fff';
     n.el.style.fontSize = kind === 'mat' ? '14px' : kind === 'build' ? '15px' : kind === 'head' ? '24px' : '20px';
   },
   hurt(src, dmg, o) {

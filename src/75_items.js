@@ -95,6 +95,7 @@ const Pickups = {
       }
       const d2 = (c.x - cp.x) ** 2 + (c.z - cp.z) ** 2; if (d2 > (pf ? 40 * 40 : 75 * 75) || !View.sees(c.x, c.y + 0.8, c.z, 1.6)) continue;
       const t = p_time + c.x * 0.7, sq = Math.sin(t * 3.2);
+      if (u.hitT > 0) { u.hitT = Math.max(0, u.hitT - dt); m.rotation.z = Math.sin(u.hitT * 60) * u.hitT * 0.5; } else if (m.rotation.z) m.rotation.z = 0;   // shot: a quick rattle
       m.scale.set(s0 * (1 - sq * 0.03), s0 * (1 + sq * 0.045), s0 * (1 - sq * 0.03));
       if (u.star) { u.star.rotation.y = t * 2.2; u.star.position.y = 1.3 + Math.sin(t * 2.4) * 0.09; u.star.scale.setScalar(0.85 + Math.sin(t * 5) * 0.15); u.lock.rotation.y = t * 1.5; }
       if (!pf && d2 < 35 * 35 && Math.random() < dt * 1.4) FX.burst(c.x + rnd(-0.6, 0.6), c.y + 0.5 + Math.random() * 0.9, c.z + rnd(-0.6, 0.6), c.kind === 'exotic' ? 0x9ffff5 : 0xfff0a0, 1, 0.5, 0.6, 0.06, 1);

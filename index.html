@@ -1024,7 +1024,7 @@ details.ctl .hint{margin-top:8px}
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js"></script>
 <script async src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>
-const BUILD_ID = '1119-1504';
+const BUILD_ID = '1119-1523';
 'use strict';
 // =====================================================================
 //  FORTDAY — core utilities, data tables, profile, audio
@@ -4588,20 +4588,27 @@ function shotChest(a, ox, oy, oz, dx, dy, dz, maxT) {
   }
   return best ? { c: best, t: bt } : null;
 }
+// It takes CHEST_SHOTS hits to break a chest open. One trigger pull counts once (a shotgun blast is one hit, not ten).
+const CHEST_SHOTS = 3; let SHOT_N = 0;
 function shootChest(a, c, x, y, z) {
+  if (c.shotId === SHOT_N) return; c.shotId = SHOT_N;
+  c.shots = (c.shots || 0) + 1;
   FX.burst(x, y, z, c.kind === 'exotic' ? 0x2fe0d0 : 0xffd84a, 4, 3, 0.3, 0.07);
-  openChest(c, a);
+  if (c.shots >= CHEST_SHOTS) { openChest(c, a); return; }
+  if (c.mesh) c.mesh.userData.hitT = 0.35;
+  if (a === player) { Sfx.tone(480 + c.shots * 160, 0.07, 'square', 0.06); HUD.dmgNum(c.x, c.y + 1.3, c.z, c.shots + '/' + CHEST_SHOTS, 'chest'); }
 }
 // rockets and shockwaves pop open every chest in the blast
 function blastChests(x, y, z, r, owner) {
   if (!owner || owner.ai || owner.remote || Match.state !== 'play') return;
-  for (const c of W.chests) if (!c.opened && !c.falling && Math.hypot(c.x - x, c.y + 0.45 - y, c.z - z) < r + CHEST_R && losClear(x, y + 0.3, z, c.x, c.y + 0.5, c.z)) openChest(c, owner);
+  SHOT_N++;   // a blast is one hit on each chest it reaches
+  for (const c of W.chests) if (!c.opened && !c.falling && Math.hypot(c.x - x, c.y + 0.45 - y, c.z - z) < r + CHEST_R && losClear(x, y + 0.3, z, c.x, c.y + 0.5, c.z)) shootChest(owner, c, c.x, c.y + 0.5, c.z);
 }
 function fireWeapon(a) {
   const it = a.inv[a.slot]; const st = wstat(it);
   if (st.melee) { slash(a, it, st); return; }
   if (it.mag <= 0) { startReload(a); return; }
-  it.mag--; a.fireCD = 1 / st.rate; a.emote = null; a.lastShotT = Match.time;
+  it.mag--; a.fireCD = 1 / st.rate; a.emote = null; a.lastShotT = Match.time; SHOT_N++;
   aimRay(a, AIM);
   const moving = Math.hypot(a.vel.x, a.vel.z) > 1.5;
   let spread = a.input.ads ? st.ads : st.spread;
@@ -4635,7 +4642,7 @@ function fireWeapon(a) {
 }
 // Japanese Katana: one swing cuts everyone in front of you within reach (and builds in the way)
 function slash(a, it, st) {
-  a.fireCD = 1 / st.rate; a.emote = null; a.lastShotT = Match.time; a.slashT = 0.28; a.slashSide = -(a.slashSide || 1);
+  a.fireCD = 1 / st.rate; a.emote = null; a.lastShotT = Match.time; a.slashT = 0.28; SHOT_N++; a.slashSide = -(a.slashSide || 1);
   const fx = Math.sin(a.yaw), fz = Math.cos(a.yaw), s = a.scale || 1, ey = a.pos.y + 1.3 * s, R = st.range * s; let hits = 0;
   for (const t of actors) {
     if (t === a || !t.alive || t.state === 'bus' || t.vehicle || t.team === a.team) continue;
@@ -5182,6 +5189,7 @@ const Pickups = {
       }
       const d2 = (c.x - cp.x) ** 2 + (c.z - cp.z) ** 2; if (d2 > (pf ? 40 * 40 : 75 * 75) || !View.sees(c.x, c.y + 0.8, c.z, 1.6)) continue;
       const t = p_time + c.x * 0.7, sq = Math.sin(t * 3.2);
+      if (u.hitT > 0) { u.hitT = Math.max(0, u.hitT - dt); m.rotation.z = Math.sin(u.hitT * 60) * u.hitT * 0.5; } else if (m.rotation.z) m.rotation.z = 0;   // shot: a quick rattle
       m.scale.set(s0 * (1 - sq * 0.03), s0 * (1 + sq * 0.045), s0 * (1 - sq * 0.03));
       if (u.star) { u.star.rotation.y = t * 2.2; u.star.position.y = 1.3 + Math.sin(t * 2.4) * 0.09; u.star.scale.setScalar(0.85 + Math.sin(t * 5) * 0.15); u.lock.rotation.y = t * 1.5; }
       if (!pf && d2 < 35 * 35 && Math.random() < dt * 1.4) FX.burst(c.x + rnd(-0.6, 0.6), c.y + 0.5 + Math.random() * 0.9, c.z + rnd(-0.6, 0.6), c.kind === 'exotic' ? 0x9ffff5 : 0xfff0a0, 1, 0.5, 0.6, 0.06, 1);
@@ -8885,7 +8893,7 @@ const HUD = {
   dmgNum(x, y, z, val, kind) {
     const n = this.nums.find(n => n.t <= 0) || this.nums[0];
     n.t = 0.9; n.x = x + rnd(-0.3, 0.3); n.y = y; n.z = z; n.el.textContent = val; n.el.style.display = 'block';
-    n.el.style.color = { head: '#ffd84a', shield: '#7cc8ff', hp: '#ffffff', mat: '#d9f7c4', build: '#c9c0b0' }[kind] || '#fff';
+    n.el.style.color = { head: '#ffd84a', shield: '#7cc8ff', hp: '#ffffff', mat: '#d9f7c4', build: '#c9c0b0', chest: '#ffd84a' }[kind] || '#fff';
     n.el.style.fontSize = kind === 'mat' ? '14px' : kind === 'build' ? '15px' : kind === 'head' ? '24px' : '20px';
   },
   hurt(src, dmg, o) {
