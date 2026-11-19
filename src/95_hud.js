@@ -30,7 +30,7 @@ const HUD = {
     const kf = $('killfeed'); kf.prepend(d); while (kf.children.length > 5) kf.lastChild.remove();
     setTimeout(() => d.remove(), 7000);
   },
-  toast(text) { this.toastEl.textContent = text; this.toastEl.style.opacity = 1; this.toastT = 2.2; },
+  toast(text) { const t = this.toastEl; t.textContent = text; t.style.opacity = 1; this.toastT = 2.2; t.classList.remove('tpop'); void t.offsetWidth; t.classList.add('tpop'); },
   banner(title, sub, dur = 3) { $('bannerT').textContent = title; $('bannerS').textContent = sub || ''; $('banner').style.opacity = 1; this.bannerT = dur; },
   hitmark(head) { const h = $('hitmarker'); h.className = head ? 'head' : ''; h.style.opacity = 1; this.hitT = 0.16; },
   dmgNum(x, y, z, val, kind) {
@@ -80,8 +80,10 @@ const HUD = {
       d.el.style.transform = `rotate(${-ang * 180 / Math.PI}deg)`; d.el.style.opacity = clamp(d.t, 0, 1);
     }
     // vitals (of the viewed actor)
-    const set = (id, w) => { const k = id + 'w'; if (this.last[k] !== w) { this.last[k] = w; $(id).style.width = w + '%'; } };
-    const txt = (id, s) => { if (this.last[id] !== s) { this.last[id] = s; $(id).textContent = s; } };
+    const set = (id, w) => { const k = id + 'w'; if (this.last[k] !== w) { const was = this.last[k]; this.last[k] = w; $(id).style.width = w + '%';
+      const gh = $(id).parentElement.querySelector('s'); if (gh) { if (was != null && w < was - 0.5 && v === this.lastV) { $(id).parentElement.classList.remove('hit'); void gh.offsetWidth; $(id).parentElement.classList.add('hit'); } else gh.style.width = w + '%'; if (w < (parseFloat(gh.style.width) || 0)) { clearTimeout(gh._t); gh._t = setTimeout(() => { gh.style.width = this.last[k] + '%'; }, 380); } } } };   // white damage trail drains after a hit
+    this.lastV = v;
+    const txt = (id, s) => { if (this.last[id] !== s) { const had = this.last[id] != null; this.last[id] = s; const el = $(id); el.textContent = s; if (had && HUD_POP.includes(id)) { el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); } } };
     set('hpFill', v.hp / v.maxHp * 100); txt('hpTxt', Math.ceil(v.hp)); set('shFill', v.shield); txt('shTxt', Math.ceil(v.shield) + (!Match.build && v.over > 0.5 ? ' +' + Math.ceil(v.over) : ''));
     // hotbar + ammo
     const it = v.inv[v.slot];
@@ -94,7 +96,7 @@ const HUD = {
     else { txt('wName', v.vehicle ? 'Driving · ' + Math.round(Math.abs(v.vehicle.speed) * 3.6) + ' km/h' : 'Harvesting Tool'); $('wName').style.color = '#fff'; txt('magTxt', ''); txt('resTxt', ''); }
     if (Match.build) {
       const mk = MAT_ORDER.map(m => v.mats[m]).join(',') + v.mat;
-      if (this.last.mats !== mk) { this.last.mats = mk; [...$('mats').children].forEach(el => { const m = el.dataset.m; el.querySelector('span').textContent = v.mats[m]; el.classList.toggle('on', m === v.mat); }); }
+      if (this.last.mats !== mk) { this.last.mats = mk; [...$('mats').children].forEach(el => { const m = el.dataset.m, sp = el.querySelector('span'), nv = String(v.mats[m]); if (sp.textContent !== nv && +nv > +sp.textContent) { el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); } sp.textContent = nv; el.classList.toggle('on', m === v.mat); }); }
       const bk = Build.active + Build.piece + Input.pad.on;
       if (this.last.bb !== bk) { this.last.bb = bk; const pad = Input.pad.on; $('buildbar').innerHTML = [['wall', Keys.of('wall'), 'Wall'], ['ramp', Keys.of('ramp'), 'Ramp'], ['floor', Keys.of('floor'), 'Floor'], ['cone', Keys.of('cone'), 'Cone']].map(([p, k, n]) => `<div class="${Build.active && Build.piece === p ? 'on' : ''}">${pad ? '' : '<kbd>' + k + '</kbd>'}${n}</div>`).join('') + (pad ? '<div><kbd>B</kbd>Build</div><div><kbd>RB</kbd>Piece</div><div><kbd>LB</kbd>Material</div>' : '<div><kbd>' + esc(Keys.of('material')) + '</kbd>Material</div>'); }
     }
@@ -146,7 +148,7 @@ const HUD = {
       else if (Storm.state === 'shrink') st = 'Storm closing · ' + fmtTime(Storm.t);
       else if (Storm.state === 'done') st = Storm.rumble ? 'Rumble zone locked' : 'Final circle';
       else st = 'Storm forming';
-      txt('stormTxt', st);
+      txt('stormTxt', st); $('stormTxt').classList.toggle('urgent', Storm.state === 'shrink');
       if (Match.mode === 'rumble') { txt('aliveN', '40'); txt('scoreBlue', String(Match.score[0])); txt('scoreRed', String(Match.score[1])); }
       else txt('aliveN', String(Match.aliveCount));
       txt('elimN', String(v.kills));
@@ -174,9 +176,13 @@ function drawMarkers(g, S, cx, cz, scale, big) {
   // storm
   if (Storm.state !== 'idle') {
     const [sx, sy] = mapXY(Storm.cx, Storm.cz, cx, cz, scale, S);
-    g.fillStyle = 'rgba(120,40,220,0.45)'; g.beginPath(); g.rect(-5, -5, S + 10, S + 10); g.arc(sx, sy, Math.max(0.5, Storm.r * scale), 0, TAU); g.fill('evenodd');
-    g.strokeStyle = 'rgba(200,150,255,.9)'; g.lineWidth = 1.5; g.beginPath(); g.arc(sx, sy, Math.max(0.5, Storm.r * scale), 0, TAU); g.stroke();
-    if (Storm.hasNext) { const [nx, ny] = mapXY(Storm.tx, Storm.tz, cx, cz, scale, S); g.strokeStyle = '#fff'; g.lineWidth = 1.5; g.setLineDash([5, 4]); g.beginPath(); g.arc(nx, ny, Math.max(0.5, Storm.tr * scale), 0, TAU); g.stroke(); g.setLineDash([]); }
+    const t = performance.now() / 1000, shrink = Storm.state === 'shrink', sr = Math.max(0.5, Storm.r * scale);
+    // the storm breathes; while it closes its edge glows brighter and dashes run around it
+    g.fillStyle = 'rgba(120,40,220,' + (0.42 + 0.06 * Math.sin(t * 2.2)) + ')'; g.beginPath(); g.rect(-5, -5, S + 10, S + 10); g.arc(sx, sy, sr, 0, TAU); g.fill('evenodd');
+    g.save(); g.shadowColor = 'rgba(200,120,255,.9)'; g.shadowBlur = shrink ? 6 + 4 * Math.sin(t * 6) : 3;
+    g.strokeStyle = 'rgba(210,160,255,' + (shrink ? 0.8 + 0.2 * Math.sin(t * 6) : 0.85) + ')'; g.lineWidth = shrink ? 2.2 : 1.5; g.beginPath(); g.arc(sx, sy, sr, 0, TAU); g.stroke(); g.restore();
+    if (shrink) { g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth = 1; g.setLineDash([3, 7]); g.lineDashOffset = -t * 18; g.beginPath(); g.arc(sx, sy, sr + 2, 0, TAU); g.stroke(); g.setLineDash([]); g.lineDashOffset = 0; }
+    if (Storm.hasNext) { const [nx, ny] = mapXY(Storm.tx, Storm.tz, cx, cz, scale, S); g.strokeStyle = '#fff'; g.lineWidth = 1.5; g.setLineDash([5, 4]); g.lineDashOffset = -t * 10; g.beginPath(); g.arc(nx, ny, Math.max(0.5, Storm.tr * scale), 0, TAU); g.stroke(); g.setLineDash([]); g.lineDashOffset = 0; }   // the next circle's outline marches
   }
   if (Bus.active) {
     const [ax, ay] = mapXY(Bus.start.x, Bus.start.z, cx, cz, scale, S), [bx, by] = mapXY(Bus.start.x + Bus.dir.x * 940, Bus.start.z + Bus.dir.z * 940, cx, cz, scale, S);
@@ -184,7 +190,7 @@ function drawMarkers(g, S, cx, cz, scale, big) {
     const [px, py] = mapXY(Bus.pos.x, Bus.pos.z, cx, cz, scale, S); g.fillStyle = '#3a8bff'; g.beginPath(); g.arc(px, py, big ? 7 : 5, 0, TAU); g.fill();
   }
   Reboot.drawMap(g, S, cx, cz, scale, big);
-  for (const c of W.chests) if (c.kind === 'supply' && !c.opened) { const [x, y] = mapXY(c.x, c.z, cx, cz, scale, S); g.fillStyle = '#3aa8ff'; g.fillRect(x - 4, y - 4, 8, 8); g.strokeStyle = '#fff'; g.strokeRect(x - 4, y - 4, 8, 8); }
+  { const k = 4 + Math.sin(performance.now() / 160) * 1.2; for (const c of W.chests) if (c.kind === 'supply' && !c.opened) { const [x, y] = mapXY(c.x, c.z, cx, cz, scale, S); g.fillStyle = '#3aa8ff'; g.fillRect(x - k, y - k, k * 2, k * 2); g.strokeStyle = '#fff'; g.strokeRect(x - k, y - k, k * 2, k * 2); } }   // supply drops pulse
   if (big || scale > 0.5) {
     g.font = (big ? 'bold 13px ' : 'bold 10px ') + 'Rubik, system-ui, sans-serif'; g.textAlign = 'center';
     for (const p of W.sites) { const [x, y] = mapXY(p.x, p.z, cx, cz, scale, S); if (x < -60 || x > S + 60 || y < -20 || y > S + 20) continue; g.fillStyle = 'rgba(0,0,0,.55)'; g.fillText(p.name, x + 1, y + 1); g.fillStyle = p.kind === 'vault' ? '#ffe066' : '#fff'; g.fillText(p.name, x, y); }
@@ -204,6 +210,7 @@ function drawMarkers(g, S, cx, cz, scale, big) {
   }
   const v = Cam.view || player; if (!v) return;
   const p = v.state === 'bus' ? Bus.pos : v.pos; const [x, y] = mapXY(p.x, p.z, cx, cz, scale, S);
+  { const ph = (performance.now() / 1300) % 1; g.strokeStyle = 'rgba(255,255,255,' + (0.55 * (1 - ph)) + ')'; g.lineWidth = 1.5; g.beginPath(); g.arc(x, y, 5 + ph * (big ? 16 : 11), 0, TAU); g.stroke(); }   // soft ping under your arrow
   g.save(); g.translate(x, y); g.rotate(Math.PI - (v.state === 'bus' ? Math.atan2(Bus.dir.x, Bus.dir.z) : v.yaw));
   g.fillStyle = '#fff'; g.strokeStyle = '#000'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(0, -8); g.lineTo(6, 6); g.lineTo(0, 3); g.lineTo(-6, 6); g.closePath(); g.fill(); g.stroke(); g.restore();
 }
@@ -261,6 +268,7 @@ const Icons = {
 
 // ---------------------------------------------------------------- waypoints over friends in a shared match
 // Every player from the room gets a marker with their name and distance; it slides to the screen edge when they are off screen.
+const HUD_POP = ['magTxt', 'elimN', 'aliveN'];   // these numbers pop when they change
 const Waypoints = {
   els: new Map(), v: new THREE.Vector3(),
   // one marker on screen; pinned to the edge (or the bottom, when behind you) if it is off-screen

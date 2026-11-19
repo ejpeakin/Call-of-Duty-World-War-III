@@ -92,6 +92,16 @@ button:focus-visible{outline:2px solid var(--sun-2);outline-offset:2px}
 #readyBtn{flex:1;font-family:var(--f-display);font-weight:900;font-style:italic;text-transform:uppercase;letter-spacing:.03em;font-size:30px;padding:14px 18px;border:0;border-radius:14px;color:#ffffff;
   background:linear-gradient(180deg,var(--sun-2),var(--sun));box-shadow:0 5px 0 #144bb0,0 10px 24px rgba(47,134,255,.35)}
 #readyBtn:active{transform:translateY(3px);box-shadow:0 2px 0 #144bb0}
+#readyBtn{position:relative;overflow:hidden;transition:transform .15s,filter .15s}
+#readyBtn:hover:not(:disabled){transform:translateY(-2px);filter:brightness(1.07)}
+#readyBtn::after{content:"";position:absolute;top:0;bottom:0;left:-40%;width:30%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.35),transparent);transform:skewX(-18deg);animation:playShine 3.4s ease-in-out infinite;pointer-events:none}
+@keyframes playShine{0%,55%{left:-40%}85%,100%{left:120%}}
+.lb-coins.bump{animation:coinBump .5s cubic-bezier(.2,1.6,.4,1)}
+@keyframes coinBump{0%{transform:scale(1.22);box-shadow:0 0 16px rgba(255,214,90,.7)}100%{transform:none}}
+.tabs button{transition:background .2s,color .2s,transform .15s}
+.tabs button:hover{transform:translateY(-1px);color:var(--ink)}
+.opt,.seg button,.isl,.scard{transition:transform .15s,border-color .15s,background .2s}
+.opt:hover,.seg button:hover,.scard:hover{transform:translateY(-2px)}
 .hint{font-size:12px;color:var(--mute);line-height:1.5}
 .hint kbd{font-family:var(--f-body);font-size:11px;background:rgba(255,255,255,.1);border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:0 5px}
 .cat-row{display:flex;flex-wrap:wrap;gap:6px}
@@ -273,7 +283,8 @@ button:focus-visible{outline:2px solid var(--sun-2);outline-offset:2px}
 #chatHint kbd{font:700 10px var(--f-body);background:rgba(255,255,255,.12);border-radius:4px;padding:0 4px}
 body.touch #chatHint,body.pad #chatHint{display:none}
 #killfeed{position:absolute;left:max(14px,var(--sl));top:calc(12px + var(--st));display:flex;flex-direction:column;gap:4px;max-width:44vw}
-#killfeed div{background:rgba(6,18,46,.6);padding:4px 10px;border-radius:7px;font-size:13px;font-weight:500;animation:fadeIn .2s}
+#killfeed div{background:rgba(6,18,46,.6);padding:4px 10px;border-radius:7px;font-size:13px;font-weight:500;animation:feedIn .32s cubic-bezier(.2,1.3,.4,1)}
+@keyframes feedIn{from{opacity:0;transform:translateX(-24px)}to{opacity:1;transform:none}}
 #killfeed div.me{background:rgba(47,134,255,.75);color:#ffffff;font-weight:700}
 #teamList{position:absolute;left:max(14px,var(--sl));top:calc(160px + var(--st));display:flex;flex-direction:column;gap:6px;width:170px}
 .tm{background:rgba(6,18,46,.6);border-radius:8px;padding:5px 8px;font-size:12px;font-weight:600}
@@ -334,6 +345,18 @@ body.touch #chatHint,body.pad #chatHint{display:none}
 #vitals{position:absolute;left:max(18px,var(--sl));bottom:calc(18px + var(--sb));width:min(320px,40vw);display:flex;flex-direction:column;gap:4px}
 .vbar{position:relative;height:16px;border-radius:5px;background:rgba(5,14,36,.7);overflow:hidden;border:1px solid rgba(255,255,255,.15)}
 .vbar i{position:absolute;left:0;top:0;bottom:0;width:100%;transition:width .12s}
+.vbar s{position:absolute;left:0;top:0;bottom:0;width:100%;background:rgba(255,255,255,.75);transition:width .55s cubic-bezier(.4,0,.2,1)}
+.vbar.hit{animation:barHit .35s ease-out}
+@keyframes barHit{0%{box-shadow:0 0 0 2px rgba(255,70,70,.9),0 0 12px rgba(255,60,60,.7)}100%{box-shadow:0 0 0 0 rgba(255,70,70,0)}}
+.pop{animation:numPop .28s cubic-bezier(.2,1.6,.4,1)}
+@keyframes numPop{0%{transform:scale(1.35)}100%{transform:scale(1)}}
+#magTxt,#elimN,#aliveN{display:inline-block}
+.mat.pop{animation:matPop .35s cubic-bezier(.2,1.6,.4,1)}
+@keyframes matPop{0%{transform:scale(1.18);box-shadow:0 0 10px rgba(255,255,255,.5)}100%{transform:none}}
+#stormTxt.urgent{animation:stormPulse 1.1s ease-in-out infinite}
+@keyframes stormPulse{50%{color:#e9b8ff;text-shadow:0 0 8px rgba(200,120,255,.9)}}
+.tpop{animation:toastPop .3s cubic-bezier(.2,1.5,.4,1)}
+@keyframes toastPop{0%{transform:translateX(-50%) translateY(10px) scale(.9)}100%{transform:translateX(-50%)}}
 .vbar b{position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:12px;font-weight:800;font-variant-numeric:tabular-nums;text-shadow:0 1px 2px #000}
 .vbar.sh i{background:linear-gradient(180deg,#6cc4ff,var(--shield))}
 .vbar.hp i{background:linear-gradient(180deg,#8ff09a,var(--hp))}
@@ -346,6 +369,7 @@ body.touch #chatHint,body.pad #chatHint{display:none}
 .slot{position:relative;width:66px;height:62px;border-radius:10px;border:2px solid rgba(255,255,255,.18);background:rgba(5,14,36,.62);display:flex;flex-direction:column;justify-content:flex-end;align-items:center;padding:3px;box-sizing:border-box;overflow:hidden;pointer-events:auto}
 .slot.r{background:linear-gradient(180deg,color-mix(in srgb,var(--rc) 75%,#fff 5%),color-mix(in srgb,var(--rc) 50%,#000 45%))}
 .slot.on{border-color:#fff;transform:translateY(-6px);box-shadow:0 6px 14px rgba(0,0,0,.4)}
+.slot{transition:transform .22s cubic-bezier(.2,1.6,.4,1),border-color .15s,box-shadow .2s}
 .slot .gi{position:absolute;left:2px;right:2px;top:12px;bottom:14px;background:center/contain no-repeat;filter:drop-shadow(0 2px 2px rgba(0,0,0,.55))}
 .slot .ic{position:relative;font-family:var(--f-display);font-weight:800;letter-spacing:.04em;font-size:11px;line-height:1;text-shadow:0 1px 2px rgba(0,0,0,.8);text-align:center}
 .slot .ct{position:absolute;right:4px;top:3px;font-size:11px;font-weight:800;text-shadow:0 1px 2px #000;font-variant-numeric:tabular-nums}
@@ -863,8 +887,8 @@ details.ctl .hint{margin-top:8px}
   <div id="mats"></div>
   <div id="ammoBox"><div id="wName"></div><b id="magTxt"></b><span id="resTxt"></span></div>
   <div id="vitals">
-    <div class="vbar sh"><i id="shFill"></i><b id="shTxt">0</b></div>
-    <div class="vbar hp"><i id="hpFill"></i><b id="hpTxt">100</b></div>
+    <div class="vbar sh"><s></s><i id="shFill"></i><b id="shTxt">0</b></div>
+    <div class="vbar hp"><s></s><i id="hpFill"></i><b id="hpTxt">100</b></div>
     <div class="vbar st" id="stBar"><i id="stFill"></i></div>
   </div>
   <div id="hotbar"></div>
@@ -1000,7 +1024,7 @@ details.ctl .hint{margin-top:8px}
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js"></script>
 <script async src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>
-const BUILD_ID = '1119-1421';
+const BUILD_ID = '1119-1424';
 'use strict';
 // =====================================================================
 //  FORTDAY — core utilities, data tables, profile, audio
@@ -8746,7 +8770,7 @@ const HUD = {
     const kf = $('killfeed'); kf.prepend(d); while (kf.children.length > 5) kf.lastChild.remove();
     setTimeout(() => d.remove(), 7000);
   },
-  toast(text) { this.toastEl.textContent = text; this.toastEl.style.opacity = 1; this.toastT = 2.2; },
+  toast(text) { const t = this.toastEl; t.textContent = text; t.style.opacity = 1; this.toastT = 2.2; t.classList.remove('tpop'); void t.offsetWidth; t.classList.add('tpop'); },
   banner(title, sub, dur = 3) { $('bannerT').textContent = title; $('bannerS').textContent = sub || ''; $('banner').style.opacity = 1; this.bannerT = dur; },
   hitmark(head) { const h = $('hitmarker'); h.className = head ? 'head' : ''; h.style.opacity = 1; this.hitT = 0.16; },
   dmgNum(x, y, z, val, kind) {
@@ -8796,8 +8820,10 @@ const HUD = {
       d.el.style.transform = `rotate(${-ang * 180 / Math.PI}deg)`; d.el.style.opacity = clamp(d.t, 0, 1);
     }
     // vitals (of the viewed actor)
-    const set = (id, w) => { const k = id + 'w'; if (this.last[k] !== w) { this.last[k] = w; $(id).style.width = w + '%'; } };
-    const txt = (id, s) => { if (this.last[id] !== s) { this.last[id] = s; $(id).textContent = s; } };
+    const set = (id, w) => { const k = id + 'w'; if (this.last[k] !== w) { const was = this.last[k]; this.last[k] = w; $(id).style.width = w + '%';
+      const gh = $(id).parentElement.querySelector('s'); if (gh) { if (was != null && w < was - 0.5 && v === this.lastV) { $(id).parentElement.classList.remove('hit'); void gh.offsetWidth; $(id).parentElement.classList.add('hit'); } else gh.style.width = w + '%'; if (w < (parseFloat(gh.style.width) || 0)) { clearTimeout(gh._t); gh._t = setTimeout(() => { gh.style.width = this.last[k] + '%'; }, 380); } } } };   // white damage trail drains after a hit
+    this.lastV = v;
+    const txt = (id, s) => { if (this.last[id] !== s) { const had = this.last[id] != null; this.last[id] = s; const el = $(id); el.textContent = s; if (had && HUD_POP.includes(id)) { el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); } } };
     set('hpFill', v.hp / v.maxHp * 100); txt('hpTxt', Math.ceil(v.hp)); set('shFill', v.shield); txt('shTxt', Math.ceil(v.shield) + (!Match.build && v.over > 0.5 ? ' +' + Math.ceil(v.over) : ''));
     // hotbar + ammo
     const it = v.inv[v.slot];
@@ -8810,7 +8836,7 @@ const HUD = {
     else { txt('wName', v.vehicle ? 'Driving · ' + Math.round(Math.abs(v.vehicle.speed) * 3.6) + ' km/h' : 'Harvesting Tool'); $('wName').style.color = '#fff'; txt('magTxt', ''); txt('resTxt', ''); }
     if (Match.build) {
       const mk = MAT_ORDER.map(m => v.mats[m]).join(',') + v.mat;
-      if (this.last.mats !== mk) { this.last.mats = mk; [...$('mats').children].forEach(el => { const m = el.dataset.m; el.querySelector('span').textContent = v.mats[m]; el.classList.toggle('on', m === v.mat); }); }
+      if (this.last.mats !== mk) { this.last.mats = mk; [...$('mats').children].forEach(el => { const m = el.dataset.m, sp = el.querySelector('span'), nv = String(v.mats[m]); if (sp.textContent !== nv && +nv > +sp.textContent) { el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); } sp.textContent = nv; el.classList.toggle('on', m === v.mat); }); }
       const bk = Build.active + Build.piece + Input.pad.on;
       if (this.last.bb !== bk) { this.last.bb = bk; const pad = Input.pad.on; $('buildbar').innerHTML = [['wall', Keys.of('wall'), 'Wall'], ['ramp', Keys.of('ramp'), 'Ramp'], ['floor', Keys.of('floor'), 'Floor'], ['cone', Keys.of('cone'), 'Cone']].map(([p, k, n]) => `<div class="${Build.active && Build.piece === p ? 'on' : ''}">${pad ? '' : '<kbd>' + k + '</kbd>'}${n}</div>`).join('') + (pad ? '<div><kbd>B</kbd>Build</div><div><kbd>RB</kbd>Piece</div><div><kbd>LB</kbd>Material</div>' : '<div><kbd>' + esc(Keys.of('material')) + '</kbd>Material</div>'); }
     }
@@ -8862,7 +8888,7 @@ const HUD = {
       else if (Storm.state === 'shrink') st = 'Storm closing · ' + fmtTime(Storm.t);
       else if (Storm.state === 'done') st = Storm.rumble ? 'Rumble zone locked' : 'Final circle';
       else st = 'Storm forming';
-      txt('stormTxt', st);
+      txt('stormTxt', st); $('stormTxt').classList.toggle('urgent', Storm.state === 'shrink');
       if (Match.mode === 'rumble') { txt('aliveN', '40'); txt('scoreBlue', String(Match.score[0])); txt('scoreRed', String(Match.score[1])); }
       else txt('aliveN', String(Match.aliveCount));
       txt('elimN', String(v.kills));
@@ -8890,9 +8916,13 @@ function drawMarkers(g, S, cx, cz, scale, big) {
   // storm
   if (Storm.state !== 'idle') {
     const [sx, sy] = mapXY(Storm.cx, Storm.cz, cx, cz, scale, S);
-    g.fillStyle = 'rgba(120,40,220,0.45)'; g.beginPath(); g.rect(-5, -5, S + 10, S + 10); g.arc(sx, sy, Math.max(0.5, Storm.r * scale), 0, TAU); g.fill('evenodd');
-    g.strokeStyle = 'rgba(200,150,255,.9)'; g.lineWidth = 1.5; g.beginPath(); g.arc(sx, sy, Math.max(0.5, Storm.r * scale), 0, TAU); g.stroke();
-    if (Storm.hasNext) { const [nx, ny] = mapXY(Storm.tx, Storm.tz, cx, cz, scale, S); g.strokeStyle = '#fff'; g.lineWidth = 1.5; g.setLineDash([5, 4]); g.beginPath(); g.arc(nx, ny, Math.max(0.5, Storm.tr * scale), 0, TAU); g.stroke(); g.setLineDash([]); }
+    const t = performance.now() / 1000, shrink = Storm.state === 'shrink', sr = Math.max(0.5, Storm.r * scale);
+    // the storm breathes; while it closes its edge glows brighter and dashes run around it
+    g.fillStyle = 'rgba(120,40,220,' + (0.42 + 0.06 * Math.sin(t * 2.2)) + ')'; g.beginPath(); g.rect(-5, -5, S + 10, S + 10); g.arc(sx, sy, sr, 0, TAU); g.fill('evenodd');
+    g.save(); g.shadowColor = 'rgba(200,120,255,.9)'; g.shadowBlur = shrink ? 6 + 4 * Math.sin(t * 6) : 3;
+    g.strokeStyle = 'rgba(210,160,255,' + (shrink ? 0.8 + 0.2 * Math.sin(t * 6) : 0.85) + ')'; g.lineWidth = shrink ? 2.2 : 1.5; g.beginPath(); g.arc(sx, sy, sr, 0, TAU); g.stroke(); g.restore();
+    if (shrink) { g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth = 1; g.setLineDash([3, 7]); g.lineDashOffset = -t * 18; g.beginPath(); g.arc(sx, sy, sr + 2, 0, TAU); g.stroke(); g.setLineDash([]); g.lineDashOffset = 0; }
+    if (Storm.hasNext) { const [nx, ny] = mapXY(Storm.tx, Storm.tz, cx, cz, scale, S); g.strokeStyle = '#fff'; g.lineWidth = 1.5; g.setLineDash([5, 4]); g.lineDashOffset = -t * 10; g.beginPath(); g.arc(nx, ny, Math.max(0.5, Storm.tr * scale), 0, TAU); g.stroke(); g.setLineDash([]); g.lineDashOffset = 0; }   // the next circle's outline marches
   }
   if (Bus.active) {
     const [ax, ay] = mapXY(Bus.start.x, Bus.start.z, cx, cz, scale, S), [bx, by] = mapXY(Bus.start.x + Bus.dir.x * 940, Bus.start.z + Bus.dir.z * 940, cx, cz, scale, S);
@@ -8900,7 +8930,7 @@ function drawMarkers(g, S, cx, cz, scale, big) {
     const [px, py] = mapXY(Bus.pos.x, Bus.pos.z, cx, cz, scale, S); g.fillStyle = '#3a8bff'; g.beginPath(); g.arc(px, py, big ? 7 : 5, 0, TAU); g.fill();
   }
   Reboot.drawMap(g, S, cx, cz, scale, big);
-  for (const c of W.chests) if (c.kind === 'supply' && !c.opened) { const [x, y] = mapXY(c.x, c.z, cx, cz, scale, S); g.fillStyle = '#3aa8ff'; g.fillRect(x - 4, y - 4, 8, 8); g.strokeStyle = '#fff'; g.strokeRect(x - 4, y - 4, 8, 8); }
+  { const k = 4 + Math.sin(performance.now() / 160) * 1.2; for (const c of W.chests) if (c.kind === 'supply' && !c.opened) { const [x, y] = mapXY(c.x, c.z, cx, cz, scale, S); g.fillStyle = '#3aa8ff'; g.fillRect(x - k, y - k, k * 2, k * 2); g.strokeStyle = '#fff'; g.strokeRect(x - k, y - k, k * 2, k * 2); } }   // supply drops pulse
   if (big || scale > 0.5) {
     g.font = (big ? 'bold 13px ' : 'bold 10px ') + 'Rubik, system-ui, sans-serif'; g.textAlign = 'center';
     for (const p of W.sites) { const [x, y] = mapXY(p.x, p.z, cx, cz, scale, S); if (x < -60 || x > S + 60 || y < -20 || y > S + 20) continue; g.fillStyle = 'rgba(0,0,0,.55)'; g.fillText(p.name, x + 1, y + 1); g.fillStyle = p.kind === 'vault' ? '#ffe066' : '#fff'; g.fillText(p.name, x, y); }
@@ -8920,6 +8950,7 @@ function drawMarkers(g, S, cx, cz, scale, big) {
   }
   const v = Cam.view || player; if (!v) return;
   const p = v.state === 'bus' ? Bus.pos : v.pos; const [x, y] = mapXY(p.x, p.z, cx, cz, scale, S);
+  { const ph = (performance.now() / 1300) % 1; g.strokeStyle = 'rgba(255,255,255,' + (0.55 * (1 - ph)) + ')'; g.lineWidth = 1.5; g.beginPath(); g.arc(x, y, 5 + ph * (big ? 16 : 11), 0, TAU); g.stroke(); }   // soft ping under your arrow
   g.save(); g.translate(x, y); g.rotate(Math.PI - (v.state === 'bus' ? Math.atan2(Bus.dir.x, Bus.dir.z) : v.yaw));
   g.fillStyle = '#fff'; g.strokeStyle = '#000'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(0, -8); g.lineTo(6, 6); g.lineTo(0, 3); g.lineTo(-6, 6); g.closePath(); g.fill(); g.stroke(); g.restore();
 }
@@ -8977,6 +9008,7 @@ const Icons = {
 
 // ---------------------------------------------------------------- waypoints over friends in a shared match
 // Every player from the room gets a marker with their name and distance; it slides to the screen edge when they are off screen.
+const HUD_POP = ['magTxt', 'elimN', 'aliveN'];   // these numbers pop when they change
 const Waypoints = {
   els: new Map(), v: new THREE.Vector3(),
   // one marker on screen; pinned to the edge (or the bottom, when behind you) if it is off-screen
@@ -9381,7 +9413,7 @@ const Lobby = {
       const kh = rows.map(([n, v]) => '<span>' + n + '</span><span>' + v + '</span>').join(''); if ($('kbHint').innerHTML !== kh) $('kbHint').innerHTML = kh; }
     { const fresh = !d.matches && !d.tutDone, newish = !d.tutDone && (d.matches || 0) < 3;
       $('welcome').hidden = !fresh; $('tutBadge').hidden = !newish; $('tutBtn').classList.toggle('new', newish); $('tutBtn').classList.toggle('small', !newish); }
-    $('coinLbl').textContent = d.coins.toLocaleString();
+    { const el = $('coinLbl'), nv = d.coins.toLocaleString(); if (el.textContent !== nv && el.textContent !== '0') { const box = el.parentElement; box.classList.remove('bump'); void box.offsetWidth; box.classList.add('bump'); } el.textContent = nv; }   // the FortBux counter bounces when it changes
     [...$('tabs').children].forEach(b => b.classList.toggle('on', b.dataset.tab === this.tab));
     if (this.tab === 'players' && !Players.link()) this.tab = 'play';
     $('tabPlayers').hidden = !Players.link();   // only the maker's browser has the Sheet link
