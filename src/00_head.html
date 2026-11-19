@@ -388,8 +388,10 @@ body.touch #chatHint,body.pad #chatHint{display:none}
 .dd{position:absolute;left:-60px;top:-160px;width:120px;height:26px;transform-origin:60px 160px;opacity:0;
   background:radial-gradient(60px 13px at 50% 100%,rgba(255,60,60,.85),transparent 70%)}
 #scope{position:absolute;inset:0;background:radial-gradient(circle at 50% 50%,transparent 0,transparent min(34vh,34vw),#000 calc(min(34vh,34vw) + 2px))}
-#scope2{position:absolute;inset:0;pointer-events:none;--R:min(41vh,41vw);background:radial-gradient(circle at 50% 50%,rgba(255,255,255,.04) 0,transparent calc(var(--R) * .6),rgba(0,0,0,.18) calc(var(--R) - 26px),rgba(0,0,0,.75) calc(var(--R) - 6px),#060606 var(--R));animation:tkIn .12s ease-out}
-#scope2 svg{position:absolute;left:50%;top:50%;width:calc(var(--R) * 2);height:calc(var(--R) * 2);transform:translate(-50%,-50%);overflow:visible}
+#scope2{position:absolute;inset:0;pointer-events:none;--R:min(26vh,26vw);animation:tkIn .12s ease-out;
+  background:radial-gradient(circle at 50% 50%,transparent calc(var(--R) * 1.25),rgba(0,0,0,.22) calc(var(--R) * 2.6))}
+#scope2 svg{position:absolute;left:50%;top:50%;width:calc(var(--R) * 2.4);height:calc(var(--R) * 2);transform:translate(-50%,-50%);overflow:visible}
+#scope2 .rd{filter:drop-shadow(0 0 3px rgba(255,40,40,.9))}
 #scope::before,#scope::after{content:"";position:absolute;background:rgba(0,0,0,.85)}
 #scope::before{left:50%;top:0;bottom:0;width:1px}
 #scope::after{top:50%;left:0;right:0;height:1px}
