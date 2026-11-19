@@ -5,8 +5,8 @@
 //  and the emails are sent by supabase/functions/notify (never from the page: emails stay private).
 // =====================================================================
 const SOCIAL = {
-  url: '',   // Project URL, like https://abcdefgh.supabase.co (Supabase: Project Settings → Data API)
-  key: '',   // the anon / publishable key. It is meant to be public. Never put the service_role key here.
+  url: 'https://scbkykinwnbwutomzoxl.supabase.co',   // Project URL (Supabase: Project Settings → Data API)
+  key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNjYmt5a2lud25id3V0b216b3hsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUxMDU3NTEsImV4cCI6MjExMDY4MTc1MX0.6SmNecWItOWCzknKNsFMcSJSKkeoy3CZaHkEotZ7v7s',   // the anon key: meant to be public. Never put the service_role key here.
   site: 'https://ejpeakin.github.io/FortDay/',   // where sign-up, password-reset and invite links send players
   emails: false,   // true once emails are set up (supabase/SETUP.md, "Adding emails later"); until then requests and invites are in-game only
 };
