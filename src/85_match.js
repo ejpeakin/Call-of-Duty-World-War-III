@@ -3,25 +3,25 @@
 // =====================================================================
 // tuned for the 530 m island: one more early circle, longer moves while the storm is large (moves ~30% slower)
 const PHASES = [
-  { wait: 70, shrink: 78, r: 400, dmg: 1 },
-  { wait: 60, shrink: 68, r: 250, dmg: 1 },
-  { wait: 52, shrink: 60, r: 150, dmg: 2 },
-  { wait: 45, shrink: 52, r: 85, dmg: 4 },
-  { wait: 40, shrink: 43, r: 45, dmg: 7 },
-  { wait: 32, shrink: 35, r: 20, dmg: 10 },
-  { wait: 24, shrink: 39, r: 0, dmg: 15 },
+  { wait: 70, shrink: 78, r: 400, dmg: 1.5 },   // storm damage per second is ~30% higher than it used to be
+  { wait: 60, shrink: 68, r: 250, dmg: 1.5 },
+  { wait: 52, shrink: 60, r: 150, dmg: 3 },
+  { wait: 45, shrink: 52, r: 85, dmg: 5 },
+  { wait: 40, shrink: 43, r: 45, dmg: 9 },
+  { wait: 32, shrink: 35, r: 20, dmg: 13 },
+  { wait: 24, shrink: 39, r: 0, dmg: 20 },
 ];
 const STORM_START = 900;
 const Storm = {
   cx: 0, cz: 0, r: 900, fx: 0, fz: 0, fr: 900, tx: 0, tz: 0, tr: 900, phase: -1, state: 'idle', t: 0, dur: 1, dmg: 1, tick: 1, hasNext: false, rumble: false,
   init(mode) {
-    Object.assign(this, { cx: 0, cz: 0, r: STORM_START, phase: -1, state: 'idle', t: 0, dmg: 1, tick: 1, hasNext: false, rumble: mode === 'rumble' });
+    Object.assign(this, { cx: 0, cz: 0, r: STORM_START, phase: -1, state: 'idle', t: 0, dmg: 1.5, tick: 1, hasNext: false, rumble: mode === 'rumble' });
     stormMesh.visible = true;
   },
   start() {
     if (this.rumble) {
       const p = pick(W.pois.length ? W.pois : [{ x: 0, z: 0 }]);
-      Object.assign(this, { fx: this.cx, fz: this.cz, fr: this.r, tx: p.x, tz: p.z, tr: 120, hasNext: true, state: 'shrink', t: 32, dur: 32, dmg: 3, phase: 0 });
+      Object.assign(this, { fx: this.cx, fz: this.cz, fr: this.r, tx: p.x, tz: p.z, tr: 120, hasNext: true, state: 'shrink', t: 32, dur: 32, dmg: 4, phase: 0 });
       return;
     }
     this.nextPhase();
@@ -51,7 +51,7 @@ const Storm = {
     this.tick -= dt;
     if (this.tick <= 0) {
       this.tick = 1;
-      if (this.state !== 'idle' && !Net.guest) for (const a of actors) if (a.alive && !a.npc && a.state !== 'bus' && a.invuln <= 0 && this.outside(a.pos.x, a.pos.z)) damageActor(a, this.dmg, null, { raw: true, storm: true });
+      if (this.state !== 'idle' && !Net.guest) for (const a of actors) if (a.alive && !a.npc && a.state !== 'bus' && a.invuln <= 0 && this.outside(a.pos.x, a.pos.z)) { a._sd = (a._sd || 0) + this.dmg; const d = Math.floor(a._sd); if (d >= 1) { a._sd -= d; damageActor(a, d, null, { raw: true, storm: true }); } }   // half points carry over (1.5/s = 1, 2, 1, 2...)
     }
     stormMesh.visible = this.state !== 'idle' && this.r < STORM_START - 20;
     stormMesh.scale.set(Math.max(0.5, this.r), 760, Math.max(0.5, this.r)); stormMesh.position.set(this.cx, 120, this.cz);
@@ -225,7 +225,7 @@ const Match = {
     }
     if (this.mode !== 'rumble' && this.mode !== 'tutorial') for (const v of W.vaults) this.spawnVault(v);
     for (const a of actors) if (!this.build && !a.npc) { a.overMax = 50; a.over = 50; }
-    this.time = 0; this.firstLander = null; this.sharkKills = 0; this.score = [0, 0]; this.ending = false; this.spectate = null; this.paused = false; this.result = null; this.deathShown = false; this.hasWinner = false;
+    this.time = 0; this.firstLander = null; this.sharkKills = 0; this.birdKills = 0; this.score = [0, 0]; this.ending = false; this.spectate = null; this.paused = false; this.result = null; this.deathShown = false; this.hasWinner = false;
     Storm.init(this.mode);
     if (this.mode === 'tutorial') Tutorial.setup();
     else if (this.mode === 'rumble') {
@@ -247,7 +247,7 @@ const Match = {
       }
     }
     }
-    this.time = this.time || 0; this.firstLander = null; this.sharkKills = 0; if (Net.guest) { this.score = [0, 0]; this.ending = false; this.spectate = null; this.paused = false; this.result = null; this.deathShown = false; this.hasWinner = false; }
+    this.time = this.time || 0; this.firstLander = null; this.sharkKills = 0; this.birdKills = 0; if (Net.guest) { this.score = [0, 0]; this.ending = false; this.spectate = null; this.paused = false; this.result = null; this.deathShown = false; this.hasWinner = false; }
     if (this.mode !== 'rumble') player.shield = 50;   // everyone drops in with half a shield
     LiveEvent.init(this.mode); if (Net.inMatch || this.mode === 'tutorial') LiveEvent.state = 'off'; else Creatures.spawn();
     if (PlayerRig) scene.remove(PlayerRig.root);
@@ -376,6 +376,7 @@ const Match = {
     else if (r.win) lines.push(['Rumble won', 600]);
     if (this.firstLander === p) lines.push(['First to land', 500]);
     if (this.sharkKills) lines.push([this.sharkKills > 1 ? 'Sharks defeated ×' + this.sharkKills : 'Shark defeated', 2000 * this.sharkKills]);
+    if (this.birdKills) lines.push([this.birdKills > 1 ? 'Birds shot down ×' + this.birdKills : 'Bird shot down', 5000 * this.birdKills]);
     if (!d.firstBonus) { d.firstBonus = true; lines.push(['First time playing', 5000]); }
     const xp = lines.reduce((s, l) => s + l[1], 0), lv = Profile.addXp(xp), tier0 = lv.l0;
     d.matches++; d.kills += p.kills; d.chests = (d.chests || 0) + (p.chests || 0);
@@ -388,7 +389,8 @@ const Match = {
     if (r.win && this.mode !== 'rumble' && !d.umbrella) { d.umbrella = true; newUmb = true; }
     const tier1 = lv.l1; const unl = lv.got.slice();
     const mc = this.mode === 'rumble' ? matchCoins(null) : matchCoins(place, this.teamCount(), p.kills, rankI), winCoins = mc.coins, coins = winCoins + lv.coins;
-    d.coins += winCoins;
+    const birdCoins = 100 * (this.birdKills || 0);   // every bird you shoot out of the sky
+    d.coins += winCoins + birdCoins;
     Profile.save();
     if (newUmb) unl.push(cosById('glider', 'umbrella'));
     $('rPlace').innerHTML = place ? '#' + place + ' <small>of ' + this.teamCount() + '</small>' : (this.score[0] + ' – ' + this.score[1]);
@@ -398,6 +400,7 @@ const Match = {
     $('rStats').innerHTML = [['Eliminations', p.kills], ['Damage dealt', p.dmgDealt], ['Survived', fmtTime(p.aliveTime)]].map(s => `<div class="stat"><b>${s[1]}</b><span>${s[0]}</span></div>`).join('');
     $('rXp').innerHTML = lines.map(l => `<span class="xpl"><span>${esc(l[0])}</span><b>+${l[1].toLocaleString()} XP</b></span>`).join('')
       + (winCoins ? `<span class="xpl gold"><span>Match reward · ${RANKS[rankI][0]} ×${mc.mult}${mc.capped ? ' (max ' + MATCH_COINS_MAX + ')' : ''}${Profile.hasPass() ? ' · Battle Pass' : ''}</span><b>+${winCoins} ${COIN}</b></span>` : '')
+      + (birdCoins ? `<span class="xpl gold"><span>Birds shot down ×${this.birdKills}</span><b>+${birdCoins} ${COIN}</b></span>` : '')
       + (lv.coins ? `<span class="xpl gold"><span>Level ${tier0} → ${tier1}</span><b>+${lv.coins.toLocaleString()} ${COIN}</b></span>` : '')
       + `<span class="xpl tot"><span>Level ${tier1} · ${Season.name()}</span><b>${(d.seasonXp % XP_PER_LEVEL).toLocaleString()} / ${XP_PER_LEVEL.toLocaleString()} XP</b></span>` + (rpTxt ? `<span class="xpl"><span>Ranked</span><b>${esc(rpTxt.replace(/^ · /, ''))}</b></span>` : '');
     $('rXpFill').style.width = ((d.seasonXp % XP_PER_LEVEL) / XP_PER_LEVEL * 100) + '%';

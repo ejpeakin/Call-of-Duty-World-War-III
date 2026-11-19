@@ -2,7 +2,7 @@
 //  Creatures: sharks that hunt swimmers, seagulls circling overhead
 // =====================================================================
 const Creatures = {
-  tpl: {}, list: [], respawnQ: [],
+  tpl: {}, list: [], respawnQ: [], gullQ: [], flocks: [],
   load() {
     if (!THREE.GLTFLoader || !THREE.SkeletonUtils || typeof CREATURE_GLB === 'undefined') return;
     const loader = new THREE.GLTFLoader();
@@ -15,7 +15,7 @@ const Creatures = {
       }, e => console.warn('Could not load the ' + k + ' model', e));
     }
   },
-  clear() { for (const c of this.list) scene.remove(c.obj); this.list = []; this.respawnQ = []; },
+  clear() { for (const c of this.list) scene.remove(c.obj); this.list = []; this.respawnQ = []; this.gullQ = []; this.flocks = []; },
   spawn() { this.clear(); for (const k of Object.keys(this.tpl)) this.spawnKind(k); },
   make(kind, scale) {
     const g = this.tpl[kind], obj = THREE.SkeletonUtils.clone(g.scene); obj.scale.setScalar(scale);
@@ -53,15 +53,27 @@ const Creatures = {
     // seagull flocks circling over the island
     for (let f = 0; f < 4; f++) {
       const a = Math.random() * TAU, d = Math.random() * W.R * 0.7, cx = Math.cos(a) * d, cz = Math.sin(a) * d;
-      const alt = Math.max(W.waterY, 0) + 55 + Math.random() * 70, rad = 35 + Math.random() * 50, spd = (0.18 + Math.random() * 0.1) * (Math.random() < 0.5 ? -1 : 1);
-      for (let i = 0; i < 4; i++) {
-        const c = this.make('gull', 0.85);
-        Object.assign(c, { cx, cz, alt: alt + (Math.random() - 0.5) * 8, rad: rad + (Math.random() - 0.5) * 12, ang: Math.random() * TAU, spd: spd * (0.9 + Math.random() * 0.2), flapT: Math.random() * 4 });
-        this.play(c, 'Glide'); this.list.push(c);
-      }
+      const fl = { cx, cz, alt: Math.max(W.waterY, 0) + 55 + Math.random() * 70, rad: 35 + Math.random() * 50, spd: (0.18 + Math.random() * 0.1) * (Math.random() < 0.5 ? -1 : 1) };
+      this.flocks.push(fl); for (let i = 0; i < 4; i++) this.spawnGull(fl);
     }
   },
+  spawnGull(fl) {
+    const c = this.make('gull', 0.85);
+    Object.assign(c, { cx: fl.cx, cz: fl.cz, fl, alt: fl.alt + (Math.random() - 0.5) * 8, rad: fl.rad + (Math.random() - 0.5) * 12, ang: Math.random() * TAU, spd: fl.spd * (0.9 + Math.random() * 0.2), flapT: Math.random() * 4 });
+    this.play(c, 'Glide'); this.list.push(c);
+  },
+  // a seagull shot out of the sky: it tumbles down; yours pays 5,000 XP and 100 FortBux (added up on the results screen)
+  downGull(c, src, h) {
+    c.alive = false; c.fallV = 2; c.deadT = 6; this.play(c, 'Flap', 3);
+    const p = c.obj.position; FX.burst(p.x, p.y, p.z, 0xf4f4f0, 14, 4, 1.1, 0.12, 2); FX.burst(p.x, p.y, p.z, 0x9aa0a8, 8, 3, 1.0, 0.1, 2);
+    if (src === player) {
+      Match.birdKills = (Match.birdKills || 0) + 1; HUD.hitmark(true); Sfx.hit(true); Sfx.tone(1400, 0.12, 'triangle', 0.1, 600);
+      HUD.toast('Bird shot down · +5,000 XP · +100 FortBux', true); if (h) HUD.dmgNum(p.x, p.y + 0.5, p.z, '+5,000 XP', 'mat');
+    }
+    this.gullQ.push({ t: 60, fl: c.fl });   // a new gull joins the flock a minute later
+  },
   damage(c, dmg, src, h) {
+    if (c.kind === 'gull') { if (c.alive) this.downGull(c, src, h); return; }
     if (!c.alive || c.kind !== 'shark') return;
     c.hp -= dmg; c.hitT = 0.4; this.play(c, 'Hit', 1.4, true);
     if (src === player) { HUD.hitmark(false); Sfx.hit(false); if (h) HUD.dmgNum(h.x, h.y + 0.4, h.z, Math.round(dmg), 'hp'); }
@@ -77,7 +89,9 @@ const Creatures = {
   ray(ox, oy, oz, dx, dy, dz, maxT) {
     let best = null, bt = maxT;
     for (const c of this.list) {
-      if (c.kind !== 'shark' || !c.alive) continue;
+      if (!c.alive) continue;
+      if (c.kind === 'gull') { const p = c.obj.position, t = raySphere(p.x, p.y + 0.15, p.z, 1.2, ox, oy, oz, dx, dy, dz); if (t >= 0 && t < bt) { bt = t; best = c; } continue; }   // birds: a generous sphere, they are small and far
+      if (c.kind !== 'shark') continue;
       const t = raySphere(c.x + Math.sin(c.yaw) * 0.6, W.waterY - 0.55, c.z + Math.cos(c.yaw) * 0.6, 1.3, ox, oy, oz, dx, dy, dz);
       if (t >= 0 && t < bt) { bt = t; best = c; }
     }
@@ -86,8 +100,14 @@ const Creatures = {
   update(dt) {
     const cam = camera.position;
     for (let i = this.respawnQ.length - 1; i >= 0; i--) { this.respawnQ[i] -= dt; if (this.respawnQ[i] <= 0) { this.respawnQ.splice(i, 1); this.spawnShark(); } }
+    for (let i = this.gullQ.length - 1; i >= 0; i--) { const q = this.gullQ[i]; q.t -= dt; if (q.t <= 0) { this.gullQ.splice(i, 1); if (this.tpl.gull && q.fl) this.spawnGull(q.fl); } }
     for (let i = this.list.length - 1; i >= 0; i--) {
       const c = this.list[i];
+      if (c.kind === 'gull' && !c.alive) {   // shot down: tumble to the ground, then vanish
+        const p = c.obj.position; c.fallV += 22 * dt; p.y -= c.fallV * dt; c.obj.rotation.z += dt * 7; c.obj.rotation.x += dt * 3; c.deadT -= dt;
+        if (p.y <= groundH(p.x, p.z) + 0.2 || c.deadT <= 0) { FX.burst(p.x, p.y + 0.3, p.z, 0xf4f4f0, 8, 2, 0.6, 0.1, 1); scene.remove(c.obj); this.list.splice(i, 1); continue; }
+        c.mixer.update(dt); continue;
+      }
       if (c.kind === 'gull') {
         c.ang += c.spd * dt; c.flapT -= dt;
         if (c.flapT <= 0) { if (c.cur === 'Glide') { this.play(c, 'Flap', 1); c.flapT = 1.2 + Math.random() * 1.5; } else { this.play(c, 'Glide', 1); c.flapT = 2.5 + Math.random() * 4; } }

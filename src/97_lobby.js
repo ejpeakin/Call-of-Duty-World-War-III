@@ -269,7 +269,7 @@ const Lobby = {
         $('bpUsd').hidden = has; $('bpPay').hidden = !PASS_PAY_URL; if (PASS_PAY_URL) $('bpPay').href = PASS_PAY_URL;
         $('bpPayNote').textContent = PASS_PAY_URL ? 'Pay on the secure checkout page. When you finish, you come straight back here and the Battle Pass unlocks by itself.' : 'Online checkout is coming soon.'; }
       $('passLvl').textContent = 'Level ' + tier; $('passXp').textContent = (d.seasonXp % XP_PER_LEVEL).toLocaleString() + ' / ' + XP_PER_LEVEL.toLocaleString() + ' XP';
-      $('passInfo').textContent = `Every level takes ${XP_PER_LEVEL.toLocaleString()} XP and pays ${LEVEL_COINS} ${COIN}. Bonus XP: 1st place +2,500 · each shark you defeat +2,000 · first to land +500 · your first game +5,000 · thanking the maker +1,000 once a season. Levels start over each season; anything you unlock stays yours.`;
+      $('passInfo').textContent = `Every level takes ${XP_PER_LEVEL.toLocaleString()} XP and pays ${LEVEL_COINS} ${COIN}. Bonus XP: 1st place +2,500 · each bird you shoot down +5,000 (and 100 ${COIN}) · each shark you defeat +2,000 · first to land +500 · your first game +5,000 · thanking the maker +1,000 once a season. Levels start over each season; anything you unlock stays yours.`;
       $('passFill').style.width = ((d.seasonXp % XP_PER_LEVEL) / XP_PER_LEVEL * 100) + '%';
       const thanked = d.thankSeason === sid; $('thankBtn').disabled = thanked; $('thankBtn').textContent = thanked ? 'Thanked ✓' : 'Thank you!';
       $('thankTxt').textContent = thanked ? 'Thanks sent for ' + Season.name() + '. You can thank the maker again next season.' : 'Say thanks to the person who made FortDay. +1,000 XP, once per season.';

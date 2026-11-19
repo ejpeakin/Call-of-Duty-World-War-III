@@ -782,7 +782,7 @@ details.ctl .hint{margin-top:8px}
         <p class="sd-msg" id="shopMsg" role="status"></p>
       </article>
       <div class="shop-cards" id="shopGrid"></div>
-      <p class="hint">FortBux are hard to earn: 50 for every new level, and up to 100 for a good Battle Royale match (a top finish and eliminations). The higher your rank, the more a good match pays. The Battle Pass puts you in Diamond. Everything in the shop is cosmetic only.</p>
+      <p class="hint">FortBux are hard to earn: 50 for every new level, and up to 100 for a good Battle Royale match (a top finish and eliminations). The higher your rank, the more a good match pays. Every bird you shoot out of the sky pays 100. The Battle Pass puts you in Diamond. Everything in the shop is cosmetic only.</p>
     </section>
 
     <section class="panel" id="tab-career" hidden>
@@ -965,7 +965,7 @@ details.ctl .hint{margin-top:8px}
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js"></script>
 <script async src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>
-const BUILD_ID = '1119-0022';
+const BUILD_ID = '1119-0027';
 'use strict';
 // =====================================================================
 //  FORTDAY — core utilities, data tables, profile, audio
@@ -5474,7 +5474,7 @@ const CHARACTER_GLB = 'Z2xURgIAAAD8MhUAND8HAEpTT057ImFzc2V0Ijp7InZlcnNpb24iOiIyL
 //  Creatures: sharks that hunt swimmers, seagulls circling overhead
 // =====================================================================
 const Creatures = {
-  tpl: {}, list: [], respawnQ: [],
+  tpl: {}, list: [], respawnQ: [], gullQ: [], flocks: [],
   load() {
     if (!THREE.GLTFLoader || !THREE.SkeletonUtils || typeof CREATURE_GLB === 'undefined') return;
     const loader = new THREE.GLTFLoader();
@@ -5487,7 +5487,7 @@ const Creatures = {
       }, e => console.warn('Could not load the ' + k + ' model', e));
     }
   },
-  clear() { for (const c of this.list) scene.remove(c.obj); this.list = []; this.respawnQ = []; },
+  clear() { for (const c of this.list) scene.remove(c.obj); this.list = []; this.respawnQ = []; this.gullQ = []; this.flocks = []; },
   spawn() { this.clear(); for (const k of Object.keys(this.tpl)) this.spawnKind(k); },
   make(kind, scale) {
     const g = this.tpl[kind], obj = THREE.SkeletonUtils.clone(g.scene); obj.scale.setScalar(scale);
@@ -5525,15 +5525,27 @@ const Creatures = {
     // seagull flocks circling over the island
     for (let f = 0; f < 4; f++) {
       const a = Math.random() * TAU, d = Math.random() * W.R * 0.7, cx = Math.cos(a) * d, cz = Math.sin(a) * d;
-      const alt = Math.max(W.waterY, 0) + 55 + Math.random() * 70, rad = 35 + Math.random() * 50, spd = (0.18 + Math.random() * 0.1) * (Math.random() < 0.5 ? -1 : 1);
-      for (let i = 0; i < 4; i++) {
-        const c = this.make('gull', 0.85);
-        Object.assign(c, { cx, cz, alt: alt + (Math.random() - 0.5) * 8, rad: rad + (Math.random() - 0.5) * 12, ang: Math.random() * TAU, spd: spd * (0.9 + Math.random() * 0.2), flapT: Math.random() * 4 });
-        this.play(c, 'Glide'); this.list.push(c);
-      }
+      const fl = { cx, cz, alt: Math.max(W.waterY, 0) + 55 + Math.random() * 70, rad: 35 + Math.random() * 50, spd: (0.18 + Math.random() * 0.1) * (Math.random() < 0.5 ? -1 : 1) };
+      this.flocks.push(fl); for (let i = 0; i < 4; i++) this.spawnGull(fl);
     }
   },
+  spawnGull(fl) {
+    const c = this.make('gull', 0.85);
+    Object.assign(c, { cx: fl.cx, cz: fl.cz, fl, alt: fl.alt + (Math.random() - 0.5) * 8, rad: fl.rad + (Math.random() - 0.5) * 12, ang: Math.random() * TAU, spd: fl.spd * (0.9 + Math.random() * 0.2), flapT: Math.random() * 4 });
+    this.play(c, 'Glide'); this.list.push(c);
+  },
+  // a seagull shot out of the sky: it tumbles down; yours pays 5,000 XP and 100 FortBux (added up on the results screen)
+  downGull(c, src, h) {
+    c.alive = false; c.fallV = 2; c.deadT = 6; this.play(c, 'Flap', 3);
+    const p = c.obj.position; FX.burst(p.x, p.y, p.z, 0xf4f4f0, 14, 4, 1.1, 0.12, 2); FX.burst(p.x, p.y, p.z, 0x9aa0a8, 8, 3, 1.0, 0.1, 2);
+    if (src === player) {
+      Match.birdKills = (Match.birdKills || 0) + 1; HUD.hitmark(true); Sfx.hit(true); Sfx.tone(1400, 0.12, 'triangle', 0.1, 600);
+      HUD.toast('Bird shot down · +5,000 XP · +100 FortBux', true); if (h) HUD.dmgNum(p.x, p.y + 0.5, p.z, '+5,000 XP', 'mat');
+    }
+    this.gullQ.push({ t: 60, fl: c.fl });   // a new gull joins the flock a minute later
+  },
   damage(c, dmg, src, h) {
+    if (c.kind === 'gull') { if (c.alive) this.downGull(c, src, h); return; }
     if (!c.alive || c.kind !== 'shark') return;
     c.hp -= dmg; c.hitT = 0.4; this.play(c, 'Hit', 1.4, true);
     if (src === player) { HUD.hitmark(false); Sfx.hit(false); if (h) HUD.dmgNum(h.x, h.y + 0.4, h.z, Math.round(dmg), 'hp'); }
@@ -5549,7 +5561,9 @@ const Creatures = {
   ray(ox, oy, oz, dx, dy, dz, maxT) {
     let best = null, bt = maxT;
     for (const c of this.list) {
-      if (c.kind !== 'shark' || !c.alive) continue;
+      if (!c.alive) continue;
+      if (c.kind === 'gull') { const p = c.obj.position, t = raySphere(p.x, p.y + 0.15, p.z, 1.2, ox, oy, oz, dx, dy, dz); if (t >= 0 && t < bt) { bt = t; best = c; } continue; }   // birds: a generous sphere, they are small and far
+      if (c.kind !== 'shark') continue;
       const t = raySphere(c.x + Math.sin(c.yaw) * 0.6, W.waterY - 0.55, c.z + Math.cos(c.yaw) * 0.6, 1.3, ox, oy, oz, dx, dy, dz);
       if (t >= 0 && t < bt) { bt = t; best = c; }
     }
@@ -5558,8 +5572,14 @@ const Creatures = {
   update(dt) {
     const cam = camera.position;
     for (let i = this.respawnQ.length - 1; i >= 0; i--) { this.respawnQ[i] -= dt; if (this.respawnQ[i] <= 0) { this.respawnQ.splice(i, 1); this.spawnShark(); } }
+    for (let i = this.gullQ.length - 1; i >= 0; i--) { const q = this.gullQ[i]; q.t -= dt; if (q.t <= 0) { this.gullQ.splice(i, 1); if (this.tpl.gull && q.fl) this.spawnGull(q.fl); } }
     for (let i = this.list.length - 1; i >= 0; i--) {
       const c = this.list[i];
+      if (c.kind === 'gull' && !c.alive) {   // shot down: tumble to the ground, then vanish
+        const p = c.obj.position; c.fallV += 22 * dt; p.y -= c.fallV * dt; c.obj.rotation.z += dt * 7; c.obj.rotation.x += dt * 3; c.deadT -= dt;
+        if (p.y <= groundH(p.x, p.z) + 0.2 || c.deadT <= 0) { FX.burst(p.x, p.y + 0.3, p.z, 0xf4f4f0, 8, 2, 0.6, 0.1, 1); scene.remove(c.obj); this.list.splice(i, 1); continue; }
+        c.mixer.update(dt); continue;
+      }
       if (c.kind === 'gull') {
         c.ang += c.spd * dt; c.flapT -= dt;
         if (c.flapT <= 0) { if (c.cur === 'Glide') { this.play(c, 'Flap', 1); c.flapT = 1.2 + Math.random() * 1.5; } else { this.play(c, 'Glide', 1); c.flapT = 2.5 + Math.random() * 4; } }
@@ -6776,25 +6796,25 @@ const Reboot = {
 // =====================================================================
 // tuned for the 530 m island: one more early circle, longer moves while the storm is large (moves ~30% slower)
 const PHASES = [
-  { wait: 70, shrink: 78, r: 400, dmg: 1 },
-  { wait: 60, shrink: 68, r: 250, dmg: 1 },
-  { wait: 52, shrink: 60, r: 150, dmg: 2 },
-  { wait: 45, shrink: 52, r: 85, dmg: 4 },
-  { wait: 40, shrink: 43, r: 45, dmg: 7 },
-  { wait: 32, shrink: 35, r: 20, dmg: 10 },
-  { wait: 24, shrink: 39, r: 0, dmg: 15 },
+  { wait: 70, shrink: 78, r: 400, dmg: 1.5 },   // storm damage per second is ~30% higher than it used to be
+  { wait: 60, shrink: 68, r: 250, dmg: 1.5 },
+  { wait: 52, shrink: 60, r: 150, dmg: 3 },
+  { wait: 45, shrink: 52, r: 85, dmg: 5 },
+  { wait: 40, shrink: 43, r: 45, dmg: 9 },
+  { wait: 32, shrink: 35, r: 20, dmg: 13 },
+  { wait: 24, shrink: 39, r: 0, dmg: 20 },
 ];
 const STORM_START = 900;
 const Storm = {
   cx: 0, cz: 0, r: 900, fx: 0, fz: 0, fr: 900, tx: 0, tz: 0, tr: 900, phase: -1, state: 'idle', t: 0, dur: 1, dmg: 1, tick: 1, hasNext: false, rumble: false,
   init(mode) {
-    Object.assign(this, { cx: 0, cz: 0, r: STORM_START, phase: -1, state: 'idle', t: 0, dmg: 1, tick: 1, hasNext: false, rumble: mode === 'rumble' });
+    Object.assign(this, { cx: 0, cz: 0, r: STORM_START, phase: -1, state: 'idle', t: 0, dmg: 1.5, tick: 1, hasNext: false, rumble: mode === 'rumble' });
     stormMesh.visible = true;
   },
   start() {
     if (this.rumble) {
       const p = pick(W.pois.length ? W.pois : [{ x: 0, z: 0 }]);
-      Object.assign(this, { fx: this.cx, fz: this.cz, fr: this.r, tx: p.x, tz: p.z, tr: 120, hasNext: true, state: 'shrink', t: 32, dur: 32, dmg: 3, phase: 0 });
+      Object.assign(this, { fx: this.cx, fz: this.cz, fr: this.r, tx: p.x, tz: p.z, tr: 120, hasNext: true, state: 'shrink', t: 32, dur: 32, dmg: 4, phase: 0 });
       return;
     }
     this.nextPhase();
@@ -6824,7 +6844,7 @@ const Storm = {
     this.tick -= dt;
     if (this.tick <= 0) {
       this.tick = 1;
-      if (this.state !== 'idle' && !Net.guest) for (const a of actors) if (a.alive && !a.npc && a.state !== 'bus' && a.invuln <= 0 && this.outside(a.pos.x, a.pos.z)) damageActor(a, this.dmg, null, { raw: true, storm: true });
+      if (this.state !== 'idle' && !Net.guest) for (const a of actors) if (a.alive && !a.npc && a.state !== 'bus' && a.invuln <= 0 && this.outside(a.pos.x, a.pos.z)) { a._sd = (a._sd || 0) + this.dmg; const d = Math.floor(a._sd); if (d >= 1) { a._sd -= d; damageActor(a, d, null, { raw: true, storm: true }); } }   // half points carry over (1.5/s = 1, 2, 1, 2...)
     }
     stormMesh.visible = this.state !== 'idle' && this.r < STORM_START - 20;
     stormMesh.scale.set(Math.max(0.5, this.r), 760, Math.max(0.5, this.r)); stormMesh.position.set(this.cx, 120, this.cz);
@@ -6998,7 +7018,7 @@ const Match = {
     }
     if (this.mode !== 'rumble' && this.mode !== 'tutorial') for (const v of W.vaults) this.spawnVault(v);
     for (const a of actors) if (!this.build && !a.npc) { a.overMax = 50; a.over = 50; }
-    this.time = 0; this.firstLander = null; this.sharkKills = 0; this.score = [0, 0]; this.ending = false; this.spectate = null; this.paused = false; this.result = null; this.deathShown = false; this.hasWinner = false;
+    this.time = 0; this.firstLander = null; this.sharkKills = 0; this.birdKills = 0; this.score = [0, 0]; this.ending = false; this.spectate = null; this.paused = false; this.result = null; this.deathShown = false; this.hasWinner = false;
     Storm.init(this.mode);
     if (this.mode === 'tutorial') Tutorial.setup();
     else if (this.mode === 'rumble') {
@@ -7020,7 +7040,7 @@ const Match = {
       }
     }
     }
-    this.time = this.time || 0; this.firstLander = null; this.sharkKills = 0; if (Net.guest) { this.score = [0, 0]; this.ending = false; this.spectate = null; this.paused = false; this.result = null; this.deathShown = false; this.hasWinner = false; }
+    this.time = this.time || 0; this.firstLander = null; this.sharkKills = 0; this.birdKills = 0; if (Net.guest) { this.score = [0, 0]; this.ending = false; this.spectate = null; this.paused = false; this.result = null; this.deathShown = false; this.hasWinner = false; }
     if (this.mode !== 'rumble') player.shield = 50;   // everyone drops in with half a shield
     LiveEvent.init(this.mode); if (Net.inMatch || this.mode === 'tutorial') LiveEvent.state = 'off'; else Creatures.spawn();
     if (PlayerRig) scene.remove(PlayerRig.root);
@@ -7149,6 +7169,7 @@ const Match = {
     else if (r.win) lines.push(['Rumble won', 600]);
     if (this.firstLander === p) lines.push(['First to land', 500]);
     if (this.sharkKills) lines.push([this.sharkKills > 1 ? 'Sharks defeated ×' + this.sharkKills : 'Shark defeated', 2000 * this.sharkKills]);
+    if (this.birdKills) lines.push([this.birdKills > 1 ? 'Birds shot down ×' + this.birdKills : 'Bird shot down', 5000 * this.birdKills]);
     if (!d.firstBonus) { d.firstBonus = true; lines.push(['First time playing', 5000]); }
     const xp = lines.reduce((s, l) => s + l[1], 0), lv = Profile.addXp(xp), tier0 = lv.l0;
     d.matches++; d.kills += p.kills; d.chests = (d.chests || 0) + (p.chests || 0);
@@ -7161,7 +7182,8 @@ const Match = {
     if (r.win && this.mode !== 'rumble' && !d.umbrella) { d.umbrella = true; newUmb = true; }
     const tier1 = lv.l1; const unl = lv.got.slice();
     const mc = this.mode === 'rumble' ? matchCoins(null) : matchCoins(place, this.teamCount(), p.kills, rankI), winCoins = mc.coins, coins = winCoins + lv.coins;
-    d.coins += winCoins;
+    const birdCoins = 100 * (this.birdKills || 0);   // every bird you shoot out of the sky
+    d.coins += winCoins + birdCoins;
     Profile.save();
     if (newUmb) unl.push(cosById('glider', 'umbrella'));
     $('rPlace').innerHTML = place ? '#' + place + ' <small>of ' + this.teamCount() + '</small>' : (this.score[0] + ' – ' + this.score[1]);
@@ -7171,6 +7193,7 @@ const Match = {
     $('rStats').innerHTML = [['Eliminations', p.kills], ['Damage dealt', p.dmgDealt], ['Survived', fmtTime(p.aliveTime)]].map(s => `<div class="stat"><b>${s[1]}</b><span>${s[0]}</span></div>`).join('');
     $('rXp').innerHTML = lines.map(l => `<span class="xpl"><span>${esc(l[0])}</span><b>+${l[1].toLocaleString()} XP</b></span>`).join('')
       + (winCoins ? `<span class="xpl gold"><span>Match reward · ${RANKS[rankI][0]} ×${mc.mult}${mc.capped ? ' (max ' + MATCH_COINS_MAX + ')' : ''}${Profile.hasPass() ? ' · Battle Pass' : ''}</span><b>+${winCoins} ${COIN}</b></span>` : '')
+      + (birdCoins ? `<span class="xpl gold"><span>Birds shot down ×${this.birdKills}</span><b>+${birdCoins} ${COIN}</b></span>` : '')
       + (lv.coins ? `<span class="xpl gold"><span>Level ${tier0} → ${tier1}</span><b>+${lv.coins.toLocaleString()} ${COIN}</b></span>` : '')
       + `<span class="xpl tot"><span>Level ${tier1} · ${Season.name()}</span><b>${(d.seasonXp % XP_PER_LEVEL).toLocaleString()} / ${XP_PER_LEVEL.toLocaleString()} XP</b></span>` + (rpTxt ? `<span class="xpl"><span>Ranked</span><b>${esc(rpTxt.replace(/^ · /, ''))}</b></span>` : '');
     $('rXpFill').style.width = ((d.seasonXp % XP_PER_LEVEL) / XP_PER_LEVEL * 100) + '%';
@@ -9193,7 +9216,7 @@ const Lobby = {
         $('bpUsd').hidden = has; $('bpPay').hidden = !PASS_PAY_URL; if (PASS_PAY_URL) $('bpPay').href = PASS_PAY_URL;
         $('bpPayNote').textContent = PASS_PAY_URL ? 'Pay on the secure checkout page. When you finish, you come straight back here and the Battle Pass unlocks by itself.' : 'Online checkout is coming soon.'; }
       $('passLvl').textContent = 'Level ' + tier; $('passXp').textContent = (d.seasonXp % XP_PER_LEVEL).toLocaleString() + ' / ' + XP_PER_LEVEL.toLocaleString() + ' XP';
-      $('passInfo').textContent = `Every level takes ${XP_PER_LEVEL.toLocaleString()} XP and pays ${LEVEL_COINS} ${COIN}. Bonus XP: 1st place +2,500 · each shark you defeat +2,000 · first to land +500 · your first game +5,000 · thanking the maker +1,000 once a season. Levels start over each season; anything you unlock stays yours.`;
+      $('passInfo').textContent = `Every level takes ${XP_PER_LEVEL.toLocaleString()} XP and pays ${LEVEL_COINS} ${COIN}. Bonus XP: 1st place +2,500 · each bird you shoot down +5,000 (and 100 ${COIN}) · each shark you defeat +2,000 · first to land +500 · your first game +5,000 · thanking the maker +1,000 once a season. Levels start over each season; anything you unlock stays yours.`;
       $('passFill').style.width = ((d.seasonXp % XP_PER_LEVEL) / XP_PER_LEVEL * 100) + '%';
       const thanked = d.thankSeason === sid; $('thankBtn').disabled = thanked; $('thankBtn').textContent = thanked ? 'Thanked ✓' : 'Thank you!';
       $('thankTxt').textContent = thanked ? 'Thanks sent for ' + Season.name() + '. You can thank the maker again next season.' : 'Say thanks to the person who made FortDay. +1,000 XP, once per season.';
