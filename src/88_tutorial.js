@@ -25,7 +25,7 @@ const Opening = {
     if (this.on && !this.out) {
       this.t += dt; if (Input.pad.hit.length) this.close();
       const k = Math.min(1, this.t / 4), e = 1 - Math.pow(1 - k, 3), a = 2.6 - e * 2.1 + Math.sin(this.t * 0.3) * 0.08 * k, r = lerp(16, 7.4, e), y = lerp(9, 2.2, e);
-      cam.position.set(Math.sin(a) * r + 1.3, y, Math.cos(a) * r); cam.lookAt(1.3, lerp(1.6, 1.2, e), 0);
+      const cx = Lobby.camX || 0; cam.position.set(Math.sin(a) * r + cx, y, Math.cos(a) * r); cam.lookAt(cx, lerp(1.6, 1.2, e), 0);
       return true;
     }
     if (this.out) {

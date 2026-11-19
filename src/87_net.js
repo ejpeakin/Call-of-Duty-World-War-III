@@ -208,7 +208,7 @@ const Net = {
     if (this.state === 'room') {
       box.innerHTML = `<div class="mp-code">Room code <b>${esc(this.code)}</b></div>`
         + `<div class="mp-list">${this.members.map(m => `<span class="${m.id === this.me ? 'me' : ''}">${esc(m.name)}${m.id === this.hostId ? ' <i>host</i>' : ''}${m.id === this.me ? ' <i>you</i>' : ''}</span>`).join('')}</div>`
-        + `<div class="hint">${this.isHost ? 'Share the code. Pick the mode and island below, then press START MATCH. Bots fill the other spots.' : 'The host picks the mode and island and starts the match.'}</div>`
+        + `<div class="hint">${this.isHost ? 'Share the code. Pick the mode above START MATCH, then press it. Bots fill the other spots.' : 'The host picks the mode and island and starts the match.'}</div>`
         + `<div class="mp-row"><button data-mp="leave">Leave room</button></div>` + err;
       return;
     }

@@ -19,6 +19,10 @@
 
 <!-- ================= LOBBY ================= -->
 <div id="lobby">
+  <!-- name over your character and the party spots beside you; Lobby.render moves these to follow the 3D stage -->
+  <div id="stageUI">
+    <label class="name-plate" id="namePlate" title="Click to change your name"><input id="nameIn" maxlength="16" placeholder="Type your name" autocomplete="off" spellcheck="false" aria-label="Your player name"></label>
+  </div>
   <header class="lb-top">
     <div class="logo">FORT<span>DAY</span></div>
     <nav class="tabs" id="tabs">
@@ -44,13 +48,16 @@
           <li>Press <b>PLAY</b>. Be the last one standing to win.</li>
         </ol>
       </div>
-      <label class="name-row"><span>Your player name</span><input id="nameIn" maxlength="16" placeholder="Type a name" autocomplete="off" spellcheck="false"></label>
       <button class="tut-card" id="tutBtn" type="button"><span class="tut-badge" id="tutBadge" hidden>Recommended for new players</span><b>Tutorial</b><span>Learn to move, build, loot and fight in a few minutes</span></button>
-      <h3>Island</h3>
-      <div class="isl-grid" id="islGrid"></div>
-      <div class="hint" id="islNote"></div>
-      <h3>Play with friends <span class="h-opt">optional</span></h3>
-      <div class="mp" id="mpBox"></div>
+      <details class="w-card" id="islBox">
+        <summary><span class="w-k">Island</span><b id="islSum">Greenvale</b><span class="w-sub" id="islSub"></span></summary>
+        <div class="isl-grid" id="islGrid"></div>
+        <div class="hint" id="islNote"></div>
+      </details>
+      <details class="w-card" id="partyBox">
+        <summary><span class="w-k">Party</span><b id="partySum">Play with friends</b><span class="w-sub" id="partySub">Make a room and share its code</span></summary>
+        <div class="mp" id="mpBox"></div>
+      </details>
       <details class="ctl" id="ctlBox">
         <summary>Controls</summary>
         <div class="ctl-grid" id="kbHint"></div>
