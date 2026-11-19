@@ -183,6 +183,14 @@
   <div id="hurtVig"></div>
   <div id="downVig" hidden><b>You are down</b><span id="downTip"></span></div>
   <div id="scope" hidden></div>
+  <div id="scope2" hidden><svg viewBox="-100 -100 200 200" aria-hidden="true">
+    <g stroke="#0a0a0a" fill="none">
+      <line x1="-100" y1="0" x2="-4" y2="0" stroke-width=".7"/><line x1="4" y1="0" x2="100" y2="0" stroke-width=".7"/>
+      <line x1="0" y1="-100" x2="0" y2="-4" stroke-width=".7"/><line x1="0" y1="4" x2="0" y2="100" stroke-width=".7"/>
+      <circle r="2.6" stroke-width=".6"/>
+      <g stroke-width=".6"><line x1="-20" y1="-2" x2="-20" y2="2"/><line x1="20" y1="-2" x2="20" y2="2"/><line x1="-40" y1="-2.6" x2="-40" y2="2.6"/><line x1="40" y1="-2.6" x2="40" y2="2.6"/><line x1="-2" y1="20" x2="2" y2="20"/><line x1="-2.6" y1="40" x2="2.6" y2="40"/><line x1="-2" y1="-20" x2="2" y2="-20"/></g>
+    </g>
+  </svg></div>
   <div id="dmgNums"></div>
   <div id="killfeed"></div>
   <div id="teamList"></div>
@@ -265,6 +273,11 @@
     <div class="sens"><label for="gfxSel">Graphics</label><select id="gfxSel"><option value="auto">Auto (recommended)</option><option value="fast">Fast: lighter, for slow computers</option><option value="pretty">Pretty: sharper, needs a strong computer</option></select></div>
     <div class="hint" id="gfxNote"></div>
     <label class="check"><input type="checkbox" id="shadowChk"> Shadows</label>
+    <h3 class="set-h">Your lobby music</h3>
+    <div class="hint">Pick songs from your computer to play in the lobby. They are saved only in this browser and never uploaded.</div>
+    <div id="musList"></div>
+    <div class="mus-acts"><label class="buy equip" for="musFile">Add songs</label><input type="file" id="musFile" accept="audio/*" multiple hidden><label class="check"><input type="checkbox" id="musOn"> Play in the lobby</label></div>
+    <div class="sens"><label for="musVol">Music volume</label><input type="range" id="musVol" min="0" max="1" step="0.05"></div>
     <h3 class="set-h">Keybinds</h3>
     <div class="hint">Click a key, then press the new key or mouse button. If another action already uses it, the two swap.</div>
     <div class="kb-list" id="kbList"></div>

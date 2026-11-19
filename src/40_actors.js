@@ -235,7 +235,7 @@ function tieDyeMat() {
   const tex = new THREE.CanvasTexture(c); tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(2, 1);
   return (_tieDyeMat = new THREE.MeshLambertMaterial({ map: tex }));
 }
-let CHAIN_Z = 0.012, BACK_Z = -0.205;
+let CHAIN_Z = 0.012, BACK_Z = -0.205, COLLAR = [0.082, 0.112, 0.085, 0.682, 0.005];   // collar: top radius, bottom radius, height, y, z
 // big block print for the back of a shirt (e.g. 999), dark letters with an outline
 function backPrint(txt, w, h, fill = '#111114', edge = '#e8731e') {
   const c = document.createElement('canvas'); c.width = 512; c.height = 256;
@@ -274,21 +274,41 @@ function dreadsModel(o, head, noCap) {
     for (let j = 0; j <= n; j++) { const c = curve.getPointAt(j / n), r = r0 + (r1 - r0) * j / n; for (let k = 0; k <= R; k++) { const i = j * (R + 1) + k; P.setXYZ(i, c.x + (P.getX(i) - c.x) * r, c.y + (P.getY(i) - c.y) * r, c.z + (P.getZ(i) - c.z) * r); } }
     L.push([g, hex]);
   };
-  const lock = (p, n, len, r, side, front) => {
+  const lock = (p, n, len, r, side, front, o2 = {}) => {
     const pts = [p.clone().addScaledVector(n, -0.012)]; let pos = p.clone().addScaledVector(n, 0.016); pts.push(pos.clone());
-    const dir = n.clone(); dir.y += front ? 0.0 : 0.08; if (front) dir.x += side * 0.9; dir.normalize();
-    const steps = 6, st = len / steps, out = new V(n.x, 0, n.z).normalize();
+    const dir = n.clone(); dir.y += o2.lift ?? (front ? 0.0 : 0.08); if (front) dir.x += side * (o2.sweep ?? 0.9); dir.normalize();
+    const steps = 6, st = len / steps, out = new V(n.x, 0, n.z).normalize(), d0 = o2.droop0 ?? 0.55, d1 = o2.droop ?? 0.45, fl = o2.flare ?? 0.04;
     for (let k = 0; k < steps; k++) {
-      dir.y -= k === 0 ? 0.55 : 0.45; dir.addScaledVector(out, 0.04); dir.x += (rnd() - 0.5) * 0.08; dir.z += (rnd() - 0.5) * 0.08; dir.normalize();
-      pos = outside(pos.clone().addScaledVector(dir, st)); pts.push(pos.clone());
+      dir.y -= k === 0 ? d0 : d1; dir.addScaledVector(out, fl); dir.x += (rnd() - 0.5) * 0.08; dir.z += (rnd() - 0.5) * 0.08; dir.normalize();
+      pos = o2.free ? pos.clone().addScaledVector(dir, st) : outside(pos.clone().addScaledVector(dir, st)); pts.push(pos.clone());
     }
-    const full = new THREE.CatmullRomCurve3(pts), S = full.getPoints(20), cut1 = 13, cut2 = 15, r1 = r * 0.72;
+    const full = new THREE.CatmullRomCurve3(pts), S = full.getPoints(20), cut1 = o2.cut1 ?? 13, cut2 = o2.cut2 ?? 15, r1 = r * (o2.taper ?? 0.72);
     const rAt = i => r + (r1 - r) * i / 20;
     tube(S.slice(0, cut1 + 1), rAt(0), rAt(cut1), root);
     tube(S.slice(cut1, cut2 + 1), rAt(cut1), rAt(cut2), mid);
     tube(S.slice(cut2), rAt(cut2), rAt(20), tip);
     const e = S[20]; L.push([new THREE.SphereGeometry(r1, 5, 4).translate(e.x, e.y, e.z), tip]);
   };
+  if (o.knot) {   // top-knot style: a tied bundle on the crown with short gold spikes fanning out, short chunky locks all around
+    const top = new V(0, cy + 0.01 + RY * 0.96, CZ - 0.03), up = new V(0, 1, 0.12).normalize(), stemTop = top.clone().addScaledVector(up, 0.1);
+    tube([top.clone().addScaledVector(up, -0.03), top.clone().addScaledVector(up, 0.03), stemTop], 0.05, 0.034, root);                       // gathered hair
+    { const band = new THREE.TorusGeometry(0.038, 0.011, 6, 16); band.rotateX(Math.PI / 2 - 0.12); band.translate(stemTop.x, stemTop.y - 0.022, stemTop.z); L.push([band, 0x060607]); }   // hair tie
+    for (let i = 0; i < 10; i++) {   // the spikes: up and out like a little palm tree
+      const a = i / 10 * TAU + rnd() * 0.35, sp = 0.45 + rnd() * 0.3, d = new V(Math.sin(a) * sp, 1, Math.cos(a) * sp - 0.1).normalize();
+      lock(stemTop.clone().addScaledVector(d, 0.01), d, 0.17 + rnd() * 0.06, 0.016 + rnd() * 0.003, 1, false, { free: true, lift: 0.35, droop0: 0.1, droop: 0.15, flare: 0.1, cut1: 4, cut2: 6, taper: 0.75 });
+    }
+    const rings = [[0.42, 11], [0.72, 15], [1.0, 18], [1.24, 19], [1.46, 17]];
+    for (const [phi, n] of rings) for (let i = 0; i < n; i++) {
+      const th = (i + rnd() * 0.5) / n * TAU, sp = Math.sin(phi), cp = Math.cos(phi), sx = Math.sin(th), cz = Math.cos(th);
+      if (phi > 1.1 && cz > 0.2) continue;                                   // keep the face and temples clear
+      const p = new V(RX * 0.97 * sp * sx, cy + 0.01 + RY * 0.97 * cp, CZ + RZ * 0.97 * sp * cz);
+      const nrm = new V(p.x / (RX * RX), (p.y - cy) / (RY * RY), (p.z - CZ) / (RZ * RZ)).normalize();
+      const front = cz > 0.4 && phi < 1.1, back = cz < -0.3;
+      const len = front ? 0.13 + rnd() * 0.04 : back ? 0.24 + rnd() * 0.07 : 0.19 + rnd() * 0.07;
+      lock(p, nrm, len, 0.015 + rnd() * 0.003, sx >= 0 ? 1 : -1, front, { lift: front ? -0.1 : 0.04, sweep: 0.5, droop0: 0.48, droop: 0.4, flare: 0.07, cut1: 13, cut2: 15, taper: 0.8 });   // black roots, gold only at the ends
+    }
+    head.add(mergedColored(L)); return;
+  }
   // roots in rings from the crown down to the hairline; theta = 0 is the face
   const rings = [[0.12, 8], [0.36, 16], [0.6, 22], [0.84, 27], [1.06, 31], [1.27, 33], [1.47, 33]];   // many thin locks, packed close
   for (const [phi, n] of rings) for (let i = 0; i < n; i++) {
@@ -630,6 +650,7 @@ function buildCharacter(eq, skinned) {
     }
   }
   if (!SKN) { M(G.torso, shirtMat, 0, 0, 0, torso); M(G.neck, o.skin, 0, 0, 0, torso); }
+  else if (o.collar) { const cl = M(new THREE.CylinderGeometry(COLLAR[0], COLLAR[1], COLLAR[2], 22, 1, true), new THREE.MeshLambertMaterial({ color: o.leather ? o.jacket : o.shirt, side: THREE.DoubleSide }), 0, COLLAR[3], COLLAR[4], torso); cl.userData.collar = true; }   // a neat collar hides the jagged neck seam of the uploaded body
   // hoodie: hood bunched behind the neck plus two drawstrings
   if (o.hoodie) {
     const hood = M(new THREE.TorusGeometry(0.085, 0.045, 8, 18), shirtMat, 0, 0.6, -0.045, torso); hood.rotation.x = Math.PI / 2 - 0.35; hood.scale.set(1.35, 1.15, 1);
@@ -771,7 +792,7 @@ function buildCharacter(eq, skinned) {
     }
     M(B(0.026, 0.005, 0.005), 0x15151a, 0, 0.027, 0.146, head);
   }
-  if (o.beard) {   // neat chinstrap along the jaw, thin moustache and a small goatee
+  if (o.beard && !SKN) {   // built-in body: neat chinstrap along the jaw, thin moustache and a small goatee (the uploaded body paints it on)
     const bc = new THREE.MeshLambertMaterial({ color: 0x1a120c }), V3 = (x, y, z) => new THREE.Vector3(x, y, z);
     const strap = new THREE.CatmullRomCurve3([V3(-0.118, -0.005, 0.03), V3(-0.112, -0.06, 0.06), V3(-0.08, -0.105, 0.092), V3(-0.035, -0.128, 0.112), V3(0, -0.132, 0.116), V3(0.035, -0.128, 0.112), V3(0.08, -0.105, 0.092), V3(0.112, -0.06, 0.06), V3(0.118, -0.005, 0.03)]);
     M(new THREE.TubeGeometry(strap, 28, 0.0075, 6, false), bc, 0, 0, 0, head);

@@ -250,7 +250,8 @@ const Cam = {
   update(dt) {
     const a = viewTarget(); this.view = a; if (!a) return;
     const it = a.inv[a.slot];
-    this.scoped = a === player && a.alive && a.input.ads && it && it.kind === 'weapon' && wstat(it).scope && a.state === 'ground' && !a.vehicle && !Build.active;
+    const st0 = it && it.kind === 'weapon' ? wstat(it) : null; this.scopeKind = st0 ? (st0.scope ? 'sniper' : st0.type === 'smg' ? 'smg' : null) : null;   // SMGs aim through a round scope too
+    this.scoped = a === player && a.alive && a.input.ads && !!this.scopeKind && a.state === 'ground' && !a.vehicle && !Build.active;
     this.kickOff = this.kickOff * Math.max(0, 1 - dt * 10) + this.kick; this.kick = 0;
     if (a.state === 'bus') {
       const yaw = player.yaw, pitch = clamp(player.pitch, -1.2, 0.5), cp = Math.cos(pitch);
@@ -296,7 +297,7 @@ const Cam = {
     this.t0 = Math.max(0, (px - cx) * fx + (pyy - cy) * fy + (pz - cz) * fz);
     this.ready = a === player;
     const sprint = a.input.sprint && a.input.f > 0 && a.state === 'ground';
-    this.fov(dt, this.scoped ? 22 : (a === player && a.input.ads && !a.vehicle) ? (it && it.kind === 'weapon' && wstat(it).type === 'shotgun' ? 64 : it && it.kind === 'weapon' && wstat(it).type === 'smg' ? 52 : 58) : sprint ? 80 : a.vehicle ? 80 : 75);
+    this.fov(dt, this.scoped ? (this.scopeKind === 'smg' ? 40 : 22) : (a === player && a.input.ads && !a.vehicle) ? (it && it.kind === 'weapon' && wstat(it).type === 'shotgun' ? 64 : it && it.kind === 'weapon' && wstat(it).type === 'smg' ? 52 : 58) : sprint ? 80 : a.vehicle ? 80 : 75);
   },
   fov(dt, target) { if (Math.abs(camera.fov - target) > 0.1) { camera.fov = lerp(camera.fov, target, Math.min(1, dt * 12)); camera.updateProjectionMatrix(); } },
 };
@@ -334,13 +335,13 @@ function updatePlayer(dt) {
   if (Victory.on) { const i = a.input; i.f = i.r = 0; i.fire = i.jump = i.ads = i.sprint = false; Input.pressed.clear(); Input.mdx = Input.mdy = 0; Input.wheel = 0; return; }   // celebrating
   const K = Input.keys, P = Input.pressed, tc = Input.touch, inp = a.input;
   const it = a.inv[a.slot];
-  const sens = 0.0022 * Profile.d.sens * (inp.ads ? (Cam.scoped ? 0.32 : 0.65) : 1);
+  const sens = 0.0022 * Profile.d.sens * (inp.ads ? (Cam.scoped ? (Cam.scopeKind === 'smg' ? 0.5 : 0.32) : 0.65) : 1);
   let mdx = Input.mdx, mdy = Input.mdy; Input.mdx = Input.mdy = 0;
   if (K.ArrowLeft) mdx -= 600 * dt; if (K.ArrowRight) mdx += 600 * dt; if (K.ArrowUp) mdy -= 400 * dt; if (K.ArrowDown) mdy += 400 * dt;
   a.yaw -= mdx * sens; a.pitch = clamp(a.pitch - mdy * sens, -1.45, 1.45);
   const pd = Input.pad;
   if (pd.on) {
-    const ls = (inp.ads ? (Cam.scoped ? 0.3 : 0.6) : 1) * Profile.d.sens, cv = v => Math.sign(v) * Math.pow(Math.abs(v), 1.7);
+    const ls = (inp.ads ? (Cam.scoped ? (Cam.scopeKind === 'smg' ? 0.48 : 0.3) : 0.6) : 1) * Profile.d.sens, cv = v => Math.sign(v) * Math.pow(Math.abs(v), 1.7);
     a.yaw -= cv(pd.lx) * 3.5 * ls * dt; a.pitch = clamp(a.pitch - cv(pd.ly) * 2.3 * ls * dt, -1.45, 1.45);
     if (a.slot) pd.lastSlot = a.slot;
     for (const i of pd.hit) {
@@ -378,6 +379,7 @@ function updatePlayer(dt) {
   inp.ads = H('ads') || tc.ads || pd.ads || Input.scoped;
   if (a.state === 'bus') { inp.f = inp.r = 0; inp.fire = false; if (P.has('Space')) busJump(a); }
   else if (a.state === 'sky') { if (P.has('Space')) a.state = 'glide'; }
+  else if (a.state === 'glide') { if (P.has('Space') && a.pos.y - groundAt(a.pos.x, a.pos.z, a.pos.y) > GLIDER_AUTO + 1) a.state = 'sky'; }   // above the auto-open height you can close the glider and dive again
   for (let i = 1; i <= 6; i++) if (P.has('Digit' + i)) { switchSlot(a, i - 1); Build.active = false; }
   if (Input.wheel) {
     const dir = Input.wheel > 0 ? 1 : -1; let s = a.slot;

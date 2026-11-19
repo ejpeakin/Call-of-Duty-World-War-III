@@ -6,12 +6,12 @@ function boot() {
   initEngine();
   BotRig.init(112);
   Build.init();
-  Trails.init(); ElimFX.init();
+  Trails.init(); ElimFX.init(); SprintWind.init();
   try { Creatures.load(); } catch (e) { console.warn(e); }
   try { CharModel.load(); } catch (e) { console.warn(e); }
   HUD.init();
   Input.init(); Settings.init(); Tutorial.init(); Inv.init();
-  Lobby.init(); Track.init(); Players.init(); Victory.init();
+  Lobby.init(); Track.init(); Players.init(); Victory.init(); LobbyMusic.init();
   // back from the $1 checkout: ?bp=CODE in the address unlocks the Battle Pass, then the code is removed from the address
   (async () => {
     let q; try { q = new URLSearchParams(location.search); } catch (e) { return; }
@@ -114,6 +114,7 @@ function step(now) {
   let dt = Math.min(0.05, Math.max(0.0005, (now - lastFrame) / 1000)); lastFrame = now;
   Input.pollPad();
   if (Match.state !== 'play' || Match.paused || !$('death').hidden || !$('results').hidden || !$('ticket').hidden || !$('skinFind').hidden || !$('tutEnd').hidden) Input.padMenu(dt);
+  LobbyMusic.sync();
   if (Match.state === 'lobby' || Match.state === 'loading') { Lobby.render(dt); return; }
   if (Match.paused && !Net.inMatch) { renderer.render(scene, camera); return; }   // a shared match keeps running while you are in the menu
   gameTime += dt;
@@ -138,7 +139,7 @@ function step(now) {
   BotRig.update(gameTime);
   CharPool.update(dt);
   ElimFX.update(dt);
-  Trails.update();
+  Trails.update(); SprintWind.update(dt);
   Nature.update(dt);
   sky.position.copy(camera.position); stars.position.copy(camera.position);
   if (v) {

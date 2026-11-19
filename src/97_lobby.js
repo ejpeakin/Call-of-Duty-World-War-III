@@ -143,6 +143,7 @@ const Lobby = {
     const it = cosById(cat, id), d = Profile.d, msg = $('shopMsg'), price = itemPrice(it); Sfx.init();
     if (Profile.canClaim(it)) { Profile.claimPassSkin(it); Sfx.chest(); msg.textContent = it.name + ' is yours for free with the Battle Pass, and equipped.'; this.refresh(); return; }
     if (Profile.unlocked(it)) { d.eq[cat] = id; Profile.save(); msg.textContent = it.name + ' equipped.' + (cat === 'car' ? ' Get into any car to drive it.' : ''); this.refresh(); return; }
+    if (it.limitedSeason != null && Season.id() > it.limitedSeason) { msg.textContent = it.name + ' was only available in ' + Season.name(it.limitedSeason) + '.'; return; }
     if (d.coins < price) { msg.textContent = 'You need ' + (price - d.coins).toLocaleString() + ' more ' + COIN + '. Play matches to earn them.'; return; }
     d.coins -= price; d.owned[cat + ':' + id] = true; d.eq[cat] = id; Profile.save(); Sfx.chest();
     msg.textContent = 'Purchased and equipped. It is in your locker under ' + COS_CATS.find(c => c[0] === cat)[1] + '.'; this.refresh();
@@ -162,6 +163,7 @@ const Lobby = {
       if (it.premium) feats.push('Any car you get into becomes your ' + it.name, it.id === 'limo' ? 'Rams through anyone in its way: it is twice as long' : 'Spinning wheels with working front steering');
     } else $('shopDesc').textContent = DESC[sel.cat] || '';
     if (it.music) feats.unshift('Music Festival 2026 collection');
+    if (it.limitedSeason != null) feats.unshift('Limited: only available in ' + Season.name(it.limitedSeason) + '. Once the season ends it leaves the Item Shop and will never return.');
     if (it.unlock && it.unlock.startsWith('tier:')) feats.push('Also unlocks free at level ' + it.unlock.slice(5));
     if (it.unlock === 'win') feats.push('Also earned free by winning a match');
     if (!it.unlock) feats.push('Included with every account');
@@ -196,12 +198,13 @@ const Lobby = {
     $('lkTag').textContent = it.premium ? 'Premium' : RARITY[it.r].name;
     $('lkName').textContent = it.name;
     $('lkSub').textContent = catName + (own ? ' · In your collection' : ' · Not owned yet');
-    $('lkDesc').textContent = DESC[cat] + (own ? '' : it.unlock === 'chest' ? ' Get it: every chest you open has a 1 in 1,000 chance to hold it. Only one per player, and it is never sold in the Shop.' : ' Get it: ' + (how(it) ? how(it) + ', or ' : '') + 'buy it in the Item Shop for ' + itemPrice(it).toLocaleString() + ' ' + COIN + '.');
+    $('lkDesc').textContent = DESC[cat] + (it.limitedSeason != null ? ' Limited to ' + Season.name(it.limitedSeason) + ': it will never return once the season ends.' : '') + (own ? '' : it.unlock === 'chest' ? ' Get it: every chest you open has a 1 in 1,000 chance to hold it. Only one per player, and it is never sold in the Shop.' : ' Get it: ' + (how(it) ? how(it) + ', or ' : '') + 'buy it in the Item Shop for ' + itemPrice(it).toLocaleString() + ' ' + COIN + '.');
     $('lkState').textContent = eq ? 'Equipped' : own ? 'Owned' : 'Locked';
     $('lkState').className = 'sd-price' + (own ? ' owned' : '');
     const bodyOk = cat === 'outfit' && !it.personal; $('lkBody').hidden = !bodyOk;
     if (bodyOk) for (const b of $('lkBody').querySelectorAll('button')) { const on = (d.eq.body || 'woman') === b.dataset.body; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); }
-    const btn = $('lkBtn'); btn.textContent = eq ? 'Equipped' : own ? 'Equip' : it.unlock === 'chest' ? 'Find it in a chest' : 'Get it in the Shop'; btn.disabled = eq || (!own && it.unlock === 'chest'); btn.className = 'buy' + (eq ? ' owned' : own ? ' equip' : '');
+    const gone = !own && it.limitedSeason != null && Season.id() > it.limitedSeason;   // a limited item after its season
+    const btn = $('lkBtn'); btn.textContent = eq ? 'Equipped' : own ? 'Equip' : gone ? 'No longer available' : it.unlock === 'chest' ? 'Find it in a chest' : 'Get it in the Shop'; btn.disabled = eq || gone || (!own && it.unlock === 'chest'); btn.className = 'buy' + (eq ? ' owned' : own ? ' equip' : '');
   },
   shopIcon(cat, item) {
     const P = { outfit: 'M8 3l4 2 4-2 5 4-3 3-2-1v11H8V9l-2 1-3-3z', backpack: 'M7 9a5 5 0 0 1 10 0v11H7z M9 13h6 M10 4.5h4', pickaxe: 'M5 20L15 10 M8.5 6.5c4-2.5 8.5-1.5 11 2-3-1-6.5-.8-9 1.3', glider: 'M2 10l10-5 10 5-10 2z M6.5 11l5.5 8 5.5-8', wrap: 'M12 3.5c3 4 6 7 6 10.5a6 6 0 0 1-12 0c0-3.5 3-6.5 6-10.5z', emote: 'M9 17.5V6l10-2v11.5 M9 17.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z M19 15.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z', car: 'M3 15.5l2-5h14l2 5v3H3z M6.5 10.5L8.5 6h7l2 4.5 M7 18.5v1.5 M17 18.5v1.5' }[cat];
@@ -228,7 +231,7 @@ const Lobby = {
     if (this.tab === 'shop') {
       this.shopHero();
       $('shopBal').textContent = d.coins.toLocaleString();
-      const all = []; for (const [cat] of COS_CATS) for (const c of COS[cat]) if (c.unlock !== 'chest') all.push(c);   // chest finds are never sold
+      const all = []; for (const [cat] of COS_CATS) for (const c of COS[cat]) if (c.unlock !== 'chest' && !(c.limitedSeason != null && Season.id() > c.limitedSeason && !Profile.owns(c))) all.push(c);   // chest finds are never sold; limited items leave after their season
       const featured = c => c.premium || c.music || c.r >= 4;
       const filters = [['all', 'All', all.length], ['featured', 'Featured', all.filter(featured).length], ...COS_CATS.map(([k, n]) => [k, n, COS[k].length])];
       $('shopFilters').innerHTML = filters.map(([k, n, c]) => `<button role="tab" aria-selected="${this.shopFilter === k}" class="${this.shopFilter === k ? 'on' : ''}" data-f="${k}">${n}<i>${c}</i></button>`).join('');

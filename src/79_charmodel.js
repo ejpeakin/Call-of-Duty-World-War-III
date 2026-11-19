@@ -427,6 +427,17 @@ const CharModel = {
       if (o.lineup) line('head', [[0, 0.74], [0.17, 0.74], [0.175, 0.64], [0.33, 0.64], [0.335, 0.49], [0.42, 0.49]], 1.5, hex(hc, 0.6));
       if (o.hat === 'slick') { line('head', [[0, 0.9], [0.42, 0.9]], 3, 'rgba(255,255,255,0.18)'); line('head', [[0.1, 0.99], [0.16, 0.8]], 1.5, hex(hc, 0.6)); }
     }
+    if (o.beard && !o.shiesty) {   // facial hair painted onto the face so it sits flat: light stubble, a chinstrap along the jaw, moustache and a small goatee
+      const bc = hex(o.beardC ?? 0x17100b), r = AT.head, u = n => r[0] + n * r[2], v = n => r[1] + (1 - n) * r[3];
+      x.save(); x.beginPath(); x.rect(r[0], r[1], r[2], r[3]); x.clip();
+      const sg = x.createLinearGradient(0, v(0.42), 0, v(0.02)); sg.addColorStop(0, 'rgba(20,12,8,0)'); sg.addColorStop(1, 'rgba(20,12,8,0.22)');
+      x.fillStyle = sg; x.beginPath(); x.moveTo(u(0), v(0.3)); x.lineTo(u(0.3), v(0.36)); x.lineTo(u(0.46), v(0.5)); x.lineTo(u(0.46), v(0.02)); x.lineTo(u(0), v(0.02)); x.closePath(); x.fill();   // stubble shadow
+      x.lineCap = 'round'; x.lineJoin = 'round'; x.strokeStyle = bc;
+      x.lineWidth = 3; x.beginPath(); x.moveTo(u(0.44), v(0.5)); x.quadraticCurveTo(u(0.41), v(0.27), u(0.3), v(0.2)); x.quadraticCurveTo(u(0.15), v(0.15), u(0), v(0.14)); x.stroke();   // chinstrap along the jaw
+      x.lineWidth = 1.6; x.beginPath(); x.moveTo(u(0), v(0.35)); x.quadraticCurveTo(u(0.05), v(0.352), u(0.088), v(0.335)); x.stroke();   // moustache
+      x.fillStyle = bc; x.beginPath(); x.ellipse(u(0), v(0.2), r[2] * 0.026, r[3] * 0.06, 0, 0, TAU); x.fill();   // goatee
+      x.restore();
+    }
     fill('shoe', hex(shoes)); rect('shoe', 0, 0, 1, 0.24, o.boots ? '#24160c' : '#ececee');
     if (o.tiedye) { const img = tieDyeMat().map.image; for (const n of ['torso', 'upper', 'fore']) { const r = AT[n]; x.drawImage(img, r[0], r[1], r[2], r[3]); } }
     if (o.print) {   // silk shirt printed with little gold crescent moons and stars

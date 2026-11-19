@@ -122,11 +122,12 @@ const HUD = {
       if (this.last.chsg !== sg + '' + ads + rd) { this.last.chsg = sg + '' + ads + rd; ch.classList.toggle('sg', sg); ch.classList.toggle('ads', sg && ads); ch.classList.toggle('rd', rd); }
     } else if (this.last.chsg !== 'no') { this.last.chsg = 'no'; ch.classList.remove('sg', 'ads', 'rd'); }
     ch.style.display = Cam.scoped || v !== a || a.state === 'bus' ? 'none' : '';
-    $('scope').hidden = !Cam.scoped;
+    $('scope').hidden = !(Cam.scoped && Cam.scopeKind !== 'smg'); $('scope2').hidden = !(Cam.scoped && Cam.scopeKind === 'smg');
     // prompt
     const pr = $('prompt'), c = Interact.cur;
-    if (a.alive && a.state === 'bus') { pr.style.display = 'block'; pr.innerHTML = '<kbd>' + (Input.pad.on ? 'A' : Input.touch.on ? 'JUMP' : esc(Keys.of('jump')).toUpperCase()) + '</kbd>Jump from the bus'; pr.style.setProperty('--pc', '#4fb0ff'); }
-    else if (a.alive && a.state === 'sky') { pr.style.display = 'block'; pr.innerHTML = '<kbd>' + (Input.pad.on ? 'A' : Input.touch.on ? 'JUMP' : esc(Keys.of('jump')).toUpperCase()) + '</kbd>Open glider early'; pr.style.setProperty('--pc', '#3aa8ff'); }
+    if (a.alive && a.state === 'bus') { pr.style.display = 'block'; pr.innerHTML = '<kbd>' + (Input.pad.on ? 'A' : Input.touch.on ? 'JUMP' : esc(Keys.of('jump')).toUpperCase()) + '</kbd>Jump from the bus'; pr.style.setProperty('--pc', '#4fb0ff'); this.last.pr = null; }
+    else if (a.alive && a.state === 'sky') { pr.style.display = 'block'; pr.innerHTML = '<kbd>' + (Input.pad.on ? 'A' : Input.touch.on ? 'JUMP' : esc(Keys.of('jump')).toUpperCase()) + '</kbd>Open glider early'; pr.style.setProperty('--pc', '#3aa8ff'); this.last.pr = null; }
+    else if (a.alive && a.state === 'glide' && a.pos.y - groundAt(a.pos.x, a.pos.z, a.pos.y) > GLIDER_AUTO + 1) { pr.style.display = 'block'; const k = (Input.pad.on ? 'A' : Input.touch.on ? 'JUMP' : esc(Keys.of('jump')).toUpperCase()); if (this.last.pr !== 'gl' + k) { this.last.pr = 'gl' + k; pr.innerHTML = '<kbd>' + k + '</kbd>Close glider and skydive · opens for good at ' + GLIDER_AUTO + ' m'; } pr.style.setProperty('--pc', '#3aa8ff'); }
     else if (c && a.alive) { pr.style.display = 'block'; const k = (Input.pad.on ? 'X' : Input.touch.on ? 'USE' : Keys.of('use')); if (this.last.pr !== c.label + k) { this.last.pr = c.label + k; pr.innerHTML = '<kbd>' + k + '</kbd>' + esc(c.label); } pr.style.setProperty('--pc', c.color); }
     else { pr.style.display = 'none'; this.last.pr = null; }
     // channel bar

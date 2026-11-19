@@ -355,6 +355,8 @@ button:focus-visible{outline:2px solid var(--sun-2);outline-offset:2px}
 .dd{position:absolute;left:-60px;top:-160px;width:120px;height:26px;transform-origin:60px 160px;opacity:0;
   background:radial-gradient(60px 13px at 50% 100%,rgba(255,60,60,.85),transparent 70%)}
 #scope{position:absolute;inset:0;background:radial-gradient(circle at 50% 50%,transparent 0,transparent min(34vh,34vw),#000 calc(min(34vh,34vw) + 2px))}
+#scope2{position:absolute;inset:0;pointer-events:none;--R:min(41vh,41vw);background:radial-gradient(circle at 50% 50%,rgba(255,255,255,.04) 0,transparent calc(var(--R) * .6),rgba(0,0,0,.18) calc(var(--R) - 26px),rgba(0,0,0,.75) calc(var(--R) - 6px),#060606 var(--R));animation:tkIn .12s ease-out}
+#scope2 svg{position:absolute;left:50%;top:50%;width:calc(var(--R) * 2);height:calc(var(--R) * 2);transform:translate(-50%,-50%);overflow:visible}
 #scope::before,#scope::after{content:"";position:absolute;background:rgba(0,0,0,.85)}
 #scope::before{left:50%;top:0;bottom:0;width:1px}
 #scope::after{top:50%;left:0;right:0;height:1px}
@@ -604,6 +606,12 @@ details.ctl .hint{margin-top:8px}
 .pl-table{width:100%;border-collapse:collapse;font-size:12.5px}
 .pl-table th{text-align:left;color:var(--mute);font-weight:700;padding:4px 6px;border-bottom:1px solid var(--line)}
 .pl-table td{padding:5px 6px;border-bottom:1px solid rgba(150,195,255,.08);font-variant-numeric:tabular-nums}
+.mus-row{display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid rgba(150,195,255,.1)}
+.mus-row .mus-name{flex:1;min-width:0;text-align:left;background:none;border:0;color:var(--ink);font:600 13px var(--f-body);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;padding:4px 2px}
+.mus-row.on .mus-name{color:#7fd8ff;font-weight:800}
+.mus-row .mus-del{background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:6px;color:var(--mute);font:700 12px var(--f-body);width:26px;height:26px;cursor:pointer}
+.mus-acts{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.mus-acts .buy{padding:7px 16px;font-size:13px;cursor:pointer}
 .perf-row{align-items:flex-start;padding:10px 12px;border-radius:12px;border:1px solid rgba(126,240,160,.4);background:rgba(126,240,160,.08)}
 .perf-row > span{display:flex;flex-direction:column;gap:2px}
 .perf-row .hint{font-size:12px}
@@ -807,6 +815,14 @@ details.ctl .hint{margin-top:8px}
   <div id="hurtVig"></div>
   <div id="downVig" hidden><b>You are down</b><span id="downTip"></span></div>
   <div id="scope" hidden></div>
+  <div id="scope2" hidden><svg viewBox="-100 -100 200 200" aria-hidden="true">
+    <g stroke="#0a0a0a" fill="none">
+      <line x1="-100" y1="0" x2="-4" y2="0" stroke-width=".7"/><line x1="4" y1="0" x2="100" y2="0" stroke-width=".7"/>
+      <line x1="0" y1="-100" x2="0" y2="-4" stroke-width=".7"/><line x1="0" y1="4" x2="0" y2="100" stroke-width=".7"/>
+      <circle r="2.6" stroke-width=".6"/>
+      <g stroke-width=".6"><line x1="-20" y1="-2" x2="-20" y2="2"/><line x1="20" y1="-2" x2="20" y2="2"/><line x1="-40" y1="-2.6" x2="-40" y2="2.6"/><line x1="40" y1="-2.6" x2="40" y2="2.6"/><line x1="-2" y1="20" x2="2" y2="20"/><line x1="-2.6" y1="40" x2="2.6" y2="40"/><line x1="-2" y1="-20" x2="2" y2="-20"/></g>
+    </g>
+  </svg></div>
   <div id="dmgNums"></div>
   <div id="killfeed"></div>
   <div id="teamList"></div>
@@ -889,6 +905,11 @@ details.ctl .hint{margin-top:8px}
     <div class="sens"><label for="gfxSel">Graphics</label><select id="gfxSel"><option value="auto">Auto (recommended)</option><option value="fast">Fast: lighter, for slow computers</option><option value="pretty">Pretty: sharper, needs a strong computer</option></select></div>
     <div class="hint" id="gfxNote"></div>
     <label class="check"><input type="checkbox" id="shadowChk"> Shadows</label>
+    <h3 class="set-h">Your lobby music</h3>
+    <div class="hint">Pick songs from your computer to play in the lobby. They are saved only in this browser and never uploaded.</div>
+    <div id="musList"></div>
+    <div class="mus-acts"><label class="buy equip" for="musFile">Add songs</label><input type="file" id="musFile" accept="audio/*" multiple hidden><label class="check"><input type="checkbox" id="musOn"> Play in the lobby</label></div>
+    <div class="sens"><label for="musVol">Music volume</label><input type="range" id="musVol" min="0" max="1" step="0.05"></div>
     <h3 class="set-h">Keybinds</h3>
     <div class="hint">Click a key, then press the new key or mouse button. If another action already uses it, the two swap.</div>
     <div class="kb-list" id="kbList"></div>
@@ -965,7 +986,7 @@ details.ctl .hint{margin-top:8px}
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js"></script>
 <script async src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>
-const BUILD_ID = '1119-0038';
+const BUILD_ID = '1119-1414';
 'use strict';
 // =====================================================================
 //  FORTDAY — core utilities, data tables, profile, audio
@@ -1194,7 +1215,7 @@ const COS = {
     { id: 'tycoon', build: 'heavy', hair: 0x1a1a1a, name: 'Gilt Tycoon', r: 4, shirt: 0xd4a72c, pants: 0xd4a72c, skin: 0xe8c06a, sleeve: 0x1a1a1a, hat: 'tophat', hatC: 0x1a1a1a, unlock: 'tier:25' },
     { id: 'stormborn', build: 'average', hair: 0x0e0e10, name: 'Pluma Peso', r: 4, shirt: 0x141416, pants: 0x17181d, skin: 0xf1cdb0, sleeve: 0x141416, hat: 'none', hoodie: true, jeans: true, shiesty: 0x0e0e10, sneakers: 0xf6f6f4, unlock: 'tier:30' },
     { id: 'nova', build: 'average', name: 'Juice Earth', r: 4, shirt: 0xf3f2ee, pants: 0xe8731e, skin: 0x70482f, sleeve: 0xf3f2ee,
-      hat: 'dreads', hatC: 0x1c120c, tip: 0xcfa552, cargo: true, chain: true, beard: true, shoes: 0x6b4423, boots: true, back: '999', chestLogo: '999', personal: true, unlock: 'shop', price: 5000 },
+      hat: 'dreads', hatC: 0x110c0a, tip: 0xb8792e, knot: true, limitedSeason: 0, collar: true, cargo: true, chain: true, beard: true, shoes: 0x6b4423, boots: true, back: '999', chestLogo: '999', personal: true, unlock: 'shop', price: 5000 },
     { id: 'tripy', build: 'slim', name: 'Tripy Red', r: 4, shirt: 0x161618, pants: 0x18181c, skin: 0x8a5a3c, sleeve: 0x161618, hair: 0x6a0c10,
       hat: 'dreads', hatC: 0x6a0c10, tip: 0xff2a2a, hairSeed: 777, hoodie: true, cargo: true, shades: 0x0c0c0e, faceTats: true, personal: true, unlock: 'shop', price: 1500 },
     { id: 'uzi', build: 'slim', name: 'Lil Uzi', r: 4, shirt: 0xff4fa8, jacket: 0x141418, pants: 0x121216, skin: 0x7a4a30, sleeve: 0x141418, hair: 0x141010, shoes: 0xf2f2f2,
@@ -3416,7 +3437,7 @@ function tieDyeMat() {
   const tex = new THREE.CanvasTexture(c); tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(2, 1);
   return (_tieDyeMat = new THREE.MeshLambertMaterial({ map: tex }));
 }
-let CHAIN_Z = 0.012, BACK_Z = -0.205;
+let CHAIN_Z = 0.012, BACK_Z = -0.205, COLLAR = [0.082, 0.112, 0.085, 0.682, 0.005];   // collar: top radius, bottom radius, height, y, z
 // big block print for the back of a shirt (e.g. 999), dark letters with an outline
 function backPrint(txt, w, h, fill = '#111114', edge = '#e8731e') {
   const c = document.createElement('canvas'); c.width = 512; c.height = 256;
@@ -3455,21 +3476,41 @@ function dreadsModel(o, head, noCap) {
     for (let j = 0; j <= n; j++) { const c = curve.getPointAt(j / n), r = r0 + (r1 - r0) * j / n; for (let k = 0; k <= R; k++) { const i = j * (R + 1) + k; P.setXYZ(i, c.x + (P.getX(i) - c.x) * r, c.y + (P.getY(i) - c.y) * r, c.z + (P.getZ(i) - c.z) * r); } }
     L.push([g, hex]);
   };
-  const lock = (p, n, len, r, side, front) => {
+  const lock = (p, n, len, r, side, front, o2 = {}) => {
     const pts = [p.clone().addScaledVector(n, -0.012)]; let pos = p.clone().addScaledVector(n, 0.016); pts.push(pos.clone());
-    const dir = n.clone(); dir.y += front ? 0.0 : 0.08; if (front) dir.x += side * 0.9; dir.normalize();
-    const steps = 6, st = len / steps, out = new V(n.x, 0, n.z).normalize();
+    const dir = n.clone(); dir.y += o2.lift ?? (front ? 0.0 : 0.08); if (front) dir.x += side * (o2.sweep ?? 0.9); dir.normalize();
+    const steps = 6, st = len / steps, out = new V(n.x, 0, n.z).normalize(), d0 = o2.droop0 ?? 0.55, d1 = o2.droop ?? 0.45, fl = o2.flare ?? 0.04;
     for (let k = 0; k < steps; k++) {
-      dir.y -= k === 0 ? 0.55 : 0.45; dir.addScaledVector(out, 0.04); dir.x += (rnd() - 0.5) * 0.08; dir.z += (rnd() - 0.5) * 0.08; dir.normalize();
-      pos = outside(pos.clone().addScaledVector(dir, st)); pts.push(pos.clone());
+      dir.y -= k === 0 ? d0 : d1; dir.addScaledVector(out, fl); dir.x += (rnd() - 0.5) * 0.08; dir.z += (rnd() - 0.5) * 0.08; dir.normalize();
+      pos = o2.free ? pos.clone().addScaledVector(dir, st) : outside(pos.clone().addScaledVector(dir, st)); pts.push(pos.clone());
     }
-    const full = new THREE.CatmullRomCurve3(pts), S = full.getPoints(20), cut1 = 13, cut2 = 15, r1 = r * 0.72;
+    const full = new THREE.CatmullRomCurve3(pts), S = full.getPoints(20), cut1 = o2.cut1 ?? 13, cut2 = o2.cut2 ?? 15, r1 = r * (o2.taper ?? 0.72);
     const rAt = i => r + (r1 - r) * i / 20;
     tube(S.slice(0, cut1 + 1), rAt(0), rAt(cut1), root);
     tube(S.slice(cut1, cut2 + 1), rAt(cut1), rAt(cut2), mid);
     tube(S.slice(cut2), rAt(cut2), rAt(20), tip);
     const e = S[20]; L.push([new THREE.SphereGeometry(r1, 5, 4).translate(e.x, e.y, e.z), tip]);
   };
+  if (o.knot) {   // top-knot style: a tied bundle on the crown with short gold spikes fanning out, short chunky locks all around
+    const top = new V(0, cy + 0.01 + RY * 0.96, CZ - 0.03), up = new V(0, 1, 0.12).normalize(), stemTop = top.clone().addScaledVector(up, 0.1);
+    tube([top.clone().addScaledVector(up, -0.03), top.clone().addScaledVector(up, 0.03), stemTop], 0.05, 0.034, root);                       // gathered hair
+    { const band = new THREE.TorusGeometry(0.038, 0.011, 6, 16); band.rotateX(Math.PI / 2 - 0.12); band.translate(stemTop.x, stemTop.y - 0.022, stemTop.z); L.push([band, 0x060607]); }   // hair tie
+    for (let i = 0; i < 10; i++) {   // the spikes: up and out like a little palm tree
+      const a = i / 10 * TAU + rnd() * 0.35, sp = 0.45 + rnd() * 0.3, d = new V(Math.sin(a) * sp, 1, Math.cos(a) * sp - 0.1).normalize();
+      lock(stemTop.clone().addScaledVector(d, 0.01), d, 0.17 + rnd() * 0.06, 0.016 + rnd() * 0.003, 1, false, { free: true, lift: 0.35, droop0: 0.1, droop: 0.15, flare: 0.1, cut1: 4, cut2: 6, taper: 0.75 });
+    }
+    const rings = [[0.42, 11], [0.72, 15], [1.0, 18], [1.24, 19], [1.46, 17]];
+    for (const [phi, n] of rings) for (let i = 0; i < n; i++) {
+      const th = (i + rnd() * 0.5) / n * TAU, sp = Math.sin(phi), cp = Math.cos(phi), sx = Math.sin(th), cz = Math.cos(th);
+      if (phi > 1.1 && cz > 0.2) continue;                                   // keep the face and temples clear
+      const p = new V(RX * 0.97 * sp * sx, cy + 0.01 + RY * 0.97 * cp, CZ + RZ * 0.97 * sp * cz);
+      const nrm = new V(p.x / (RX * RX), (p.y - cy) / (RY * RY), (p.z - CZ) / (RZ * RZ)).normalize();
+      const front = cz > 0.4 && phi < 1.1, back = cz < -0.3;
+      const len = front ? 0.13 + rnd() * 0.04 : back ? 0.24 + rnd() * 0.07 : 0.19 + rnd() * 0.07;
+      lock(p, nrm, len, 0.015 + rnd() * 0.003, sx >= 0 ? 1 : -1, front, { lift: front ? -0.1 : 0.04, sweep: 0.5, droop0: 0.48, droop: 0.4, flare: 0.07, cut1: 13, cut2: 15, taper: 0.8 });   // black roots, gold only at the ends
+    }
+    head.add(mergedColored(L)); return;
+  }
   // roots in rings from the crown down to the hairline; theta = 0 is the face
   const rings = [[0.12, 8], [0.36, 16], [0.6, 22], [0.84, 27], [1.06, 31], [1.27, 33], [1.47, 33]];   // many thin locks, packed close
   for (const [phi, n] of rings) for (let i = 0; i < n; i++) {
@@ -3811,6 +3852,7 @@ function buildCharacter(eq, skinned) {
     }
   }
   if (!SKN) { M(G.torso, shirtMat, 0, 0, 0, torso); M(G.neck, o.skin, 0, 0, 0, torso); }
+  else if (o.collar) { const cl = M(new THREE.CylinderGeometry(COLLAR[0], COLLAR[1], COLLAR[2], 22, 1, true), new THREE.MeshLambertMaterial({ color: o.leather ? o.jacket : o.shirt, side: THREE.DoubleSide }), 0, COLLAR[3], COLLAR[4], torso); cl.userData.collar = true; }   // a neat collar hides the jagged neck seam of the uploaded body
   // hoodie: hood bunched behind the neck plus two drawstrings
   if (o.hoodie) {
     const hood = M(new THREE.TorusGeometry(0.085, 0.045, 8, 18), shirtMat, 0, 0.6, -0.045, torso); hood.rotation.x = Math.PI / 2 - 0.35; hood.scale.set(1.35, 1.15, 1);
@@ -3952,7 +3994,7 @@ function buildCharacter(eq, skinned) {
     }
     M(B(0.026, 0.005, 0.005), 0x15151a, 0, 0.027, 0.146, head);
   }
-  if (o.beard) {   // neat chinstrap along the jaw, thin moustache and a small goatee
+  if (o.beard && !SKN) {   // built-in body: neat chinstrap along the jaw, thin moustache and a small goatee (the uploaded body paints it on)
     const bc = new THREE.MeshLambertMaterial({ color: 0x1a120c }), V3 = (x, y, z) => new THREE.Vector3(x, y, z);
     const strap = new THREE.CatmullRomCurve3([V3(-0.118, -0.005, 0.03), V3(-0.112, -0.06, 0.06), V3(-0.08, -0.105, 0.092), V3(-0.035, -0.128, 0.112), V3(0, -0.132, 0.116), V3(0.035, -0.128, 0.112), V3(0.08, -0.105, 0.092), V3(0.112, -0.06, 0.06), V3(0.118, -0.005, 0.03)]);
     M(new THREE.TubeGeometry(strap, 28, 0.0075, 6, false), bc, 0, 0, 0, head);
@@ -6073,6 +6115,17 @@ const CharModel = {
       if (o.lineup) line('head', [[0, 0.74], [0.17, 0.74], [0.175, 0.64], [0.33, 0.64], [0.335, 0.49], [0.42, 0.49]], 1.5, hex(hc, 0.6));
       if (o.hat === 'slick') { line('head', [[0, 0.9], [0.42, 0.9]], 3, 'rgba(255,255,255,0.18)'); line('head', [[0.1, 0.99], [0.16, 0.8]], 1.5, hex(hc, 0.6)); }
     }
+    if (o.beard && !o.shiesty) {   // facial hair painted onto the face so it sits flat: light stubble, a chinstrap along the jaw, moustache and a small goatee
+      const bc = hex(o.beardC ?? 0x17100b), r = AT.head, u = n => r[0] + n * r[2], v = n => r[1] + (1 - n) * r[3];
+      x.save(); x.beginPath(); x.rect(r[0], r[1], r[2], r[3]); x.clip();
+      const sg = x.createLinearGradient(0, v(0.42), 0, v(0.02)); sg.addColorStop(0, 'rgba(20,12,8,0)'); sg.addColorStop(1, 'rgba(20,12,8,0.22)');
+      x.fillStyle = sg; x.beginPath(); x.moveTo(u(0), v(0.3)); x.lineTo(u(0.3), v(0.36)); x.lineTo(u(0.46), v(0.5)); x.lineTo(u(0.46), v(0.02)); x.lineTo(u(0), v(0.02)); x.closePath(); x.fill();   // stubble shadow
+      x.lineCap = 'round'; x.lineJoin = 'round'; x.strokeStyle = bc;
+      x.lineWidth = 3; x.beginPath(); x.moveTo(u(0.44), v(0.5)); x.quadraticCurveTo(u(0.41), v(0.27), u(0.3), v(0.2)); x.quadraticCurveTo(u(0.15), v(0.15), u(0), v(0.14)); x.stroke();   // chinstrap along the jaw
+      x.lineWidth = 1.6; x.beginPath(); x.moveTo(u(0), v(0.35)); x.quadraticCurveTo(u(0.05), v(0.352), u(0.088), v(0.335)); x.stroke();   // moustache
+      x.fillStyle = bc; x.beginPath(); x.ellipse(u(0), v(0.2), r[2] * 0.026, r[3] * 0.06, 0, 0, TAU); x.fill();   // goatee
+      x.restore();
+    }
     fill('shoe', hex(shoes)); rect('shoe', 0, 0, 1, 0.24, o.boots ? '#24160c' : '#ececee');
     if (o.tiedye) { const img = tieDyeMat().map.image; for (const n of ['torso', 'upper', 'fore']) { const r = AT[n]; x.drawImage(img, r[0], r[1], r[2], r[3]); } }
     if (o.print) {   // silk shirt printed with little gold crescent moons and stars
@@ -7018,7 +7071,7 @@ const Match = {
     genWorld(this.theme); Reboot.setup(this.mode);
     if (this.mode !== 'tutorial') { const cs = W.chests.filter(c => c.kind === 'chest'); for (let i = 0; i < KATANAS_PER_MATCH && cs.length; i++) cs.splice(Math.floor(Math.random() * cs.length), 1)[0].katana = true; }
     $('ldFill').style.width = '80%';
-    actors.length = 0; nextId = 1; ElimFX.clear(); CharPool.clear(); BotRig.hideAll(); Trails.clear();
+    actors.length = 0; nextId = 1; ElimFX.clear(); CharPool.clear(); BotRig.hideAll(); Trails.clear(); SprintWind.clear();
     if (Net.guest) Net.guestSetup(); else {
     Net.humans.clear();
     player = newActor({ name: 'You', isPlayer: true, team: 0 });
@@ -7223,7 +7276,7 @@ const Match = {
     this.state = 'lobby'; $('results').hidden = true; $('death').hidden = true; $('pause').hidden = true; $('hud').hidden = true; $('bigmap').hidden = true; $('clickHint').hidden = true;
     if (document.pointerLockElement) document.exitPointerLock();
     if (Bus.mesh) Bus.mesh.visible = false; stormMesh.visible = false; Build.hideGhost();
-    LiveEvent.init('rumble'); Lightning.clear(); ElimFX.clear(); CharPool.clear(); BotRig.hideAll(); Trails.clear(); Creatures.clear(); actors.length = 0; player = null;
+    LiveEvent.init('rumble'); Lightning.clear(); ElimFX.clear(); CharPool.clear(); BotRig.hideAll(); Trails.clear(); SprintWind.clear(); Creatures.clear(); actors.length = 0; player = null;
     $('lobby').hidden = false; Lobby.refresh();
   },
 };
@@ -8275,7 +8328,8 @@ const Cam = {
   update(dt) {
     const a = viewTarget(); this.view = a; if (!a) return;
     const it = a.inv[a.slot];
-    this.scoped = a === player && a.alive && a.input.ads && it && it.kind === 'weapon' && wstat(it).scope && a.state === 'ground' && !a.vehicle && !Build.active;
+    const st0 = it && it.kind === 'weapon' ? wstat(it) : null; this.scopeKind = st0 ? (st0.scope ? 'sniper' : st0.type === 'smg' ? 'smg' : null) : null;   // SMGs aim through a round scope too
+    this.scoped = a === player && a.alive && a.input.ads && !!this.scopeKind && a.state === 'ground' && !a.vehicle && !Build.active;
     this.kickOff = this.kickOff * Math.max(0, 1 - dt * 10) + this.kick; this.kick = 0;
     if (a.state === 'bus') {
       const yaw = player.yaw, pitch = clamp(player.pitch, -1.2, 0.5), cp = Math.cos(pitch);
@@ -8321,7 +8375,7 @@ const Cam = {
     this.t0 = Math.max(0, (px - cx) * fx + (pyy - cy) * fy + (pz - cz) * fz);
     this.ready = a === player;
     const sprint = a.input.sprint && a.input.f > 0 && a.state === 'ground';
-    this.fov(dt, this.scoped ? 22 : (a === player && a.input.ads && !a.vehicle) ? (it && it.kind === 'weapon' && wstat(it).type === 'shotgun' ? 64 : it && it.kind === 'weapon' && wstat(it).type === 'smg' ? 52 : 58) : sprint ? 80 : a.vehicle ? 80 : 75);
+    this.fov(dt, this.scoped ? (this.scopeKind === 'smg' ? 40 : 22) : (a === player && a.input.ads && !a.vehicle) ? (it && it.kind === 'weapon' && wstat(it).type === 'shotgun' ? 64 : it && it.kind === 'weapon' && wstat(it).type === 'smg' ? 52 : 58) : sprint ? 80 : a.vehicle ? 80 : 75);
   },
   fov(dt, target) { if (Math.abs(camera.fov - target) > 0.1) { camera.fov = lerp(camera.fov, target, Math.min(1, dt * 12)); camera.updateProjectionMatrix(); } },
 };
@@ -8359,13 +8413,13 @@ function updatePlayer(dt) {
   if (Victory.on) { const i = a.input; i.f = i.r = 0; i.fire = i.jump = i.ads = i.sprint = false; Input.pressed.clear(); Input.mdx = Input.mdy = 0; Input.wheel = 0; return; }   // celebrating
   const K = Input.keys, P = Input.pressed, tc = Input.touch, inp = a.input;
   const it = a.inv[a.slot];
-  const sens = 0.0022 * Profile.d.sens * (inp.ads ? (Cam.scoped ? 0.32 : 0.65) : 1);
+  const sens = 0.0022 * Profile.d.sens * (inp.ads ? (Cam.scoped ? (Cam.scopeKind === 'smg' ? 0.5 : 0.32) : 0.65) : 1);
   let mdx = Input.mdx, mdy = Input.mdy; Input.mdx = Input.mdy = 0;
   if (K.ArrowLeft) mdx -= 600 * dt; if (K.ArrowRight) mdx += 600 * dt; if (K.ArrowUp) mdy -= 400 * dt; if (K.ArrowDown) mdy += 400 * dt;
   a.yaw -= mdx * sens; a.pitch = clamp(a.pitch - mdy * sens, -1.45, 1.45);
   const pd = Input.pad;
   if (pd.on) {
-    const ls = (inp.ads ? (Cam.scoped ? 0.3 : 0.6) : 1) * Profile.d.sens, cv = v => Math.sign(v) * Math.pow(Math.abs(v), 1.7);
+    const ls = (inp.ads ? (Cam.scoped ? (Cam.scopeKind === 'smg' ? 0.48 : 0.3) : 0.6) : 1) * Profile.d.sens, cv = v => Math.sign(v) * Math.pow(Math.abs(v), 1.7);
     a.yaw -= cv(pd.lx) * 3.5 * ls * dt; a.pitch = clamp(a.pitch - cv(pd.ly) * 2.3 * ls * dt, -1.45, 1.45);
     if (a.slot) pd.lastSlot = a.slot;
     for (const i of pd.hit) {
@@ -8403,6 +8457,7 @@ function updatePlayer(dt) {
   inp.ads = H('ads') || tc.ads || pd.ads || Input.scoped;
   if (a.state === 'bus') { inp.f = inp.r = 0; inp.fire = false; if (P.has('Space')) busJump(a); }
   else if (a.state === 'sky') { if (P.has('Space')) a.state = 'glide'; }
+  else if (a.state === 'glide') { if (P.has('Space') && a.pos.y - groundAt(a.pos.x, a.pos.z, a.pos.y) > GLIDER_AUTO + 1) a.state = 'sky'; }   // above the auto-open height you can close the glider and dive again
   for (let i = 1; i <= 6; i++) if (P.has('Digit' + i)) { switchSlot(a, i - 1); Build.active = false; }
   if (Input.wheel) {
     const dir = Input.wheel > 0 ? 1 : -1; let s = a.slot;
@@ -8517,6 +8572,50 @@ const Trails = {
   },
 };
 const _trV = new THREE.Vector3();
+
+// ---------------------------------------------------------------- wind streaks while sprinting
+// thin white lines that appear around a sprinting runner and stream past them; one instanced mesh, faded through colour (additive)
+const SprintWind = {
+  max: 64, P: [], n: 0, mesh: null, m: new THREE.Matrix4(), q: new THREE.Quaternion(), v: new THREE.Vector3(), s: new THREE.Vector3(), z: new THREE.Vector3(0, 0, 1), acc: new Map(),
+  init() {
+    const g = new THREE.BoxGeometry(0.03, 0.03, 1); g.translate(0, 0, -0.5);   // grows backward from its start point
+    this.mesh = new THREE.InstancedMesh(g, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }), this.max);
+    this.mesh.frustumCulled = false; this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    for (let i = 0; i < this.max; i++) { this.mesh.setMatrixAt(i, ZERO_M); this.mesh.setColorAt(i, _c1.setRGB(0, 0, 0)); this.P.push({ life: 0 }); }
+    scene.add(this.mesh);
+  },
+  clear() { for (const p of this.P) p.life = 0; this.acc.clear(); if (this.mesh) { for (let i = 0; i < this.max; i++) this.mesh.setMatrixAt(i, ZERO_M); this.mesh.instanceMatrix.needsUpdate = true; } },
+  update(dt) {
+    if (!this.mesh || Match.state !== 'play') return;
+    const cam = camera.position, pf = Perf.on, cap = pf ? 24 : this.max, rate = pf ? 18 : 40;
+    for (const a of actors) {
+      if (!a.alive || a.state !== 'ground' || a.vehicle || a.inWater) continue;
+      if ((a.pos.x - cam.x) ** 2 + (a.pos.z - cam.z) ** 2 > 40 * 40) continue;
+      if (a === player && Cam.scoped) continue;
+      const vx = a.remote && a.net ? a.net.vx : a.vel.x, vz = a.remote && a.net ? a.net.vz : a.vel.z, sp = Math.hypot(vx, vz);
+      if (sp < 8.3) { this.acc.delete(a); continue; }   // only at sprint speed (running tops out at 6 m/s)
+      let acc = (this.acc.get(a) || 0) + dt * rate;
+      const fx = vx / sp, fz = vz / sp, sc = a.scale || 1;
+      while (acc >= 1) {
+        acc -= 1; const i = this.n % cap; this.n = (i + 1) % cap; const p = this.P[i];
+        const side = (Math.random() < 0.5 ? -1 : 1) * (0.45 + Math.random() * 0.6) * sc, h = (0.2 + Math.random() * 1.9) * sc, ahead = (Math.random() * 0.9 - 0.1) * sc;
+        p.x = a.pos.x + fx * ahead - fz * side; p.y = a.pos.y + h; p.z = a.pos.z + fz * ahead + fx * side;
+        p.dx = -fx; p.dz = -fz; p.len = 0.9 + Math.random() * 0.8; p.life = p.max = 0.26 + Math.random() * 0.14; p.b = 0.6 + Math.random() * 0.35;
+      }
+      this.acc.set(a, acc);
+    }
+    let any = false;
+    for (let i = 0; i < this.max; i++) {
+      const p = this.P[i];
+      if (p.life <= 0) { if (p.max) { this.mesh.setMatrixAt(i, ZERO_M); p.max = 0; any = true; } continue; }
+      p.life -= dt; any = true; const k = Math.max(0, p.life / p.max), grow = Math.min(1, (1 - k) * 4);
+      this.q.setFromUnitVectors(this.z, this.v.set(-p.dx, 0, -p.dz));   // the box grows along -z, i.e. backward along the run
+      this.m.compose(this.v.set(p.x, p.y, p.z), this.q, this.s.set(1, 1, p.len * grow)); this.mesh.setMatrixAt(i, this.m);
+      const c = p.b * Math.sin(k * Math.PI); this.mesh.setColorAt(i, _c1.setRGB(c, c, c * 1.05));
+    }
+    if (any) { this.mesh.instanceMatrix.needsUpdate = true; this.mesh.instanceColor.needsUpdate = true; }
+  },
+};
 
 // =====================================================================
 //  HUD
@@ -8642,11 +8741,12 @@ const HUD = {
       if (this.last.chsg !== sg + '' + ads + rd) { this.last.chsg = sg + '' + ads + rd; ch.classList.toggle('sg', sg); ch.classList.toggle('ads', sg && ads); ch.classList.toggle('rd', rd); }
     } else if (this.last.chsg !== 'no') { this.last.chsg = 'no'; ch.classList.remove('sg', 'ads', 'rd'); }
     ch.style.display = Cam.scoped || v !== a || a.state === 'bus' ? 'none' : '';
-    $('scope').hidden = !Cam.scoped;
+    $('scope').hidden = !(Cam.scoped && Cam.scopeKind !== 'smg'); $('scope2').hidden = !(Cam.scoped && Cam.scopeKind === 'smg');
     // prompt
     const pr = $('prompt'), c = Interact.cur;
-    if (a.alive && a.state === 'bus') { pr.style.display = 'block'; pr.innerHTML = '<kbd>' + (Input.pad.on ? 'A' : Input.touch.on ? 'JUMP' : esc(Keys.of('jump')).toUpperCase()) + '</kbd>Jump from the bus'; pr.style.setProperty('--pc', '#4fb0ff'); }
-    else if (a.alive && a.state === 'sky') { pr.style.display = 'block'; pr.innerHTML = '<kbd>' + (Input.pad.on ? 'A' : Input.touch.on ? 'JUMP' : esc(Keys.of('jump')).toUpperCase()) + '</kbd>Open glider early'; pr.style.setProperty('--pc', '#3aa8ff'); }
+    if (a.alive && a.state === 'bus') { pr.style.display = 'block'; pr.innerHTML = '<kbd>' + (Input.pad.on ? 'A' : Input.touch.on ? 'JUMP' : esc(Keys.of('jump')).toUpperCase()) + '</kbd>Jump from the bus'; pr.style.setProperty('--pc', '#4fb0ff'); this.last.pr = null; }
+    else if (a.alive && a.state === 'sky') { pr.style.display = 'block'; pr.innerHTML = '<kbd>' + (Input.pad.on ? 'A' : Input.touch.on ? 'JUMP' : esc(Keys.of('jump')).toUpperCase()) + '</kbd>Open glider early'; pr.style.setProperty('--pc', '#3aa8ff'); this.last.pr = null; }
+    else if (a.alive && a.state === 'glide' && a.pos.y - groundAt(a.pos.x, a.pos.z, a.pos.y) > GLIDER_AUTO + 1) { pr.style.display = 'block'; const k = (Input.pad.on ? 'A' : Input.touch.on ? 'JUMP' : esc(Keys.of('jump')).toUpperCase()); if (this.last.pr !== 'gl' + k) { this.last.pr = 'gl' + k; pr.innerHTML = '<kbd>' + k + '</kbd>Close glider and skydive · opens for good at ' + GLIDER_AUTO + ' m'; } pr.style.setProperty('--pc', '#3aa8ff'); }
     else if (c && a.alive) { pr.style.display = 'block'; const k = (Input.pad.on ? 'X' : Input.touch.on ? 'USE' : Keys.of('use')); if (this.last.pr !== c.label + k) { this.last.pr = c.label + k; pr.innerHTML = '<kbd>' + k + '</kbd>' + esc(c.label); } pr.style.setProperty('--pc', c.color); }
     else { pr.style.display = 'none'; this.last.pr = null; }
     // channel bar
@@ -9107,6 +9207,7 @@ const Lobby = {
     const it = cosById(cat, id), d = Profile.d, msg = $('shopMsg'), price = itemPrice(it); Sfx.init();
     if (Profile.canClaim(it)) { Profile.claimPassSkin(it); Sfx.chest(); msg.textContent = it.name + ' is yours for free with the Battle Pass, and equipped.'; this.refresh(); return; }
     if (Profile.unlocked(it)) { d.eq[cat] = id; Profile.save(); msg.textContent = it.name + ' equipped.' + (cat === 'car' ? ' Get into any car to drive it.' : ''); this.refresh(); return; }
+    if (it.limitedSeason != null && Season.id() > it.limitedSeason) { msg.textContent = it.name + ' was only available in ' + Season.name(it.limitedSeason) + '.'; return; }
     if (d.coins < price) { msg.textContent = 'You need ' + (price - d.coins).toLocaleString() + ' more ' + COIN + '. Play matches to earn them.'; return; }
     d.coins -= price; d.owned[cat + ':' + id] = true; d.eq[cat] = id; Profile.save(); Sfx.chest();
     msg.textContent = 'Purchased and equipped. It is in your locker under ' + COS_CATS.find(c => c[0] === cat)[1] + '.'; this.refresh();
@@ -9126,6 +9227,7 @@ const Lobby = {
       if (it.premium) feats.push('Any car you get into becomes your ' + it.name, it.id === 'limo' ? 'Rams through anyone in its way: it is twice as long' : 'Spinning wheels with working front steering');
     } else $('shopDesc').textContent = DESC[sel.cat] || '';
     if (it.music) feats.unshift('Music Festival 2026 collection');
+    if (it.limitedSeason != null) feats.unshift('Limited: only available in ' + Season.name(it.limitedSeason) + '. Once the season ends it leaves the Item Shop and will never return.');
     if (it.unlock && it.unlock.startsWith('tier:')) feats.push('Also unlocks free at level ' + it.unlock.slice(5));
     if (it.unlock === 'win') feats.push('Also earned free by winning a match');
     if (!it.unlock) feats.push('Included with every account');
@@ -9160,12 +9262,13 @@ const Lobby = {
     $('lkTag').textContent = it.premium ? 'Premium' : RARITY[it.r].name;
     $('lkName').textContent = it.name;
     $('lkSub').textContent = catName + (own ? ' · In your collection' : ' · Not owned yet');
-    $('lkDesc').textContent = DESC[cat] + (own ? '' : it.unlock === 'chest' ? ' Get it: every chest you open has a 1 in 1,000 chance to hold it. Only one per player, and it is never sold in the Shop.' : ' Get it: ' + (how(it) ? how(it) + ', or ' : '') + 'buy it in the Item Shop for ' + itemPrice(it).toLocaleString() + ' ' + COIN + '.');
+    $('lkDesc').textContent = DESC[cat] + (it.limitedSeason != null ? ' Limited to ' + Season.name(it.limitedSeason) + ': it will never return once the season ends.' : '') + (own ? '' : it.unlock === 'chest' ? ' Get it: every chest you open has a 1 in 1,000 chance to hold it. Only one per player, and it is never sold in the Shop.' : ' Get it: ' + (how(it) ? how(it) + ', or ' : '') + 'buy it in the Item Shop for ' + itemPrice(it).toLocaleString() + ' ' + COIN + '.');
     $('lkState').textContent = eq ? 'Equipped' : own ? 'Owned' : 'Locked';
     $('lkState').className = 'sd-price' + (own ? ' owned' : '');
     const bodyOk = cat === 'outfit' && !it.personal; $('lkBody').hidden = !bodyOk;
     if (bodyOk) for (const b of $('lkBody').querySelectorAll('button')) { const on = (d.eq.body || 'woman') === b.dataset.body; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); }
-    const btn = $('lkBtn'); btn.textContent = eq ? 'Equipped' : own ? 'Equip' : it.unlock === 'chest' ? 'Find it in a chest' : 'Get it in the Shop'; btn.disabled = eq || (!own && it.unlock === 'chest'); btn.className = 'buy' + (eq ? ' owned' : own ? ' equip' : '');
+    const gone = !own && it.limitedSeason != null && Season.id() > it.limitedSeason;   // a limited item after its season
+    const btn = $('lkBtn'); btn.textContent = eq ? 'Equipped' : own ? 'Equip' : gone ? 'No longer available' : it.unlock === 'chest' ? 'Find it in a chest' : 'Get it in the Shop'; btn.disabled = eq || gone || (!own && it.unlock === 'chest'); btn.className = 'buy' + (eq ? ' owned' : own ? ' equip' : '');
   },
   shopIcon(cat, item) {
     const P = { outfit: 'M8 3l4 2 4-2 5 4-3 3-2-1v11H8V9l-2 1-3-3z', backpack: 'M7 9a5 5 0 0 1 10 0v11H7z M9 13h6 M10 4.5h4', pickaxe: 'M5 20L15 10 M8.5 6.5c4-2.5 8.5-1.5 11 2-3-1-6.5-.8-9 1.3', glider: 'M2 10l10-5 10 5-10 2z M6.5 11l5.5 8 5.5-8', wrap: 'M12 3.5c3 4 6 7 6 10.5a6 6 0 0 1-12 0c0-3.5 3-6.5 6-10.5z', emote: 'M9 17.5V6l10-2v11.5 M9 17.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z M19 15.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z', car: 'M3 15.5l2-5h14l2 5v3H3z M6.5 10.5L8.5 6h7l2 4.5 M7 18.5v1.5 M17 18.5v1.5' }[cat];
@@ -9192,7 +9295,7 @@ const Lobby = {
     if (this.tab === 'shop') {
       this.shopHero();
       $('shopBal').textContent = d.coins.toLocaleString();
-      const all = []; for (const [cat] of COS_CATS) for (const c of COS[cat]) if (c.unlock !== 'chest') all.push(c);   // chest finds are never sold
+      const all = []; for (const [cat] of COS_CATS) for (const c of COS[cat]) if (c.unlock !== 'chest' && !(c.limitedSeason != null && Season.id() > c.limitedSeason && !Profile.owns(c))) all.push(c);   // chest finds are never sold; limited items leave after their season
       const featured = c => c.premium || c.music || c.r >= 4;
       const filters = [['all', 'All', all.length], ['featured', 'Featured', all.filter(featured).length], ...COS_CATS.map(([k, n]) => [k, n, COS[k].length])];
       $('shopFilters').innerHTML = filters.map(([k, n, c]) => `<button role="tab" aria-selected="${this.shopFilter === k}" class="${this.shopFilter === k ? 'on' : ''}" data-f="${k}">${n}<i>${c}</i></button>`).join('');
@@ -9250,6 +9353,75 @@ const Lobby = {
 };
 
 // =====================================================================
+//  Your lobby music: songs a player picks from their own computer. They are stored only in that
+//  browser (IndexedDB) and play in the lobby, one after another. Nothing is uploaded anywhere.
+// =====================================================================
+const LobbyMusic = {
+  db: null, songs: [], i: 0, el: null, url: '', unlocked: false, err: '',
+  async init() {
+    this.el = new Audio(); this.el.preload = 'auto';
+    this.el.addEventListener('ended', () => this.next());
+    this.el.addEventListener('error', () => { if (this.songs.length > 1) this.next(); });
+    const unlock = () => { this.unlocked = true; this.sync(); };
+    addEventListener('pointerdown', unlock, true); addEventListener('keydown', unlock, true);   // browsers only allow sound after a click or key
+    $('musFile').addEventListener('change', e => { const f = [...e.target.files]; e.target.value = ''; this.add(f); });
+    $('musList').addEventListener('click', e => { const b = e.target.closest('[data-del]'); if (b) this.remove(b.dataset.del); const p = e.target.closest('[data-play]'); if (p) { this.i = this.songs.findIndex(s => s.id === p.dataset.play); this.load(true); } });
+    $('musVol').value = Profile.d.musVol ?? 0.5; $('musVol').addEventListener('input', e => { Profile.d.musVol = +e.target.value; Profile.save(); this.el.volume = Profile.d.musVol; });
+    $('musOn').checked = Profile.d.musOn !== false; $('musOn').addEventListener('change', e => { Profile.d.musOn = e.target.checked; Profile.save(); this.sync(); });
+    this.el.volume = Profile.d.musVol ?? 0.5;
+    try { await this.open(); this.songs = await this.all(); } catch (e) { this.err = 'This browser cannot save songs (private window or storage turned off).'; }
+    this.render(); this.load(false);
+  },
+  open() {
+    return new Promise((res, rej) => {
+      if (!window.indexedDB) return rej(new Error('no storage'));
+      const r = indexedDB.open('fortday-music', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('songs', { keyPath: 'id' });
+      r.onsuccess = () => { this.db = r.result; res(); }; r.onerror = () => rej(r.error);
+    });
+  },
+  tx(mode) { return this.db.transaction('songs', mode).objectStore('songs'); },
+  all() { return new Promise((res, rej) => { const r = this.tx('readonly').getAll(); r.onsuccess = () => res((r.result || []).sort((a, b) => a.at - b.at)); r.onerror = () => rej(r.error); }); },
+  async add(files) {
+    if (!this.db) { this.err = this.err || 'This browser cannot save songs.'; this.render(); return; }
+    for (const f of files) {
+      if (!/^audio\//.test(f.type) && !/\.(mp3|m4a|aac|ogg|oga|wav|flac|webm)$/i.test(f.name)) continue;
+      if (f.size > 40 * 1024 * 1024) { this.err = f.name + ' is bigger than 40 MB.'; continue; }
+      const s = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name: f.name.replace(/\.[^.]+$/, '').slice(0, 80), at: Date.now(), blob: f };
+      try { await new Promise((res, rej) => { const r = this.tx('readwrite').put(s); r.onsuccess = res; r.onerror = () => rej(r.error); }); this.songs.push(s); this.err = ''; }
+      catch (e) { this.err = 'Could not save ' + f.name + ' (the browser may be out of space).'; }
+    }
+    this.render(); if (this.songs.length && !this.url) { this.i = this.songs.length - 1; this.load(true); }
+  },
+  remove(id) {
+    if (this.db) this.tx('readwrite').delete(id);
+    const was = this.songs[this.i] && this.songs[this.i].id === id;
+    this.songs = this.songs.filter(s => s.id !== id); if (this.i >= this.songs.length) this.i = 0;
+    if (was) { this.el.pause(); if (this.url) URL.revokeObjectURL(this.url); this.url = ''; this.load(true); }
+    this.render();
+  },
+  load(play) {
+    const s = this.songs[this.i]; if (!s) { this.el.removeAttribute('src'); this.render(); return; }
+    if (this.url) URL.revokeObjectURL(this.url);
+    this.url = URL.createObjectURL(s.blob); this.el.src = this.url; this.render();
+    if (play) this.sync(true);
+  },
+  next() { if (!this.songs.length) return; this.i = (this.i + 1) % this.songs.length; this.load(true); },
+  want() { return Profile.d.musOn !== false && this.songs.length > 0 && Match.state === 'lobby' && !document.hidden; },
+  // play in the lobby, pause everywhere else (matches, loading, results)
+  sync(force) {
+    if (!this.el || !this.el.src) return;
+    if (this.want() && this.unlocked) { if (this.el.paused || force) { const p = this.el.play(); if (p && p.catch) p.catch(() => {}); } }
+    else if (!this.el.paused) this.el.pause();
+  },
+  render() {
+    const box = $('musList'); if (!box) return;
+    const cur = this.songs[this.i];
+    box.innerHTML = (this.songs.length ? this.songs.map(s => `<div class="mus-row${cur && s.id === cur.id ? ' on' : ''}"><button class="mus-name" data-play="${s.id}" title="Play this one">${cur && s.id === cur.id ? '♫ ' : ''}${esc(s.name)}</button><button class="mus-del" data-del="${s.id}" title="Remove">✕</button></div>`).join('') : '<div class="hint">No songs yet.</div>') + (this.err ? '<div class="hint pl-err">' + esc(this.err) + '</div>' : '');
+  },
+};
+
+// =====================================================================
 //  Boot + main loop
 // =====================================================================
 let gameTime = 0, lastFrame = performance.now();
@@ -9257,12 +9429,12 @@ function boot() {
   initEngine();
   BotRig.init(112);
   Build.init();
-  Trails.init(); ElimFX.init();
+  Trails.init(); ElimFX.init(); SprintWind.init();
   try { Creatures.load(); } catch (e) { console.warn(e); }
   try { CharModel.load(); } catch (e) { console.warn(e); }
   HUD.init();
   Input.init(); Settings.init(); Tutorial.init(); Inv.init();
-  Lobby.init(); Track.init(); Players.init(); Victory.init();
+  Lobby.init(); Track.init(); Players.init(); Victory.init(); LobbyMusic.init();
   // back from the $1 checkout: ?bp=CODE in the address unlocks the Battle Pass, then the code is removed from the address
   (async () => {
     let q; try { q = new URLSearchParams(location.search); } catch (e) { return; }
@@ -9365,6 +9537,7 @@ function step(now) {
   let dt = Math.min(0.05, Math.max(0.0005, (now - lastFrame) / 1000)); lastFrame = now;
   Input.pollPad();
   if (Match.state !== 'play' || Match.paused || !$('death').hidden || !$('results').hidden || !$('ticket').hidden || !$('skinFind').hidden || !$('tutEnd').hidden) Input.padMenu(dt);
+  LobbyMusic.sync();
   if (Match.state === 'lobby' || Match.state === 'loading') { Lobby.render(dt); return; }
   if (Match.paused && !Net.inMatch) { renderer.render(scene, camera); return; }   // a shared match keeps running while you are in the menu
   gameTime += dt;
@@ -9389,7 +9562,7 @@ function step(now) {
   BotRig.update(gameTime);
   CharPool.update(dt);
   ElimFX.update(dt);
-  Trails.update();
+  Trails.update(); SprintWind.update(dt);
   Nature.update(dt);
   sky.position.copy(camera.position); stars.position.copy(camera.position);
   if (v) {

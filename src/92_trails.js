@@ -82,3 +82,47 @@ const Trails = {
   },
 };
 const _trV = new THREE.Vector3();
+
+// ---------------------------------------------------------------- wind streaks while sprinting
+// thin white lines that appear around a sprinting runner and stream past them; one instanced mesh, faded through colour (additive)
+const SprintWind = {
+  max: 64, P: [], n: 0, mesh: null, m: new THREE.Matrix4(), q: new THREE.Quaternion(), v: new THREE.Vector3(), s: new THREE.Vector3(), z: new THREE.Vector3(0, 0, 1), acc: new Map(),
+  init() {
+    const g = new THREE.BoxGeometry(0.03, 0.03, 1); g.translate(0, 0, -0.5);   // grows backward from its start point
+    this.mesh = new THREE.InstancedMesh(g, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }), this.max);
+    this.mesh.frustumCulled = false; this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    for (let i = 0; i < this.max; i++) { this.mesh.setMatrixAt(i, ZERO_M); this.mesh.setColorAt(i, _c1.setRGB(0, 0, 0)); this.P.push({ life: 0 }); }
+    scene.add(this.mesh);
+  },
+  clear() { for (const p of this.P) p.life = 0; this.acc.clear(); if (this.mesh) { for (let i = 0; i < this.max; i++) this.mesh.setMatrixAt(i, ZERO_M); this.mesh.instanceMatrix.needsUpdate = true; } },
+  update(dt) {
+    if (!this.mesh || Match.state !== 'play') return;
+    const cam = camera.position, pf = Perf.on, cap = pf ? 24 : this.max, rate = pf ? 18 : 40;
+    for (const a of actors) {
+      if (!a.alive || a.state !== 'ground' || a.vehicle || a.inWater) continue;
+      if ((a.pos.x - cam.x) ** 2 + (a.pos.z - cam.z) ** 2 > 40 * 40) continue;
+      if (a === player && Cam.scoped) continue;
+      const vx = a.remote && a.net ? a.net.vx : a.vel.x, vz = a.remote && a.net ? a.net.vz : a.vel.z, sp = Math.hypot(vx, vz);
+      if (sp < 8.3) { this.acc.delete(a); continue; }   // only at sprint speed (running tops out at 6 m/s)
+      let acc = (this.acc.get(a) || 0) + dt * rate;
+      const fx = vx / sp, fz = vz / sp, sc = a.scale || 1;
+      while (acc >= 1) {
+        acc -= 1; const i = this.n % cap; this.n = (i + 1) % cap; const p = this.P[i];
+        const side = (Math.random() < 0.5 ? -1 : 1) * (0.45 + Math.random() * 0.6) * sc, h = (0.2 + Math.random() * 1.9) * sc, ahead = (Math.random() * 0.9 - 0.1) * sc;
+        p.x = a.pos.x + fx * ahead - fz * side; p.y = a.pos.y + h; p.z = a.pos.z + fz * ahead + fx * side;
+        p.dx = -fx; p.dz = -fz; p.len = 0.9 + Math.random() * 0.8; p.life = p.max = 0.26 + Math.random() * 0.14; p.b = 0.6 + Math.random() * 0.35;
+      }
+      this.acc.set(a, acc);
+    }
+    let any = false;
+    for (let i = 0; i < this.max; i++) {
+      const p = this.P[i];
+      if (p.life <= 0) { if (p.max) { this.mesh.setMatrixAt(i, ZERO_M); p.max = 0; any = true; } continue; }
+      p.life -= dt; any = true; const k = Math.max(0, p.life / p.max), grow = Math.min(1, (1 - k) * 4);
+      this.q.setFromUnitVectors(this.z, this.v.set(-p.dx, 0, -p.dz));   // the box grows along -z, i.e. backward along the run
+      this.m.compose(this.v.set(p.x, p.y, p.z), this.q, this.s.set(1, 1, p.len * grow)); this.mesh.setMatrixAt(i, this.m);
+      const c = p.b * Math.sin(k * Math.PI); this.mesh.setColorAt(i, _c1.setRGB(c, c, c * 1.05));
+    }
+    if (any) { this.mesh.instanceMatrix.needsUpdate = true; this.mesh.instanceColor.needsUpdate = true; }
+  },
+};
