@@ -1024,7 +1024,7 @@ details.ctl .hint{margin-top:8px}
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js"></script>
 <script async src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>
-const BUILD_ID = '1119-1523';
+const BUILD_ID = '1119-1533';
 'use strict';
 // =====================================================================
 //  FORTDAY — core utilities, data tables, profile, audio
@@ -5239,7 +5239,13 @@ function botGive(a, items, dropAt) {
 function chestLoot(kind) {
   if (kind === 'ammo') { const k = pick(Object.keys(AMMO)), k2 = pick(Object.keys(AMMO)); const o = [{ kind: 'ammo', ammo: k, count: Math.round(AMMO[k].pick * 1.5) }, { kind: 'ammo', ammo: k2, count: AMMO[k2].pick }]; if (Math.random() < 0.25) o.push(rollHeal()); return o; }
   if (kind === 'exotic') { const id = pick(['frostbite', 'kicker']); return [makeWeapon(id, 6), ammoFor(id, 2.5)]; }
-  if (kind === 'supply') { const w = rollWeapon(RAR_SUPPLY); return [w, ammoFor(w.wid, 2), { kind: 'heal', hid: 'shield', count: 2 }, { kind: 'mats', mat: pick(MAT_ORDER), count: 100 }]; }
+  if (kind === 'supply') {   // blue supply drop: the best loot on the island
+    const roll = (t, not) => { let w; for (let i = 0; i < 8; i++) { w = rollWeapon(t); const ty = WEAPONS[w.wid].type; if (ty !== 'pistol' && ty !== not) break; } return w; };
+    const w = roll([{ w: 1, r: 4 }]), w2 = roll(RAR_SUPPLY, WEAPONS[w.wid].type);   // one legendary for sure, plus a second epic-or-better gun of another kind (no pistols)
+    return [w, w2, ammoFor(w.wid, 2.5), ammoFor(w2.wid, 2),
+      { kind: 'heal', hid: 'shield', count: 3 }, { kind: 'heal', hid: 'mini', count: 6 }, { kind: 'heal', hid: 'medkit', count: 2 },
+      ...MAT_ORDER.map(m => ({ kind: 'mats', mat: m, count: 150 }))];
+  }
   const w = rollWeapon(RAR_CHEST); const o = [w, ammoFor(w.wid)];
   if (Math.random() < 0.7) o.push(rollHeal());
   if (Math.random() < 0.6) o.push({ kind: 'mats', mat: 'wood', count: 30 });
@@ -5266,7 +5272,8 @@ function openChest(c, a) {
   const near = player && Math.hypot(c.x - player.pos.x, c.z - player.pos.z) < 110;
   if (a === player || !a.ai) {
     const fx = Math.sin(c.rot || 0), fz = Math.cos(c.rot || 0);
-    items.forEach((it, i) => { const sp = (i - (items.length - 1) / 2) * 0.75; const x = c.x + fx * 1.3 + fz * sp, z = c.z + fz * 1.3 - fx * sp; Pickups.spawn(it, x, Math.max(c.y, groundAt(x, z, c.y + 0.6)), z); });
+    const per = 5;
+    items.forEach((it, i) => { const row = Math.floor(i / per), inRow = Math.min(per, items.length - row * per), sp = (i % per - (inRow - 1) / 2) * 0.75, fd = 1.3 + row * 0.8; const x = c.x + fx * fd + fz * sp, z = c.z + fz * fd - fx * sp; Pickups.spawn(it, x, Math.max(c.y, groundAt(x, z, c.y + 0.6)), z); });
   } else botGive(a, items, near ? { x: c.x, y: c.y, z: c.z } : null);
   if (near) { FX.burst(c.x, c.y + 0.8, c.z, c.kind === 'exotic' ? 0x2fe0d0 : 0xffd84a, 16, 3, 0.8, 0.12, -1); if (Sfx.vol(c.x, c.y, c.z) > 0.3) Sfx.chest(); }
   if (a === player) HUD.dirty = true;
