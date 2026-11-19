@@ -118,8 +118,9 @@ const HUD = {
       this.sprS = this.sprS == null ? want : lerp(this.sprS, want, Math.min(1, dt * 14));
       const px = Math.round(sg ? Math.max(8, this.sprS) : 3 + this.sprS);
       if (this.last.spr !== px) { this.last.spr = px; ch.style.setProperty('--spr', px + 'px'); }
-      if (this.last.chsg !== sg + '' + ads) { this.last.chsg = sg + '' + ads; ch.classList.toggle('sg', sg); ch.classList.toggle('ads', sg && ads); }
-    } else if (this.last.chsg !== 'no') { this.last.chsg = 'no'; ch.classList.remove('sg', 'ads'); }
+      const rd = st.type === 'smg' && ads && !Build.active;   // SMG: red-dot reticle while aiming
+      if (this.last.chsg !== sg + '' + ads + rd) { this.last.chsg = sg + '' + ads + rd; ch.classList.toggle('sg', sg); ch.classList.toggle('ads', sg && ads); ch.classList.toggle('rd', rd); }
+    } else if (this.last.chsg !== 'no') { this.last.chsg = 'no'; ch.classList.remove('sg', 'ads', 'rd'); }
     ch.style.display = Cam.scoped || v !== a || a.state === 'bus' ? 'none' : '';
     $('scope').hidden = !Cam.scoped;
     // prompt

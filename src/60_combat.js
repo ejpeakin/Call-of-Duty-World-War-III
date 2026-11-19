@@ -152,7 +152,7 @@ function fireWeapon(a) {
   }
   Sfx.shot(st.type, a.pos.x, a.pos.y, a.pos.z);
   FX.burst(mz.x, mz.y, mz.z, 0xffd27a, 2, 1.5, 0.06, 0.12, 0);
-  if (a === player) { Cam.kick += st.type === 'sniper' ? 0.05 : st.type === 'shotgun' ? 0.045 : st.type === 'rocket' ? 0.04 : 0.012; HUD.dirty = true; }
+  if (a === player) { Cam.kick += st.type === 'sniper' ? 0.05 : st.type === 'shotgun' ? 0.045 : st.type === 'rocket' ? 0.04 : st.type === 'smg' && a.input.ads ? 0.006 : 0.012; HUD.dirty = true; }
 }
 // Japanese Katana: one swing cuts everyone in front of you within reach (and builds in the way)
 function slash(a, it, st) {

@@ -268,7 +268,7 @@ const Cam = {
     if (a.vehicle) { const lg = (a.vehicle.mesh.userData.halfLen || 2.25) > 3; dist = lg ? 13.5 : 10; side = 0; up = lg ? 1.6 : 1.0; py = 2.5; }
     else if (a.state === 'sky' || a.state === 'glide') { dist = 7.5; side = 0; up = 1.2; py = 1.5; }
     else if (this.scoped) { dist = 0; side = 0; up = 0; py = 1.72; }
-    else if (a === player && a.input.ads) { const w = a.inv[a.slot], sg = w && w.kind === 'weapon' && WEAPONS[w.wid].type === 'shotgun'; dist = sg ? 1.75 : 2.0; side = sg ? 0.78 : 0.72; up = sg ? 0.16 : 0.12; py = 1.62; }
+    else if (a === player && a.input.ads) { const w = a.inv[a.slot], wt = w && w.kind === 'weapon' ? WEAPONS[w.wid].type : '', sg = wt === 'shotgun', sm = wt === 'smg'; dist = sg ? 1.75 : sm ? 1.65 : 2.0; side = sg ? 0.78 : sm ? 0.7 : 0.72; up = sg ? 0.16 : sm ? 0.14 : 0.12; py = 1.62; }
     else { dist = 3.5; side = 0.82; up = 0.28; py = 1.62; }
     if (a.crawl && !a.vehicle && a.state === 'ground') { py = 0.6; dist = Math.max(dist, 3.2); up = 0.5; }
     if (innerHeight > innerWidth * 1.2 && !this.scoped) { dist *= 1.35; side *= 0.6; }
@@ -290,7 +290,7 @@ const Cam = {
     this.t0 = Math.max(0, (px - cx) * fx + (pyy - cy) * fy + (pz - cz) * fz);
     this.ready = a === player;
     const sprint = a.input.sprint && a.input.f > 0 && a.state === 'ground';
-    this.fov(dt, this.scoped ? 22 : (a === player && a.input.ads && !a.vehicle) ? (it && it.kind === 'weapon' && wstat(it).type === 'shotgun' ? 64 : 58) : sprint ? 80 : a.vehicle ? 80 : 75);
+    this.fov(dt, this.scoped ? 22 : (a === player && a.input.ads && !a.vehicle) ? (it && it.kind === 'weapon' && wstat(it).type === 'shotgun' ? 64 : it && it.kind === 'weapon' && wstat(it).type === 'smg' ? 52 : 58) : sprint ? 80 : a.vehicle ? 80 : 75);
   },
   fov(dt, target) { if (Math.abs(camera.fov - target) > 0.1) { camera.fov = lerp(camera.fov, target, Math.min(1, dt * 12)); camera.updateProjectionMatrix(); } },
 };

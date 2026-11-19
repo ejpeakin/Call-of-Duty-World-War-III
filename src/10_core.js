@@ -63,7 +63,7 @@ const MAT_ORDER = ['wood', 'brick', 'metal'];
 // type: model + bot logic; ammo; auto; head = headshot multiplier
 const WEAPONS = {
   pistol: { name: 'Sidearm', short: 'PISTOL', type: 'pistol', dmg: 24, rate: 6.5, mag: 16, reload: 1.3, spread: 0.016, ads: 0.006, range: 140, ammo: 'light', auto: false, struct: 1, head: 1.75, minR: 0 },
-  smg: { name: 'Buzzsaw SMG', short: 'SMG', type: 'smg', dmg: 16, rate: 11, mag: 30, reload: 2.0, spread: 0.038, ads: 0.024, range: 100, ammo: 'light', auto: true, struct: 1, head: 1.75, minR: 0 },
+  smg: { name: 'Buzzsaw SMG', short: 'SMG', type: 'smg', dmg: 16, rate: 11, mag: 30, reload: 2.0, spread: 0.038, ads: 0.010, range: 100, ammo: 'light', auto: true, struct: 1, head: 1.75, minR: 0 },
   ar: { name: 'Trailblazer AR', short: 'RIFLE', type: 'ar', dmg: 30, rate: 5.5, mag: 30, reload: 2.2, spread: 0.026, ads: 0.007, range: 220, ammo: 'medium', auto: true, struct: 1, head: 1.75, minR: 0 },
   shotgun: { name: 'Brawler Pump', short: 'PUMP', type: 'shotgun', dmg: 9.5, pellets: 10, rate: 1.15, mag: 5, reload: 4.2, spread: 0.075, ads: 0.042, range: 42, ammo: 'shells', auto: false, struct: 0.8, head: 1.75, minR: 0 },
   sniper: { name: 'Longshot Bolt', short: 'SNIPER', type: 'sniper', dmg: 105, rate: 0.6, mag: 1, reload: 2.4, spread: 0.06, ads: 0.0, range: 450, ammo: 'heavy', auto: false, struct: 1.2, head: 2.5, scope: true, minR: 1 },
