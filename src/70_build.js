@@ -6,14 +6,10 @@ const T = 5.12, TH = 3.84, CONE_H = TH * 0.5;
 // A freshly placed piece is see-through and firms up to solid over this many seconds (sturdier materials take longer)
 const BUILD_TIME = { wood: 1.4, brick: 2.0, metal: 2.6 }, FADE_STEPS = 12;
 const Build = {
-  fades: {}, lines: {}, edgeGeo: {},
+  fades: {},
   // shared see-through copies of each material at a few opacity steps, so many pieces can fade without a material each
   fadeMat(mat, i) { return BuildLook.fade(mat, i, FADE_STEPS); },   // the look itself (shapes, surfaces, cracks) is in src/71_buildlook.js
-  buildEdge(k, mat) {
-    const g = this.edgeGeo[k] || (this.edgeGeo[k] = new THREE.EdgesGeometry(GEO[k], 25));
-    const lm = this.lines[mat] || (this.lines[mat] = new THREE.LineBasicMaterial({ color: new THREE.Color(MATS[mat].color).lerp(new THREE.Color(0xffffff), 0.55), transparent: true, opacity: 0.85, depthWrite: false }));
-    return new THREE.LineSegments(g, lm);
-  },
+  buildEdge(k, mat) { return new THREE.LineSegments(BuildLook.edges(mat, k), BuildLook.lineBuild[mat]); },   // bright while it builds
   active: false, piece: 'wall', pieces: [], map: new Map(), ghosts: null, tgt: null, lastKey: null, lastCol: null, placeCD: 0,
   init() {
     BuildLook.init();
@@ -124,7 +120,7 @@ const Build = {
       if (p.anim > 0) { p.anim -= dt; p.mesh.scale.setScalar(p.anim > 0 ? 1 - p.anim / 0.14 * 0.6 : 1); }
       if (p.build < 1) {   // see-through while it builds, then solid
         p.build = Math.min(1, p.build + dt / p.buildT);
-        if (p.build >= 1) { p.mesh.material = BuildLook.solid(p); p.mesh.castShadow = true; p.mesh.renderOrder = 0; if (p.edge) { p.mesh.remove(p.edge); p.edge = null; } }
+        if (p.build >= 1) { p.mesh.material = BuildLook.solid(p); p.mesh.castShadow = true; p.mesh.renderOrder = 0; if (p.edge) { if (BuildLook.outlines) { p.edge.material = BuildLook.lineSolid[p.mat]; p.edge.renderOrder = 0; } else { p.mesh.remove(p.edge); p.edge = null; } } }   // then a dark cartoon outline
         else p.mesh.material = this.fadeMat(p.mat, Math.min(FADE_STEPS - 1, Math.floor(p.build * p.build * FADE_STEPS)));
       }
     }
