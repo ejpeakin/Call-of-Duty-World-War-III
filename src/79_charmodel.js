@@ -429,6 +429,21 @@ const CharModel = {
     }
     fill('shoe', hex(shoes)); rect('shoe', 0, 0, 1, 0.24, o.boots ? '#24160c' : '#ececee');
     if (o.tiedye) { const img = tieDyeMat().map.image; for (const n of ['torso', 'upper', 'fore']) { const r = AT[n]; x.drawImage(img, r[0], r[1], r[2], r[3]); } }
+    if (o.print) {   // silk shirt printed with little gold crescent moons and stars
+      const g = hex(o.print), base = hex(o.shirt), gd = hex(o.print, 0.75);
+      for (const n of ['torso', 'upper', 'fore']) {
+        const r = AT[n], st = 15; x.save(); x.beginPath(); x.rect(r[0], r[1], r[2], r[3]); x.clip();
+        for (let j = 0, row = 0; j < r[3] + st; j += st, row++) for (let i = (row % 2) * st / 2; i < r[2] + st; i += st) {
+          const px = r[0] + i, py = r[1] + j, k = (i * 7 + j * 13) % 3;
+          if (k === 0) { x.fillStyle = g; x.beginPath(); x.arc(px, py, 3.6, 0, TAU); x.fill(); x.fillStyle = base; x.beginPath(); x.arc(px + 1.7, py - 0.9, 3.1, 0, TAU); x.fill(); }
+          else if (k === 1) { x.strokeStyle = g; x.lineWidth = 1.1; x.beginPath(); x.moveTo(px - 2.6, py); x.lineTo(px + 2.6, py); x.moveTo(px, py - 2.6); x.lineTo(px, py + 2.6); x.stroke(); }
+          else { x.fillStyle = gd; x.beginPath(); x.arc(px, py, 1, 0, TAU); x.fill(); }
+        }
+        x.fillStyle = 'rgba(255,255,255,0.05)'; for (let i = 0; i < r[2]; i += 6) x.fillRect(r[0] + i, r[1], 2, r[3]);   // silk sheen
+        x.restore();
+      }
+      line('torso', [[0, 0.995], [0.2, 0.96], [0.42, 0.99]], 3, gd);   // collar edge
+    }
     if (o.plaid) {   // red-and-black buffalo plaid flannel
       for (const n of ['torso', 'upper', 'fore']) {
         const r = AT[n], st = 10; x.save(); x.beginPath(); x.rect(r[0], r[1], r[2], r[3]); x.clip();
@@ -606,7 +621,7 @@ const CharModel = {
         st.rev = st.rev ? Math.abs(ph) > Math.PI / 2 + 0.1 : Math.abs(ph) > Math.PI / 2 + 0.6;
         const rev = st.rev; if (rev) ph = Math.atan2(Math.sin(ph - Math.PI), Math.cos(ph - Math.PI));
         legYaw = clamp(ph, -0.7, 0.7);
-        if (sp < 2.6) { base = 'Walk'; ts = clamp(sp / 1.2, 0.7, 1.7); } else if (sp < 5.0) { base = 'Jog'; ts = clamp(sp / 3.6, 0.7, 1.6); } else { base = 'Sprint'; ts = clamp(sp / 5.4, 0.8, 1.6); }
+        if (sp < 2.6) { base = 'Walk'; ts = clamp(sp / 1.2, 0.7, 1.7); } else if (sp < 5.0) { base = 'Jog'; ts = clamp(sp / 3.6, 0.7, 1.6); } else { base = 'Sprint'; ts = clamp(sp / 5.4, 0.8, 2.0); }
         if (rev) ts = -ts;
       }
       showGun = !!gun; showPick = !it || it.kind === 'pick'; showHeld = !gun && !showPick && !!held;

@@ -239,7 +239,9 @@ let CHAIN_Z = 0.012, BACK_Z = -0.205;
 // big block print for the back of a shirt (e.g. 999), dark letters with an outline
 function backPrint(txt, w, h, fill = '#111114', edge = '#e8731e') {
   const c = document.createElement('canvas'); c.width = 512; c.height = 256;
-  const x = c.getContext('2d'); x.font = '900 190px "Arial Black", Impact, "Helvetica Neue", sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+  const x = c.getContext('2d'); let fs = 190; const font = () => { x.font = '900 ' + fs + 'px "Arial Black", Impact, "Helvetica Neue", sans-serif'; }; font();
+  while (x.measureText(txt).width > 450 && fs > 70) { fs -= 10; font(); }   // longer words shrink to fit
+  x.textAlign = 'center'; x.textBaseline = 'middle';
   x.lineJoin = 'round'; x.lineWidth = 22; x.strokeStyle = edge; x.strokeText(txt, 256, 138); x.fillStyle = fill; x.fillText(txt, 256, 138);
   const tex = new THREE.CanvasTexture(c);
   return new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshLambertMaterial({ map: tex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
@@ -344,6 +346,15 @@ function hatModel(o, head, hs, skn) {
     case 'tophat': add(new THREE.CylinderGeometry(0.36, 0.36, 0.04, 14), lam(c), 0, top + 0.02, 0); add(new THREE.CylinderGeometry(0.22, 0.22, 0.42, 14), lam(c), 0, top + 0.24, 0); add(new THREE.CylinderGeometry(0.225, 0.225, 0.07, 14), lam(0xd4a72c), 0, top + 0.09, 0); break;
     case 'crown': add(new THREE.CylinderGeometry(0.28, 0.28, 0.08, 10), basic(c), 0, top + 0.04, 0); for (let i = 0; i < 6; i++) { const a = i / 6 * TAU; add(new THREE.ConeGeometry(0.06, 0.2, 5), basic(c), Math.cos(a) * 0.24, top + 0.16, Math.sin(a) * 0.24); } break;
     case 'toast': add(new THREE.BoxGeometry(0.5 * hs[0] + 0.08, 0.5 * hs[1] + 0.08, 0.18), lam(c), 0, 0, -0.06); break;
+    case 'fedora': {   // short-brim fedora, tipped forward a touch, with a band and a creased crown
+      const g = new THREE.Group(); g.position.set(0, top - 0.06, 0.01); g.rotation.x = 0.1; head.add(g);
+      const put = (geo, mat, x, y, z) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; g.add(m); return m; };
+      const brim = put(new THREE.CylinderGeometry(0.37, 0.37, 0.022, 24), lam(c), 0, 0, 0); brim.scale.set(1, 1, 1.1);
+      put(new THREE.CylinderGeometry(0.205, 0.245, 0.235, 20), lam(c), 0, 0.125, 0);
+      put(new THREE.CylinderGeometry(0.248, 0.25, 0.055, 20), lam(o.band ?? 0xd4a72c), 0, 0.04, 0);
+      put(new THREE.BoxGeometry(0.04, 0.02, 0.28), lam(new THREE.Color(c).multiplyScalar(0.6).getHex()), 0, 0.238, 0);   // crease along the top
+      break;
+    }
   }
 }
 // ---------------------------------------------------------------- detailed back bling and harvesting tools
@@ -637,7 +648,7 @@ function buildCharacter(eq, skinned) {
     const logo = textDecal('999', 0.085, 0.042); logo.position.set(tx, ty, tz + 0.008); logo.rotation.y = Math.atan2(tx / (JX * JX), tz / (JZ * JZ)); torso.add(logo);
   }
   // big print across the back of the shirt
-  if (o.back) { const bp = backPrint(o.back, SKN ? 0.3 / 0.7 : 0.3, 0.15); bp.position.set(0, 0.4, SKN ? BACK_Z : -torsoR(0.36) * 0.66 - 0.006); bp.rotation.y = Math.PI; torso.add(bp); }
+  if (o.back) { const bp = backPrint(o.back, SKN ? 0.3 / 0.7 : 0.3, 0.15, o.backFill || '#111114', o.backEdge || '#e8731e'); bp.position.set(0, 0.4, SKN ? BACK_Z : -torsoR(0.36) * 0.66 - 0.006); bp.rotation.y = Math.PI; torso.add(bp); }
   // chunky silver chain hanging in a U, with a 999 pendant
   if (o.chain) {
     const links = [], N = 19, W = 0.07, TOP = 0.61, DROP = 0.11;
@@ -647,12 +658,17 @@ function buildCharacter(eq, skinned) {
       const g = new THREE.TorusGeometry(0.0105, 0.0045, 5, 8); g.scale(1.35, 1, 1);
       if (i % 2) g.rotateX(Math.PI / 2);
       g.rotateZ(Math.atan2(DROP * Math.sin(a), W * Math.cos(a))); g.translate(x, y, z);
-      links.push([g, i % 2 ? 0xc4cad2 : 0xeef1f5]);
+      links.push([g, o.chain === 'gold' ? (i % 2 ? 0xc9962a : 0xf2d27a) : (i % 2 ? 0xc4cad2 : 0xeef1f5)]);
     }
     torso.add(mergedColored(links));
     const py = TOP - DROP - 0.035, pz = front(py) + 0.02 + (SKN ? CHAIN_Z : 0);
-    M(B(0.1, 0.044, 0.008), 0xb9bfc8, 0, py, pz, torso);
-    const pend = textDecal('999', 0.1, 0.05, '#ffffff'); pend.position.set(0, py, pz + 0.006); torso.add(pend);
+    if (o.chain === 'gold') {   // crescent moon pendant
+      const moon = new THREE.Shape(); moon.absarc(0, 0, 0.032, Math.PI * 0.35, Math.PI * 1.65, false); moon.absarc(0.016, 0, 0.026, Math.PI * 1.55, Math.PI * 0.45, true);
+      const mg = new THREE.ExtrudeGeometry(moon, { depth: 0.008, bevelEnabled: false }); const pm = M(mg, new THREE.MeshPhongMaterial({ color: 0xf0c64a, shininess: 80, specular: 0x8a6a20 }), 0, py - 0.005, pz - 0.004, torso); pm.rotation.z = -0.3;
+    } else {
+      M(B(0.1, 0.044, 0.008), 0xb9bfc8, 0, py, pz, torso);
+      const pend = textDecal('999', 0.1, 0.05, '#ffffff'); pend.position.set(0, py, pz + 0.006); torso.add(pend);
+    }
   }
   if (SKN) R.elbowR = new THREE.Group();
   for (const side of SKN ? [] : [1, -1]) {

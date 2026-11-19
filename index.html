@@ -965,7 +965,7 @@ details.ctl .hint{margin-top:8px}
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js"></script>
 <script async src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>
-const BUILD_ID = '1119-0013';
+const BUILD_ID = '1119-0022';
 'use strict';
 // =====================================================================
 //  FORTDAY — core utilities, data tables, profile, audio
@@ -1203,6 +1203,9 @@ const COS = {
       jacket: 0xffd84a, leather: true, studBelt: true, unlock: 'shop', price: 1500, music: true },
     { id: 'week', build: 'slim', name: 'The Week', r: 4, shirt: 0x17171c, pants: 0x17171c, skin: 0x6e4630, sleeve: 0x17171c, hair: 0x0e0b0a, shoes: 0x0c0c0e,
       hat: 'afro', afroSize: 0.8, lineup: true, hatC: 0x0e0b0a, suit: true, tieC: 0xb3121e, mustache: true, shades: 0x0a0a0c, personal: true, unlock: 'shop', price: 1500 },
+    // retro showman: black fedora with a gold band, black silk shirt printed with gold moons and stars, gold moon chain
+    { id: 'bruno', build: 'slim', name: 'Bruno Moon', r: 4, shirt: 0x16141d, pants: 0xefe6d2, skin: 0xb07a52, sleeve: 0x16141d, hair: 0x15100c, shoes: 0xf4f4f2, sneakers: 0xf6f6f4,
+      hat: 'fedora', hatC: 0x17171c, band: 0xd4a72c, print: 0xd8b04a, chain: 'gold', shades: 0x0b0b0e, mustache: true, back: 'MOON', backFill: '#d8b04a', backEdge: '#16141d', personal: true, unlock: 'shop', price: 1500, music: true },
   ],
   backpack: [
     { id: 'none', name: 'No Backpack', r: 0 },
@@ -3417,7 +3420,9 @@ let CHAIN_Z = 0.012, BACK_Z = -0.205;
 // big block print for the back of a shirt (e.g. 999), dark letters with an outline
 function backPrint(txt, w, h, fill = '#111114', edge = '#e8731e') {
   const c = document.createElement('canvas'); c.width = 512; c.height = 256;
-  const x = c.getContext('2d'); x.font = '900 190px "Arial Black", Impact, "Helvetica Neue", sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+  const x = c.getContext('2d'); let fs = 190; const font = () => { x.font = '900 ' + fs + 'px "Arial Black", Impact, "Helvetica Neue", sans-serif'; }; font();
+  while (x.measureText(txt).width > 450 && fs > 70) { fs -= 10; font(); }   // longer words shrink to fit
+  x.textAlign = 'center'; x.textBaseline = 'middle';
   x.lineJoin = 'round'; x.lineWidth = 22; x.strokeStyle = edge; x.strokeText(txt, 256, 138); x.fillStyle = fill; x.fillText(txt, 256, 138);
   const tex = new THREE.CanvasTexture(c);
   return new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshLambertMaterial({ map: tex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
@@ -3522,6 +3527,15 @@ function hatModel(o, head, hs, skn) {
     case 'tophat': add(new THREE.CylinderGeometry(0.36, 0.36, 0.04, 14), lam(c), 0, top + 0.02, 0); add(new THREE.CylinderGeometry(0.22, 0.22, 0.42, 14), lam(c), 0, top + 0.24, 0); add(new THREE.CylinderGeometry(0.225, 0.225, 0.07, 14), lam(0xd4a72c), 0, top + 0.09, 0); break;
     case 'crown': add(new THREE.CylinderGeometry(0.28, 0.28, 0.08, 10), basic(c), 0, top + 0.04, 0); for (let i = 0; i < 6; i++) { const a = i / 6 * TAU; add(new THREE.ConeGeometry(0.06, 0.2, 5), basic(c), Math.cos(a) * 0.24, top + 0.16, Math.sin(a) * 0.24); } break;
     case 'toast': add(new THREE.BoxGeometry(0.5 * hs[0] + 0.08, 0.5 * hs[1] + 0.08, 0.18), lam(c), 0, 0, -0.06); break;
+    case 'fedora': {   // short-brim fedora, tipped forward a touch, with a band and a creased crown
+      const g = new THREE.Group(); g.position.set(0, top - 0.06, 0.01); g.rotation.x = 0.1; head.add(g);
+      const put = (geo, mat, x, y, z) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; g.add(m); return m; };
+      const brim = put(new THREE.CylinderGeometry(0.37, 0.37, 0.022, 24), lam(c), 0, 0, 0); brim.scale.set(1, 1, 1.1);
+      put(new THREE.CylinderGeometry(0.205, 0.245, 0.235, 20), lam(c), 0, 0.125, 0);
+      put(new THREE.CylinderGeometry(0.248, 0.25, 0.055, 20), lam(o.band ?? 0xd4a72c), 0, 0.04, 0);
+      put(new THREE.BoxGeometry(0.04, 0.02, 0.28), lam(new THREE.Color(c).multiplyScalar(0.6).getHex()), 0, 0.238, 0);   // crease along the top
+      break;
+    }
   }
 }
 // ---------------------------------------------------------------- detailed back bling and harvesting tools
@@ -3815,7 +3829,7 @@ function buildCharacter(eq, skinned) {
     const logo = textDecal('999', 0.085, 0.042); logo.position.set(tx, ty, tz + 0.008); logo.rotation.y = Math.atan2(tx / (JX * JX), tz / (JZ * JZ)); torso.add(logo);
   }
   // big print across the back of the shirt
-  if (o.back) { const bp = backPrint(o.back, SKN ? 0.3 / 0.7 : 0.3, 0.15); bp.position.set(0, 0.4, SKN ? BACK_Z : -torsoR(0.36) * 0.66 - 0.006); bp.rotation.y = Math.PI; torso.add(bp); }
+  if (o.back) { const bp = backPrint(o.back, SKN ? 0.3 / 0.7 : 0.3, 0.15, o.backFill || '#111114', o.backEdge || '#e8731e'); bp.position.set(0, 0.4, SKN ? BACK_Z : -torsoR(0.36) * 0.66 - 0.006); bp.rotation.y = Math.PI; torso.add(bp); }
   // chunky silver chain hanging in a U, with a 999 pendant
   if (o.chain) {
     const links = [], N = 19, W = 0.07, TOP = 0.61, DROP = 0.11;
@@ -3825,12 +3839,17 @@ function buildCharacter(eq, skinned) {
       const g = new THREE.TorusGeometry(0.0105, 0.0045, 5, 8); g.scale(1.35, 1, 1);
       if (i % 2) g.rotateX(Math.PI / 2);
       g.rotateZ(Math.atan2(DROP * Math.sin(a), W * Math.cos(a))); g.translate(x, y, z);
-      links.push([g, i % 2 ? 0xc4cad2 : 0xeef1f5]);
+      links.push([g, o.chain === 'gold' ? (i % 2 ? 0xc9962a : 0xf2d27a) : (i % 2 ? 0xc4cad2 : 0xeef1f5)]);
     }
     torso.add(mergedColored(links));
     const py = TOP - DROP - 0.035, pz = front(py) + 0.02 + (SKN ? CHAIN_Z : 0);
-    M(B(0.1, 0.044, 0.008), 0xb9bfc8, 0, py, pz, torso);
-    const pend = textDecal('999', 0.1, 0.05, '#ffffff'); pend.position.set(0, py, pz + 0.006); torso.add(pend);
+    if (o.chain === 'gold') {   // crescent moon pendant
+      const moon = new THREE.Shape(); moon.absarc(0, 0, 0.032, Math.PI * 0.35, Math.PI * 1.65, false); moon.absarc(0.016, 0, 0.026, Math.PI * 1.55, Math.PI * 0.45, true);
+      const mg = new THREE.ExtrudeGeometry(moon, { depth: 0.008, bevelEnabled: false }); const pm = M(mg, new THREE.MeshPhongMaterial({ color: 0xf0c64a, shininess: 80, specular: 0x8a6a20 }), 0, py - 0.005, pz - 0.004, torso); pm.rotation.z = -0.3;
+    } else {
+      M(B(0.1, 0.044, 0.008), 0xb9bfc8, 0, py, pz, torso);
+      const pend = textDecal('999', 0.1, 0.05, '#ffffff'); pend.position.set(0, py, pz + 0.006); torso.add(pend);
+    }
   }
   if (SKN) R.elbowR = new THREE.Group();
   for (const side of SKN ? [] : [1, -1]) {
@@ -4121,7 +4140,7 @@ function gunModel(it, wrapHex, simple) {
 // =====================================================================
 //  Physics: ground, collision, movement, mantling, water
 // =====================================================================
-const GRAV = 28, JUMP = 9.4, STEP = 0.6;
+const GRAV = 28, JUMP = 9.4, STEP = 0.6, SPRINT_BOOST = 1.2;   // sprinting is 20% faster than it used to be (about 10 m/s)
 const _cands = [], _cands2 = [], _cands3 = [];
 
 function rampY(c, x, z) {
@@ -4207,7 +4226,7 @@ function physicsActor(a, dt) {
     if (sprint && a.onGround) { a.stamina = Math.max(0, a.stamina - 22 * dt); a.stamRest = 0.9; if (a.stamina <= 0) a.exhausted = true; }
     else { a.stamRest = (a.stamRest || 0) - dt; if (a.stamRest <= 0) a.stamina = Math.min(100, a.stamina + 20 * dt); }
     if (a.exhausted && a.stamina >= 25) a.exhausted = false;
-    speed = sprint ? (Match.build ? 8.4 : 8.9) : 6.0;
+    speed = sprint ? (Match.build ? 8.4 : 8.9) * SPRINT_BOOST : 6.0;
     if (inp.ads) speed = 4.0;
     if (a.useT > 0) speed = Math.min(speed, 3.0);
     if (a.inWater) speed *= 0.6;
@@ -6019,6 +6038,21 @@ const CharModel = {
     }
     fill('shoe', hex(shoes)); rect('shoe', 0, 0, 1, 0.24, o.boots ? '#24160c' : '#ececee');
     if (o.tiedye) { const img = tieDyeMat().map.image; for (const n of ['torso', 'upper', 'fore']) { const r = AT[n]; x.drawImage(img, r[0], r[1], r[2], r[3]); } }
+    if (o.print) {   // silk shirt printed with little gold crescent moons and stars
+      const g = hex(o.print), base = hex(o.shirt), gd = hex(o.print, 0.75);
+      for (const n of ['torso', 'upper', 'fore']) {
+        const r = AT[n], st = 15; x.save(); x.beginPath(); x.rect(r[0], r[1], r[2], r[3]); x.clip();
+        for (let j = 0, row = 0; j < r[3] + st; j += st, row++) for (let i = (row % 2) * st / 2; i < r[2] + st; i += st) {
+          const px = r[0] + i, py = r[1] + j, k = (i * 7 + j * 13) % 3;
+          if (k === 0) { x.fillStyle = g; x.beginPath(); x.arc(px, py, 3.6, 0, TAU); x.fill(); x.fillStyle = base; x.beginPath(); x.arc(px + 1.7, py - 0.9, 3.1, 0, TAU); x.fill(); }
+          else if (k === 1) { x.strokeStyle = g; x.lineWidth = 1.1; x.beginPath(); x.moveTo(px - 2.6, py); x.lineTo(px + 2.6, py); x.moveTo(px, py - 2.6); x.lineTo(px, py + 2.6); x.stroke(); }
+          else { x.fillStyle = gd; x.beginPath(); x.arc(px, py, 1, 0, TAU); x.fill(); }
+        }
+        x.fillStyle = 'rgba(255,255,255,0.05)'; for (let i = 0; i < r[2]; i += 6) x.fillRect(r[0] + i, r[1], 2, r[3]);   // silk sheen
+        x.restore();
+      }
+      line('torso', [[0, 0.995], [0.2, 0.96], [0.42, 0.99]], 3, gd);   // collar edge
+    }
     if (o.plaid) {   // red-and-black buffalo plaid flannel
       for (const n of ['torso', 'upper', 'fore']) {
         const r = AT[n], st = 10; x.save(); x.beginPath(); x.rect(r[0], r[1], r[2], r[3]); x.clip();
@@ -6196,7 +6230,7 @@ const CharModel = {
         st.rev = st.rev ? Math.abs(ph) > Math.PI / 2 + 0.1 : Math.abs(ph) > Math.PI / 2 + 0.6;
         const rev = st.rev; if (rev) ph = Math.atan2(Math.sin(ph - Math.PI), Math.cos(ph - Math.PI));
         legYaw = clamp(ph, -0.7, 0.7);
-        if (sp < 2.6) { base = 'Walk'; ts = clamp(sp / 1.2, 0.7, 1.7); } else if (sp < 5.0) { base = 'Jog'; ts = clamp(sp / 3.6, 0.7, 1.6); } else { base = 'Sprint'; ts = clamp(sp / 5.4, 0.8, 1.6); }
+        if (sp < 2.6) { base = 'Walk'; ts = clamp(sp / 1.2, 0.7, 1.7); } else if (sp < 5.0) { base = 'Jog'; ts = clamp(sp / 3.6, 0.7, 1.6); } else { base = 'Sprint'; ts = clamp(sp / 5.4, 0.8, 2.0); }
         if (rev) ts = -ts;
       }
       showGun = !!gun; showPick = !it || it.kind === 'pick'; showHeld = !gun && !showPick && !!held;

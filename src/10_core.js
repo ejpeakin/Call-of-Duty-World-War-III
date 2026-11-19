@@ -235,6 +235,9 @@ const COS = {
       jacket: 0xffd84a, leather: true, studBelt: true, unlock: 'shop', price: 1500, music: true },
     { id: 'week', build: 'slim', name: 'The Week', r: 4, shirt: 0x17171c, pants: 0x17171c, skin: 0x6e4630, sleeve: 0x17171c, hair: 0x0e0b0a, shoes: 0x0c0c0e,
       hat: 'afro', afroSize: 0.8, lineup: true, hatC: 0x0e0b0a, suit: true, tieC: 0xb3121e, mustache: true, shades: 0x0a0a0c, personal: true, unlock: 'shop', price: 1500 },
+    // retro showman: black fedora with a gold band, black silk shirt printed with gold moons and stars, gold moon chain
+    { id: 'bruno', build: 'slim', name: 'Bruno Moon', r: 4, shirt: 0x16141d, pants: 0xefe6d2, skin: 0xb07a52, sleeve: 0x16141d, hair: 0x15100c, shoes: 0xf4f4f2, sneakers: 0xf6f6f4,
+      hat: 'fedora', hatC: 0x17171c, band: 0xd4a72c, print: 0xd8b04a, chain: 'gold', shades: 0x0b0b0e, mustache: true, back: 'MOON', backFill: '#d8b04a', backEdge: '#16141d', personal: true, unlock: 'shop', price: 1500, music: true },
   ],
   backpack: [
     { id: 'none', name: 'No Backpack', r: 0 },
