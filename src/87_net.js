@@ -345,7 +345,7 @@ const Net = {
       this.send(cid, ev);
     }
   },
-  slim(o) { o = o || {}; const r = {}; for (const k of ['head', 'raw', 'storm', 'fall', 'shark']) if (o[k]) r[k] = 1; for (const k of ['x', 'y', 'z']) if (Number.isFinite(o[k])) r[k] = Math.round(o[k] * 10) / 10; if (o.w) r.w = String(o.w).slice(0, 30); return r; },
+  slim(o) { o = o || {}; const r = {}; for (const k of ['head', 'raw', 'storm', 'fall', 'shark']) if (o[k]) r[k] = 1; for (const k of ['kx', 'kz']) if (Number.isFinite(o[k])) r[k] = clamp(o[k], -20, 20); for (const k of ['x', 'y', 'z']) if (Number.isFinite(o[k])) r[k] = Math.round(o[k] * 10) / 10; if (o.w) r.w = String(o.w).slice(0, 30); return r; },
   okItem(it) {
     if (!it || typeof it !== 'object') return false;
     if (it.kind === 'weapon') return !!WEAPONS[it.wid] && Number.isFinite(it.rarity) && it.rarity >= 0 && it.rarity <= 6 && Number.isFinite(it.mag);
@@ -374,7 +374,7 @@ const Net = {
     if (this.isHost) {
       const me = this.humans.get(from); if (!me) return;
       if (d.k === 'st') { if (Array.isArray(d.s)) { d.s[0] = me.id; this.dec(me, d.s); } }
-      else if (d.k === 'dmg') { const t = this.ids.get(d.id); if (!t || !t.alive) return; d.src = me.id; if (t.human) this.send(t.human, d); else if (!t.remote) damageActor(t, clamp(+d.dmg || 0, 0, 400), me, d.o || {}); }
+      else if (d.k === 'dmg') { const t = this.ids.get(d.id); if (!t || !t.alive) return; d.src = me.id; if (t.human) this.send(t.human, d); else if (!t.remote) { damageActor(t, clamp(+d.dmg || 0, 0, 400), me, d.o || {}); if (d.o && Number.isFinite(d.o.kx)) shockLaunch(t, clamp(+d.o.kx, -20, 20), clamp(+d.o.kz || 0, -20, 20)); } }
       else if (d.k === 'take') { const p = Pickups.byId.get(d.id); if (p && p.alive) Pickups.remove(p); }
       else if (d.k === 'drop') { if (this.okItem(d.item) && Number.isFinite(d.x + d.y + d.z)) Pickups.spawn(d.item, d.x, d.y, d.z, { pop: Array.isArray(d.pop) ? { x: d.pop[0], y: d.pop[1] - 1, z: d.pop[2] } : null, ttl: Match.mode === 'rumble' ? 75 : 0 }); }
       else if (d.k === 'chest') { const c = this.chestNear(d.x, d.z); if (c && !c.opened && !c.falling) openChest(c, me); }
@@ -403,7 +403,7 @@ const Net = {
       if (Array.isArray(d.a)) for (const s of d.a) { const a = this.ids.get(s[0]); if (a && a !== player) this.dec(a, s); }
       if (d.sm) this.applyStorm(d.sm);
     }
-    else if (d.k === 'dmg') { if (player && player.alive) damageActor(player, clamp(+d.dmg || 0, 0, 400), this.ids.get(d.src) || null, d.o || {}); }
+    else if (d.k === 'dmg') { if (player && player.alive) { damageActor(player, clamp(+d.dmg || 0, 0, 400), this.ids.get(d.src) || null, d.o || {}); if (d.o && Number.isFinite(d.o.kx)) shockLaunch(player, clamp(+d.o.kx, -20, 20), clamp(+d.o.kz || 0, -20, 20)); } }
     else if (d.k === 'end') { if (Match.state === 'play') { HUD.toast('The host ended the match'); Match.showResults(); } }
     else if (d.k === 'chat') Chat.receive(d.n, d.t);
     else if (d.k === 'rbt') { if (player && d.id === player.id && !player.alive) Match.reboot(player, d.tw | 0, String(d.by || '').slice(0, 24)); }

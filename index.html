@@ -1024,7 +1024,7 @@ details.ctl .hint{margin-top:8px}
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js"></script>
 <script async src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>
-const BUILD_ID = '1119-1424';
+const BUILD_ID = '1119-1437';
 'use strict';
 // =====================================================================
 //  FORTDAY — core utilities, data tables, profile, audio
@@ -1098,13 +1098,15 @@ const WEAPONS = {
   stormcaller: { name: "Warden's Stormcaller", short: 'MYTHIC', type: 'ar', dmg: 38, rate: 7, mag: 40, reload: 1.8, spread: 0.018, ads: 0.004, range: 240, ammo: 'medium', auto: true, struct: 1.2, head: 1.8, mythic: true },
   sledge: { name: "Foreman's Sledge", short: 'MYTHIC', type: 'shotgun', dmg: 11, pellets: 10, rate: 1.7, mag: 8, reload: 3.2, spread: 0.065, ads: 0.036, range: 48, ammo: 'shells', auto: false, struct: 1.5, head: 1.75, mythic: true },
   frostbite: { name: 'Frostbite Rifle', short: 'EXOTIC', type: 'ar', dmg: 44, rate: 2.6, mag: 10, reload: 2.2, spread: 0.02, ads: 0.002, range: 300, ammo: 'heavy', auto: false, struct: 1, head: 2, slow: 2.5, exotic: true },
+  // fun gun: fires a charged energy orb; the shockwave launches everyone caught in it up and away
+  shock: { name: 'Shockwave Cannon', short: 'SHOCK', type: 'shock', dmg: 34, rate: 1.0, mag: 4, reload: 2.4, spread: 0.008, ads: 0.004, range: 120, ammo: 'medium', auto: false, proj: 46, splash: 5, struct: 0.8, head: 1, shock: 15, minR: 3 },
   // melee: every swing slices everyone in front of you within reach, about as hard as a close shotgun blast; no ammo, no reload
   katana: { name: 'Japanese Katana', short: 'KATANA', type: 'katana', dmg: 86, rate: 1.4, mag: 1, reload: 0.01, spread: 0, ads: 0, range: 3.6, ammo: 'light', auto: false, struct: 1.4, head: 1, melee: true, minR: 4 },
   kicker: { name: 'Kinetic Kicker', short: 'EXOTIC', type: 'shotgun', dmg: 8, pellets: 10, rate: 1.3, mag: 6, reload: 3.4, spread: 0.07, ads: 0.04, range: 38, ammo: 'shells', auto: false, struct: 1, head: 1.6, knock: 17, exotic: true },
 };
 const KATANAS_PER_MATCH = 5;   // hidden in 5 random chests each match
-const GUN_SIZE = { katana: [0.06, 0.07, 1.2], pistol: [0.1, 0.18, 0.42], smg: [0.12, 0.2, 0.62], ar: [0.12, 0.2, 0.95], shotgun: [0.14, 0.18, 0.92], sniper: [0.11, 0.18, 1.35], rocket: [0.26, 0.26, 1.25] };
-const WEAPON_POOL = [{ w: 24, id: 'ar' }, { w: 20, id: 'shotgun' }, { w: 18, id: 'smg' }, { w: 16, id: 'pistol' }, { w: 9, id: 'sniper' }, { w: 5, id: 'rocket' }];
+const GUN_SIZE = { shock: [0.16, 0.2, 0.7], katana: [0.06, 0.07, 1.2], pistol: [0.1, 0.18, 0.42], smg: [0.12, 0.2, 0.62], ar: [0.12, 0.2, 0.95], shotgun: [0.14, 0.18, 0.92], sniper: [0.11, 0.18, 1.35], rocket: [0.26, 0.26, 1.25] };
+const WEAPON_POOL = [{ w: 24, id: 'ar' }, { w: 20, id: 'shotgun' }, { w: 18, id: 'smg' }, { w: 16, id: 'pistol' }, { w: 9, id: 'sniper' }, { w: 5, id: 'rocket' }, { w: 4, id: 'shock' }];
 const RAR_FLOOR = [{ w: 38, r: 0 }, { w: 34, r: 1 }, { w: 19, r: 2 }, { w: 7, r: 3 }, { w: 2, r: 4 }];
 const RAR_CHEST = [{ w: 16, r: 0 }, { w: 34, r: 1 }, { w: 31, r: 2 }, { w: 14, r: 3 }, { w: 5, r: 4 }];
 const RAR_SUPPLY = [{ w: 60, r: 3 }, { w: 40, r: 4 }];
@@ -4169,6 +4171,19 @@ function gunGeo(type, rarity, wrap, simple) {
     if (detail) for (let i = 0; i < 4; i++) { C(0.0085, 0.046, 0.034, 0.026, -0.05 + i * 0.022, 0xb02020, 0.0085, 8, 'y'); C(0.009, 0.012, 0.034, -0.003, -0.05 + i * 0.022, brass, 0.009, 8, 'y'); }   // shells on a side saddle
     B(0.058, 0.012, 0.2, 0, 0.06, 0.02, acc);
     shift = 0.1;
+  } else if (type === 'shock') {
+    const glow = 0x45d4ff, gun = 0x23272e, steel = 0x59606b;
+    B(0.07, 0.1, 0.36, 0, 0.02, 0.06, gun);                                              // receiver
+    C(0.045, 0.34, 0, 0.03, 0.36, steel, 0.05, 12);                                      // barrel
+    for (let i = 0; i < 4; i++) C(0.058, 0.025, 0, 0.03, 0.24 + i * 0.07, glow, 0.058, 12);   // glowing coils
+    C(0.07, 0.06, 0, 0.03, 0.54, gun, 0.055, 12);                                        // muzzle ring
+    C(0.03, 0.02, 0, 0.03, 0.575, glow, 0.03, 10);                                       // charged core in the muzzle
+    B(0.05, 0.05, 0.14, 0, 0.1, 0.02, gun); B(0.02, 0.02, 0.1, 0, 0.13, 0.02, glow);     // top rail + light strip
+    B(0.06, 0.07, 0.1, 0, 0.0, -0.18, steel);                                            // energy cell
+    B(0.04, 0.12, 0.05, 0, -0.08, -0.04, gun, 0.28);                                     // grip
+    B(0.045, 0.05, 0.08, 0, -0.04, 0.16, gun);                                           // front handle
+    if (detail) { B(0.072, 0.012, 0.3, 0, -0.035, 0.06, acc === dark ? steel : acc); B(0.01, 0.03, 0.06, 0.04, 0.02, -0.18, glow); }
+    trigger(-0.01, 0.02);
   } else if (type === 'katana') {
     const steel = 0xc9ced6, edge = 0xf2f5f8, wrapC = 0x17131a, gold = 0xc8a040;
     C(0.018, 0.27, 0, 0, -0.025, wrapC, 0.017, 8);                                   // handle (tsuka)
@@ -4379,7 +4394,7 @@ function physicsActor(a, dt) {
   const snap = wasGround && a.vel.y <= 0 && a.pos.y - g < 0.7 && a.state === 'ground';
   if (a.pos.y <= g || snap) {
     if (a.state === 'sky' || a.state === 'glide') { a.state = 'ground'; onLand(a); }
-    else if (!wasGround && !a.inWater && a.vel.y < -23) damageActor(a, (-a.vel.y - 23) * 4.5, null, { raw: true, fall: true });
+    else if (!wasGround && !a.inWater && a.vel.y < -23 && !(a.noFallT > Match.time)) damageActor(a, (-a.vel.y - 23) * 4.5, null, { raw: true, fall: true });
     a.pos.y = g; if (a.vel.y < 0) a.vel.y = 0; a.onGround = true;
   } else a.onGround = false;
   // water
@@ -4737,11 +4752,12 @@ function scatterLoot(items, pos) {
 }
 
 // ---------------------------------------------------------------- rockets
+let ORB_GEO = null, ORB_MAT = null;
 const Rockets = {
   list: [],
   clear() { for (const r of this.list) scene.remove(r.m); this.list = []; },
   spawn(owner, o, d, st, vis) {   // vis: another player's rocket, shown here but harmless (their game deals the damage)
-    const m = new THREE.Mesh(GEO.rocket, lam(0x56625a)); m.position.copy(o); m.lookAt(_v4.copy(o).add(d)); scene.add(m);
+    const m = st.shock ? new THREE.Mesh(ORB_GEO || (ORB_GEO = new THREE.IcosahedronGeometry(0.24, 2)), ORB_MAT || (ORB_MAT = new THREE.MeshBasicMaterial({ color: 0x8fe8ff }))) : new THREE.Mesh(GEO.rocket, lam(0x56625a)); m.position.copy(o); m.lookAt(_v4.copy(o).add(d)); scene.add(m);
     this.list.push({ m, owner, x: o.x, y: o.y, z: o.z, dx: d.x, dy: d.y, dz: d.z, sp: st.proj, life: 4.5, st, vis: !!vis });
     if (Net.inMatch && !vis && !owner.remote) { const w = owner.inv[owner.slot]; if (w && w.kind === 'weapon') Net.emit({ k: 'rk', id: owner.id, o: [o.x, o.y, o.z], d: [d.x, d.y, d.z], wid: w.wid, r: w.rarity }, owner.pos, NET_RANGE); }
   },
@@ -4751,11 +4767,35 @@ const Rockets = {
       const h = raycast(r.x, r.y, r.z, r.dx, r.dy, r.dz, step, r.owner, true);
       if (h.type || r.life <= 0) { explode(h.type ? h.x : r.x, h.type ? h.y : r.y, h.type ? h.z : r.z, r.owner, r.st, r.vis); scene.remove(r.m); this.list.splice(i, 1); continue; }
       r.x += r.dx * step; r.y += r.dy * step; r.z += r.dz * step; r.m.position.set(r.x, r.y, r.z);
-      FX.burst(r.x - r.dx, r.y - r.dy, r.z - r.dz, 0xcfcfcf, 1, 0.5, 0.5, 0.25, -1);
+      if (r.st.shock) { const k = 1 + Math.sin(performance.now() / 40) * 0.18; r.m.scale.setScalar(k); FX.burst(r.x - r.dx * 0.5, r.y, r.z - r.dz * 0.5, 0x45d4ff, 1, 0.6, 0.35, 0.1, 0); }   // crackling energy orb
+      else FX.burst(r.x - r.dx, r.y - r.dy, r.z - r.dz, 0xcfcfcf, 1, 0.5, 0.5, 0.25, -1);
     }
   },
 };
+function shockBurst(x, y, z, owner, st, fxOnly) {
+  FX.burst(x, y + 0.5, z, 0x45d4ff, 26, 11, 0.6, 0.12, 0); FX.burst(x, y + 0.5, z, 0xffffff, 10, 7, 0.4, 0.1, 0);
+  FX.flash(x, y + 0.5, z, st.splash * 1.4, 0x45d4ff, 0.5);
+  const v = Sfx.vol(x, y, z); if (v > 0.05) { Sfx.tone(140, 0.35, 'sawtooth', 0.12 * v); Sfx.tone(70, 0.5, 'sine', 0.16 * v); Sfx.tone(1400, 0.08, 'square', 0.04 * v); }
+  if (owner === player || Math.hypot(player.pos.x - x, player.pos.z - z) < 25) Cam.shake = Math.max(Cam.shake || 0, 0.35);
+  if (fxOnly) return;
+  for (const a of actors) {
+    if (!a.alive || a.state === 'bus' || a.npc) continue;
+    if (owner && a !== owner && a.team === owner.team) continue;
+    const dx = a.pos.x - x, dz = a.pos.z - z, d = Math.hypot(dx, a.pos.y + 1 - y, dz); if (d > st.splash) continue;
+    const f = 1 - d / st.splash * 0.6, h = Math.hypot(dx, dz) || 1, kx = dx / h * st.shock * f, kz = dz / h * st.shock * f;
+    damageActor(a, st.dmg * (0.5 + f * 0.5) * (a === owner ? 0.25 : 1), a === owner ? null : owner, { x: a.pos.x, y: a.pos.y + 2, z: a.pos.z, w: 'Shockwave Cannon', kx, kz });
+    if (!a.remote) shockLaunch(a, kx, kz);
+  }
+  Build.explode(x, y, z, st.splash, st.dmg * st.struct);
+}
+// thrown up and away by a shockwave (no fall damage from the landing)
+function shockLaunch(a, kx, kz) {
+  if (!a.alive || a.vehicle || !Number.isFinite(kx) || !Number.isFinite(kz)) return;
+  if (a.state !== 'ground' && a.state !== 'glide') return;
+  a.vel.x += kx; a.vel.z += kz; a.vel.y = Math.max(a.vel.y, 11 + Math.hypot(kx, kz) * 0.25); a.onGround = false; a.noFallT = Match.time + 3; a.emote = null;
+}
 function explode(x, y, z, owner, st, fxOnly) {
+  if (st.shock) { shockBurst(x, y, z, owner, st, fxOnly); return; }
   FX.flash(x, y, z, st.splash * 1.1, 0xffa040, 0.5); FX.burst(x, y, z, 0xffa040, 26, 10, 0.8, 0.25, 6); FX.burst(x, y, z, 0x444444, 14, 5, 1.2, 0.35, -1);
   Sfx.boom(x, y, z);
   if (player && player.alive) { const d = Math.hypot(player.pos.x - x, player.pos.z - z); if (d < 40) Cam.shake = Math.max(Cam.shake, (1 - d / 40) * 0.6); }
@@ -5137,7 +5177,7 @@ function giveItem(a, it) {
   if (it.kind === 'weapon') { for (let i = 1; i < 6; i++) if (!a.inv[i]) { a.inv[i] = it; return null; } return it; }
   return it;
 }
-function weaponScore(w) { return w.rarity + ({ katana: 2.0, ar: 2.2, shotgun: 2.1, smg: 1.6, sniper: 1.5, rocket: 1.2, pistol: 0.4 }[WEAPONS[w.wid].type] || 1) + (w.rarity >= 5 ? 3 : 0); }
+function weaponScore(w) { return w.rarity + ({ shock: 1.4, katana: 2.0, ar: 2.2, shotgun: 2.1, smg: 1.6, sniper: 1.5, rocket: 1.2, pistol: 0.4 }[WEAPONS[w.wid].type] || 1) + (w.rarity >= 5 ? 3 : 0); }
 function botConsiderWeapon(a, w) {
   let same = -1, worst = -1, worstScore = 1e9, empty = -1, nW = 0;
   for (let i = 1; i < 6; i++) {
@@ -6325,7 +6365,7 @@ const CharModel = {
     if (prev && prev !== act) { if (fade > 0) act.crossFadeFrom(prev, fade, false); else prev.stop(); }
     layer.cur = name; layer.act = act; return act;
   },
-  TWIST: ['pelvis', 'spine_01', 'spine_02', 'spine_03', 'neck_01'],
+  TWIST: ['pelvis', 'spine_01', 'spine_02', 'spine_03', 'neck_01', 'upperarm_l', 'lowerarm_l', 'hand_l', 'upperarm_r', 'lowerarm_r', 'hand_r'],   // re-set every frame (procedural turns and the two-hand grip)
   reset(R) { if (R.pure) this.TWIST.forEach((n, i) => R.B[n].quaternion.copy(R.pure[i])); R.mixer.stopAllAction(); R.L.cur = R.U.cur = null; R.L.act = R.U.act = null; R.st.fresh = true; R.st.legYaw = 0; R.st.rev = false; R.st.vy = null; },
   emoteClip: { groove: 'Dance_Body_Roll', robot: 'Dance_Charleston', jacks: 'Jumping_Jacks', wave: 'Greeting', airguitar: 'Dance_Simple', micdrop: 'Victory' },
   // a crawling player glows red so everyone can see they are hurt
@@ -6420,14 +6460,57 @@ const CharModel = {
     }
     R.gun.visible = showGun;
     if (showGun) {
-      R.mHandR.getWorldPosition(_cmV); R.body.worldToLocal(_cmV);
-      R.gun.position.set(_cmV.x, _cmV.y + 0.07 * Math.cos(pitch), _cmV.z - 0.07 * Math.sin(pitch)); R.gun.rotation.set(-pitch, 0, 0);
+      const hold = GRIP[WEAPONS[it.wid].type];
+      if (!hold || a.state !== 'ground' || a.inWater || a.crawl) {   // pistols (and swimming/crawling): one hand, as before
+        R.mHandR.getWorldPosition(_cmV); R.body.worldToLocal(_cmV);
+        R.gun.position.set(_cmV.x, _cmV.y + 0.07 * Math.cos(pitch), _cmV.z - 0.07 * Math.sin(pitch)); R.gun.rotation.set(-pitch, 0, 0);
+      } else {   // two hands: the gun sits at the right shoulder along the aim, and both arms reach for it
+        B.upperarm_r.getWorldPosition(_cmV); R.body.worldToLocal(_cmV);
+        const p = clamp(pitch, -1.1, 1.1) * (hold.pitchK ?? 1), th = -p - (hold.tilt || 0), o = hold.at, c = Math.cos(th), s = Math.sin(th);
+        R.gun.position.set(_cmV.x + o[0], _cmV.y + o[1] * c - o[2] * s, _cmV.z + o[1] * s + o[2] * c); R.gun.rotation.set(th, hold.yaw || 0, hold.roll || 0);
+      }
       if (a.slashT > 0) { const k = 1 - a.slashT / 0.28, sd = a.slashSide || 1; R.gun.rotation.set(-pitch - 0.5 * Math.sin(k * Math.PI), sd * (1.2 - 2.4 * k), sd * 0.6); }   // katana swing
+      if (hold && a.state === 'ground' && !a.inWater && !a.crawl) {
+        R.gun.updateMatrixWorld(true);
+        const sx = -1, rt = _ikT.set(hold.rh[0], hold.rh[1], hold.rh[2]).applyMatrix4(R.gun.matrixWorld);
+        armIK(B.upperarm_r, B.lowerarm_r, B.hand_r, rt, _ikP.set(sx * 0.6, -1, -0.3).applyQuaternion(R.body.getWorldQuaternion(_ikQ)));
+        const lt = _ikT.set(hold.lh[0], hold.lh[1], hold.lh[2]).applyMatrix4(R.gun.matrixWorld);
+        armIK(B.upperarm_l, B.lowerarm_l, B.hand_l, lt, _ikP.set(-sx * 0.7, -1, -0.2).applyQuaternion(R.body.getWorldQuaternion(_ikQ)));
+      }
     }
     R.pick.visible = showPick; R.held.visible = showHeld; R.glider.visible = glider;
   },
 };
 const _cmQ = new THREE.Quaternion(), _cmQi = new THREE.Quaternion(), _cmQ2 = new THREE.Quaternion(), _cmV = new THREE.Vector3();
+// How each weapon type is held (body space, metres): `at` = where the gun's grip sits relative to the right shoulder,
+// `rh`/`lh` = where the right/left wrist goes on the gun (gun space: grip at 0, barrel along +z). Pistols stay one-handed.
+const GRIP = {
+  ar:      { at: [0.07, -0.13, 0.24], rh: [0, -0.04, -0.06], lh: [0.0, -0.05, 0.27] },
+  smg:     { at: [0.08, -0.15, 0.27], rh: [0, -0.04, -0.06], lh: [0.0, -0.08, 0.15] },
+  shotgun: { at: [0.07, -0.13, 0.24], rh: [0, -0.04, -0.06], lh: [0.0, -0.06, 0.26] },
+  sniper:  { at: [0.07, -0.12, 0.22], rh: [0, -0.04, -0.06], lh: [0.0, -0.05, 0.32] },
+  shock:   { at: [0.08, -0.14, 0.26], rh: [0, -0.04, -0.06], lh: [0.0, -0.06, 0.16] },
+  rocket:  { at: [0.02, 0.03, 0.05], rh: [0, -0.07, -0.02], lh: [0.0, -0.08, 0.24] },      // resting on the shoulder
+  katana:  { at: [0.15, -0.3, 0.3], tilt: 0.85, pitchK: 0.5, rh: [0, 0, 0.02], lh: [0, 0, -0.11] },   // both hands on the handle, blade up
+};
+// two-bone arm reach: bend the elbow toward `pole` so the wrist lands on `target` (world space)
+const _ikA = new THREE.Vector3(), _ikB = new THREE.Vector3(), _ikC = new THREE.Vector3(), _ikD = new THREE.Vector3(), _ikE = new THREE.Vector3(), _ikT = new THREE.Vector3(), _ikP = new THREE.Vector3(), _ikQ = new THREE.Quaternion(), _ikQ2 = new THREE.Quaternion(), _ikQ3 = new THREE.Quaternion(), _ikS = new THREE.Vector3();
+function aimBone(bone, from, to) {
+  _ikQ2.setFromUnitVectors(from, to); bone.getWorldQuaternion(_ikQ3); _ikQ3.premultiply(_ikQ2);
+  bone.parent.getWorldQuaternion(_ikQ2); bone.quaternion.copy(_ikQ2.invert().multiply(_ikQ3)); bone.updateMatrixWorld(true);
+}
+function armIK(up, lo, hand, target, pole) {
+  if (!up || !lo || !hand) return;
+  const S = up.getWorldPosition(_ikS), E = lo.getWorldPosition(_ikB), H = hand.getWorldPosition(_ikC);
+  const a = S.distanceTo(E), b = E.distanceTo(H), dir = _ikD.copy(target).sub(S); let d = dir.length(); if (d < 1e-4) return; dir.divideScalar(d);
+  d = clamp(d, Math.abs(a - b) + 1e-3, a + b - 1e-3);
+  const x = (a * a - b * b + d * d) / (2 * d), h = Math.sqrt(Math.max(0, a * a - x * x));
+  const perp = _ikE.copy(pole).addScaledVector(dir, -pole.dot(dir)); if (perp.lengthSq() < 1e-6) perp.set(0, -1, 0); perp.normalize();
+  const elbow = perp.multiplyScalar(h).addScaledVector(dir, x).add(S);   // where the elbow should be
+  aimBone(up, _ikT.copy(E).sub(S).normalize(), _ikB.copy(elbow).sub(S).normalize());
+  const E2 = lo.getWorldPosition(_ikB), H2 = hand.getWorldPosition(_ikC), wrist = _ikA.copy(dir).multiplyScalar(d).add(S);
+  aimBone(lo, _ikT.copy(H2).sub(E2).normalize(), wrist.sub(E2).normalize());
+}
 const X_AXIS = new THREE.Vector3(1, 0, 0), Y_AXIS = new THREE.Vector3(0, 1, 0);
 
 // One entry point for every rig: the uploaded model when it is ready, the built-in body otherwise.
@@ -6473,7 +6556,7 @@ const CharPool = {
 // =====================================================================
 //  Bots: drop, loot, rotate with the storm, fight, heal, build cover
 // =====================================================================
-const PREF_RANGE = { katana: -3.6, shotgun: 6, smg: 12, pistol: 14, ar: 26, sniper: 70, rocket: 30 };
+const PREF_RANGE = { shock: 16, katana: -3.6, shotgun: 6, smg: 12, pistol: 14, ar: 26, sniper: 70, rocket: 30 };
 function initBotAI(a, skill) {
   a.ai = {
     t: Math.random() * 0.4, mode: 'idle', target: null, lastSeen: -99, seen: new THREE.Vector3(), loot: null, roam: null,
@@ -6504,7 +6587,7 @@ function botBestSlot(a, dist) {
     const s = a.inv[i]; if (!s || s.kind !== 'weapon') continue;
     const t = WEAPONS[s.wid].type, d = dist;
     let sc = t === 'shotgun' ? (d < 10 ? 10 : d < 20 ? 4 : 0.2) : t === 'smg' ? (d < 18 ? 8 : d < 35 ? 5 : 1) : t === 'ar' ? (d < 8 ? 5 : d < 70 ? 9 : 7) :
-      t === 'sniper' ? (d > 45 ? 10 : d > 22 ? 4 : 0.5) : t === 'rocket' ? (d > 8 && d < 70 ? 6.5 : 0) : t === 'katana' ? (d < 4 ? 12 : d < 9 ? 5 : 0.1) : 3;
+      t === 'sniper' ? (d > 45 ? 10 : d > 22 ? 4 : 0.5) : t === 'rocket' ? (d > 8 && d < 70 ? 6.5 : 0) : t === 'katana' ? (d < 4 ? 12 : d < 9 ? 5 : 0.1) : t === 'shock' ? (d > 6 && d < 40 ? 6 : 1) : 3;
     sc += s.rarity * 0.5 + (s.rarity >= 5 ? 2 : 0); if (s.mag <= 0) sc -= 2;
     if (sc > bs) { bs = sc; best = i; }
   }
@@ -7875,7 +7958,7 @@ const Net = {
       this.send(cid, ev);
     }
   },
-  slim(o) { o = o || {}; const r = {}; for (const k of ['head', 'raw', 'storm', 'fall', 'shark']) if (o[k]) r[k] = 1; for (const k of ['x', 'y', 'z']) if (Number.isFinite(o[k])) r[k] = Math.round(o[k] * 10) / 10; if (o.w) r.w = String(o.w).slice(0, 30); return r; },
+  slim(o) { o = o || {}; const r = {}; for (const k of ['head', 'raw', 'storm', 'fall', 'shark']) if (o[k]) r[k] = 1; for (const k of ['kx', 'kz']) if (Number.isFinite(o[k])) r[k] = clamp(o[k], -20, 20); for (const k of ['x', 'y', 'z']) if (Number.isFinite(o[k])) r[k] = Math.round(o[k] * 10) / 10; if (o.w) r.w = String(o.w).slice(0, 30); return r; },
   okItem(it) {
     if (!it || typeof it !== 'object') return false;
     if (it.kind === 'weapon') return !!WEAPONS[it.wid] && Number.isFinite(it.rarity) && it.rarity >= 0 && it.rarity <= 6 && Number.isFinite(it.mag);
@@ -7904,7 +7987,7 @@ const Net = {
     if (this.isHost) {
       const me = this.humans.get(from); if (!me) return;
       if (d.k === 'st') { if (Array.isArray(d.s)) { d.s[0] = me.id; this.dec(me, d.s); } }
-      else if (d.k === 'dmg') { const t = this.ids.get(d.id); if (!t || !t.alive) return; d.src = me.id; if (t.human) this.send(t.human, d); else if (!t.remote) damageActor(t, clamp(+d.dmg || 0, 0, 400), me, d.o || {}); }
+      else if (d.k === 'dmg') { const t = this.ids.get(d.id); if (!t || !t.alive) return; d.src = me.id; if (t.human) this.send(t.human, d); else if (!t.remote) { damageActor(t, clamp(+d.dmg || 0, 0, 400), me, d.o || {}); if (d.o && Number.isFinite(d.o.kx)) shockLaunch(t, clamp(+d.o.kx, -20, 20), clamp(+d.o.kz || 0, -20, 20)); } }
       else if (d.k === 'take') { const p = Pickups.byId.get(d.id); if (p && p.alive) Pickups.remove(p); }
       else if (d.k === 'drop') { if (this.okItem(d.item) && Number.isFinite(d.x + d.y + d.z)) Pickups.spawn(d.item, d.x, d.y, d.z, { pop: Array.isArray(d.pop) ? { x: d.pop[0], y: d.pop[1] - 1, z: d.pop[2] } : null, ttl: Match.mode === 'rumble' ? 75 : 0 }); }
       else if (d.k === 'chest') { const c = this.chestNear(d.x, d.z); if (c && !c.opened && !c.falling) openChest(c, me); }
@@ -7933,7 +8016,7 @@ const Net = {
       if (Array.isArray(d.a)) for (const s of d.a) { const a = this.ids.get(s[0]); if (a && a !== player) this.dec(a, s); }
       if (d.sm) this.applyStorm(d.sm);
     }
-    else if (d.k === 'dmg') { if (player && player.alive) damageActor(player, clamp(+d.dmg || 0, 0, 400), this.ids.get(d.src) || null, d.o || {}); }
+    else if (d.k === 'dmg') { if (player && player.alive) { damageActor(player, clamp(+d.dmg || 0, 0, 400), this.ids.get(d.src) || null, d.o || {}); if (d.o && Number.isFinite(d.o.kx)) shockLaunch(player, clamp(+d.o.kx, -20, 20), clamp(+d.o.kz || 0, -20, 20)); } }
     else if (d.k === 'end') { if (Match.state === 'play') { HUD.toast('The host ended the match'); Match.showResults(); } }
     else if (d.k === 'chat') Chat.receive(d.n, d.t);
     else if (d.k === 'rbt') { if (player && d.id === player.id && !player.alive) Match.reboot(player, d.tw | 0, String(d.by || '').slice(0, 24)); }

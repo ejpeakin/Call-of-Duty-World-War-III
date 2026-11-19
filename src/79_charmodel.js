@@ -595,7 +595,7 @@ const CharModel = {
     if (prev && prev !== act) { if (fade > 0) act.crossFadeFrom(prev, fade, false); else prev.stop(); }
     layer.cur = name; layer.act = act; return act;
   },
-  TWIST: ['pelvis', 'spine_01', 'spine_02', 'spine_03', 'neck_01'],
+  TWIST: ['pelvis', 'spine_01', 'spine_02', 'spine_03', 'neck_01', 'upperarm_l', 'lowerarm_l', 'hand_l', 'upperarm_r', 'lowerarm_r', 'hand_r'],   // re-set every frame (procedural turns and the two-hand grip)
   reset(R) { if (R.pure) this.TWIST.forEach((n, i) => R.B[n].quaternion.copy(R.pure[i])); R.mixer.stopAllAction(); R.L.cur = R.U.cur = null; R.L.act = R.U.act = null; R.st.fresh = true; R.st.legYaw = 0; R.st.rev = false; R.st.vy = null; },
   emoteClip: { groove: 'Dance_Body_Roll', robot: 'Dance_Charleston', jacks: 'Jumping_Jacks', wave: 'Greeting', airguitar: 'Dance_Simple', micdrop: 'Victory' },
   // a crawling player glows red so everyone can see they are hurt
@@ -690,14 +690,57 @@ const CharModel = {
     }
     R.gun.visible = showGun;
     if (showGun) {
-      R.mHandR.getWorldPosition(_cmV); R.body.worldToLocal(_cmV);
-      R.gun.position.set(_cmV.x, _cmV.y + 0.07 * Math.cos(pitch), _cmV.z - 0.07 * Math.sin(pitch)); R.gun.rotation.set(-pitch, 0, 0);
+      const hold = GRIP[WEAPONS[it.wid].type];
+      if (!hold || a.state !== 'ground' || a.inWater || a.crawl) {   // pistols (and swimming/crawling): one hand, as before
+        R.mHandR.getWorldPosition(_cmV); R.body.worldToLocal(_cmV);
+        R.gun.position.set(_cmV.x, _cmV.y + 0.07 * Math.cos(pitch), _cmV.z - 0.07 * Math.sin(pitch)); R.gun.rotation.set(-pitch, 0, 0);
+      } else {   // two hands: the gun sits at the right shoulder along the aim, and both arms reach for it
+        B.upperarm_r.getWorldPosition(_cmV); R.body.worldToLocal(_cmV);
+        const p = clamp(pitch, -1.1, 1.1) * (hold.pitchK ?? 1), th = -p - (hold.tilt || 0), o = hold.at, c = Math.cos(th), s = Math.sin(th);
+        R.gun.position.set(_cmV.x + o[0], _cmV.y + o[1] * c - o[2] * s, _cmV.z + o[1] * s + o[2] * c); R.gun.rotation.set(th, hold.yaw || 0, hold.roll || 0);
+      }
       if (a.slashT > 0) { const k = 1 - a.slashT / 0.28, sd = a.slashSide || 1; R.gun.rotation.set(-pitch - 0.5 * Math.sin(k * Math.PI), sd * (1.2 - 2.4 * k), sd * 0.6); }   // katana swing
+      if (hold && a.state === 'ground' && !a.inWater && !a.crawl) {
+        R.gun.updateMatrixWorld(true);
+        const sx = -1, rt = _ikT.set(hold.rh[0], hold.rh[1], hold.rh[2]).applyMatrix4(R.gun.matrixWorld);
+        armIK(B.upperarm_r, B.lowerarm_r, B.hand_r, rt, _ikP.set(sx * 0.6, -1, -0.3).applyQuaternion(R.body.getWorldQuaternion(_ikQ)));
+        const lt = _ikT.set(hold.lh[0], hold.lh[1], hold.lh[2]).applyMatrix4(R.gun.matrixWorld);
+        armIK(B.upperarm_l, B.lowerarm_l, B.hand_l, lt, _ikP.set(-sx * 0.7, -1, -0.2).applyQuaternion(R.body.getWorldQuaternion(_ikQ)));
+      }
     }
     R.pick.visible = showPick; R.held.visible = showHeld; R.glider.visible = glider;
   },
 };
 const _cmQ = new THREE.Quaternion(), _cmQi = new THREE.Quaternion(), _cmQ2 = new THREE.Quaternion(), _cmV = new THREE.Vector3();
+// How each weapon type is held (body space, metres): `at` = where the gun's grip sits relative to the right shoulder,
+// `rh`/`lh` = where the right/left wrist goes on the gun (gun space: grip at 0, barrel along +z). Pistols stay one-handed.
+const GRIP = {
+  ar:      { at: [0.07, -0.13, 0.24], rh: [0, -0.04, -0.06], lh: [0.0, -0.05, 0.27] },
+  smg:     { at: [0.08, -0.15, 0.27], rh: [0, -0.04, -0.06], lh: [0.0, -0.08, 0.15] },
+  shotgun: { at: [0.07, -0.13, 0.24], rh: [0, -0.04, -0.06], lh: [0.0, -0.06, 0.26] },
+  sniper:  { at: [0.07, -0.12, 0.22], rh: [0, -0.04, -0.06], lh: [0.0, -0.05, 0.32] },
+  shock:   { at: [0.08, -0.14, 0.26], rh: [0, -0.04, -0.06], lh: [0.0, -0.06, 0.16] },
+  rocket:  { at: [0.02, 0.03, 0.05], rh: [0, -0.07, -0.02], lh: [0.0, -0.08, 0.24] },      // resting on the shoulder
+  katana:  { at: [0.15, -0.3, 0.3], tilt: 0.85, pitchK: 0.5, rh: [0, 0, 0.02], lh: [0, 0, -0.11] },   // both hands on the handle, blade up
+};
+// two-bone arm reach: bend the elbow toward `pole` so the wrist lands on `target` (world space)
+const _ikA = new THREE.Vector3(), _ikB = new THREE.Vector3(), _ikC = new THREE.Vector3(), _ikD = new THREE.Vector3(), _ikE = new THREE.Vector3(), _ikT = new THREE.Vector3(), _ikP = new THREE.Vector3(), _ikQ = new THREE.Quaternion(), _ikQ2 = new THREE.Quaternion(), _ikQ3 = new THREE.Quaternion(), _ikS = new THREE.Vector3();
+function aimBone(bone, from, to) {
+  _ikQ2.setFromUnitVectors(from, to); bone.getWorldQuaternion(_ikQ3); _ikQ3.premultiply(_ikQ2);
+  bone.parent.getWorldQuaternion(_ikQ2); bone.quaternion.copy(_ikQ2.invert().multiply(_ikQ3)); bone.updateMatrixWorld(true);
+}
+function armIK(up, lo, hand, target, pole) {
+  if (!up || !lo || !hand) return;
+  const S = up.getWorldPosition(_ikS), E = lo.getWorldPosition(_ikB), H = hand.getWorldPosition(_ikC);
+  const a = S.distanceTo(E), b = E.distanceTo(H), dir = _ikD.copy(target).sub(S); let d = dir.length(); if (d < 1e-4) return; dir.divideScalar(d);
+  d = clamp(d, Math.abs(a - b) + 1e-3, a + b - 1e-3);
+  const x = (a * a - b * b + d * d) / (2 * d), h = Math.sqrt(Math.max(0, a * a - x * x));
+  const perp = _ikE.copy(pole).addScaledVector(dir, -pole.dot(dir)); if (perp.lengthSq() < 1e-6) perp.set(0, -1, 0); perp.normalize();
+  const elbow = perp.multiplyScalar(h).addScaledVector(dir, x).add(S);   // where the elbow should be
+  aimBone(up, _ikT.copy(E).sub(S).normalize(), _ikB.copy(elbow).sub(S).normalize());
+  const E2 = lo.getWorldPosition(_ikB), H2 = hand.getWorldPosition(_ikC), wrist = _ikA.copy(dir).multiplyScalar(d).add(S);
+  aimBone(lo, _ikT.copy(H2).sub(E2).normalize(), wrist.sub(E2).normalize());
+}
 const X_AXIS = new THREE.Vector3(1, 0, 0), Y_AXIS = new THREE.Vector3(0, 1, 0);
 
 // One entry point for every rig: the uploaded model when it is ready, the built-in body otherwise.

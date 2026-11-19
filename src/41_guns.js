@@ -84,6 +84,19 @@ function gunGeo(type, rarity, wrap, simple) {
     if (detail) for (let i = 0; i < 4; i++) { C(0.0085, 0.046, 0.034, 0.026, -0.05 + i * 0.022, 0xb02020, 0.0085, 8, 'y'); C(0.009, 0.012, 0.034, -0.003, -0.05 + i * 0.022, brass, 0.009, 8, 'y'); }   // shells on a side saddle
     B(0.058, 0.012, 0.2, 0, 0.06, 0.02, acc);
     shift = 0.1;
+  } else if (type === 'shock') {
+    const glow = 0x45d4ff, gun = 0x23272e, steel = 0x59606b;
+    B(0.07, 0.1, 0.36, 0, 0.02, 0.06, gun);                                              // receiver
+    C(0.045, 0.34, 0, 0.03, 0.36, steel, 0.05, 12);                                      // barrel
+    for (let i = 0; i < 4; i++) C(0.058, 0.025, 0, 0.03, 0.24 + i * 0.07, glow, 0.058, 12);   // glowing coils
+    C(0.07, 0.06, 0, 0.03, 0.54, gun, 0.055, 12);                                        // muzzle ring
+    C(0.03, 0.02, 0, 0.03, 0.575, glow, 0.03, 10);                                       // charged core in the muzzle
+    B(0.05, 0.05, 0.14, 0, 0.1, 0.02, gun); B(0.02, 0.02, 0.1, 0, 0.13, 0.02, glow);     // top rail + light strip
+    B(0.06, 0.07, 0.1, 0, 0.0, -0.18, steel);                                            // energy cell
+    B(0.04, 0.12, 0.05, 0, -0.08, -0.04, gun, 0.28);                                     // grip
+    B(0.045, 0.05, 0.08, 0, -0.04, 0.16, gun);                                           // front handle
+    if (detail) { B(0.072, 0.012, 0.3, 0, -0.035, 0.06, acc === dark ? steel : acc); B(0.01, 0.03, 0.06, 0.04, 0.02, -0.18, glow); }
+    trigger(-0.01, 0.02);
   } else if (type === 'katana') {
     const steel = 0xc9ced6, edge = 0xf2f5f8, wrapC = 0x17131a, gold = 0xc8a040;
     C(0.018, 0.27, 0, 0, -0.025, wrapC, 0.017, 8);                                   // handle (tsuka)

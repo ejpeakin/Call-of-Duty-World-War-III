@@ -298,11 +298,12 @@ function scatterLoot(items, pos) {
 }
 
 // ---------------------------------------------------------------- rockets
+let ORB_GEO = null, ORB_MAT = null;
 const Rockets = {
   list: [],
   clear() { for (const r of this.list) scene.remove(r.m); this.list = []; },
   spawn(owner, o, d, st, vis) {   // vis: another player's rocket, shown here but harmless (their game deals the damage)
-    const m = new THREE.Mesh(GEO.rocket, lam(0x56625a)); m.position.copy(o); m.lookAt(_v4.copy(o).add(d)); scene.add(m);
+    const m = st.shock ? new THREE.Mesh(ORB_GEO || (ORB_GEO = new THREE.IcosahedronGeometry(0.24, 2)), ORB_MAT || (ORB_MAT = new THREE.MeshBasicMaterial({ color: 0x8fe8ff }))) : new THREE.Mesh(GEO.rocket, lam(0x56625a)); m.position.copy(o); m.lookAt(_v4.copy(o).add(d)); scene.add(m);
     this.list.push({ m, owner, x: o.x, y: o.y, z: o.z, dx: d.x, dy: d.y, dz: d.z, sp: st.proj, life: 4.5, st, vis: !!vis });
     if (Net.inMatch && !vis && !owner.remote) { const w = owner.inv[owner.slot]; if (w && w.kind === 'weapon') Net.emit({ k: 'rk', id: owner.id, o: [o.x, o.y, o.z], d: [d.x, d.y, d.z], wid: w.wid, r: w.rarity }, owner.pos, NET_RANGE); }
   },
@@ -312,11 +313,35 @@ const Rockets = {
       const h = raycast(r.x, r.y, r.z, r.dx, r.dy, r.dz, step, r.owner, true);
       if (h.type || r.life <= 0) { explode(h.type ? h.x : r.x, h.type ? h.y : r.y, h.type ? h.z : r.z, r.owner, r.st, r.vis); scene.remove(r.m); this.list.splice(i, 1); continue; }
       r.x += r.dx * step; r.y += r.dy * step; r.z += r.dz * step; r.m.position.set(r.x, r.y, r.z);
-      FX.burst(r.x - r.dx, r.y - r.dy, r.z - r.dz, 0xcfcfcf, 1, 0.5, 0.5, 0.25, -1);
+      if (r.st.shock) { const k = 1 + Math.sin(performance.now() / 40) * 0.18; r.m.scale.setScalar(k); FX.burst(r.x - r.dx * 0.5, r.y, r.z - r.dz * 0.5, 0x45d4ff, 1, 0.6, 0.35, 0.1, 0); }   // crackling energy orb
+      else FX.burst(r.x - r.dx, r.y - r.dy, r.z - r.dz, 0xcfcfcf, 1, 0.5, 0.5, 0.25, -1);
     }
   },
 };
+function shockBurst(x, y, z, owner, st, fxOnly) {
+  FX.burst(x, y + 0.5, z, 0x45d4ff, 26, 11, 0.6, 0.12, 0); FX.burst(x, y + 0.5, z, 0xffffff, 10, 7, 0.4, 0.1, 0);
+  FX.flash(x, y + 0.5, z, st.splash * 1.4, 0x45d4ff, 0.5);
+  const v = Sfx.vol(x, y, z); if (v > 0.05) { Sfx.tone(140, 0.35, 'sawtooth', 0.12 * v); Sfx.tone(70, 0.5, 'sine', 0.16 * v); Sfx.tone(1400, 0.08, 'square', 0.04 * v); }
+  if (owner === player || Math.hypot(player.pos.x - x, player.pos.z - z) < 25) Cam.shake = Math.max(Cam.shake || 0, 0.35);
+  if (fxOnly) return;
+  for (const a of actors) {
+    if (!a.alive || a.state === 'bus' || a.npc) continue;
+    if (owner && a !== owner && a.team === owner.team) continue;
+    const dx = a.pos.x - x, dz = a.pos.z - z, d = Math.hypot(dx, a.pos.y + 1 - y, dz); if (d > st.splash) continue;
+    const f = 1 - d / st.splash * 0.6, h = Math.hypot(dx, dz) || 1, kx = dx / h * st.shock * f, kz = dz / h * st.shock * f;
+    damageActor(a, st.dmg * (0.5 + f * 0.5) * (a === owner ? 0.25 : 1), a === owner ? null : owner, { x: a.pos.x, y: a.pos.y + 2, z: a.pos.z, w: 'Shockwave Cannon', kx, kz });
+    if (!a.remote) shockLaunch(a, kx, kz);
+  }
+  Build.explode(x, y, z, st.splash, st.dmg * st.struct);
+}
+// thrown up and away by a shockwave (no fall damage from the landing)
+function shockLaunch(a, kx, kz) {
+  if (!a.alive || a.vehicle || !Number.isFinite(kx) || !Number.isFinite(kz)) return;
+  if (a.state !== 'ground' && a.state !== 'glide') return;
+  a.vel.x += kx; a.vel.z += kz; a.vel.y = Math.max(a.vel.y, 11 + Math.hypot(kx, kz) * 0.25); a.onGround = false; a.noFallT = Match.time + 3; a.emote = null;
+}
 function explode(x, y, z, owner, st, fxOnly) {
+  if (st.shock) { shockBurst(x, y, z, owner, st, fxOnly); return; }
   FX.flash(x, y, z, st.splash * 1.1, 0xffa040, 0.5); FX.burst(x, y, z, 0xffa040, 26, 10, 0.8, 0.25, 6); FX.burst(x, y, z, 0x444444, 14, 5, 1.2, 0.35, -1);
   Sfx.boom(x, y, z);
   if (player && player.alive) { const d = Math.hypot(player.pos.x - x, player.pos.z - z); if (d < 40) Cam.shake = Math.max(Cam.shake, (1 - d / 40) * 0.6); }

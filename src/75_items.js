@@ -116,7 +116,7 @@ function giveItem(a, it) {
   if (it.kind === 'weapon') { for (let i = 1; i < 6; i++) if (!a.inv[i]) { a.inv[i] = it; return null; } return it; }
   return it;
 }
-function weaponScore(w) { return w.rarity + ({ katana: 2.0, ar: 2.2, shotgun: 2.1, smg: 1.6, sniper: 1.5, rocket: 1.2, pistol: 0.4 }[WEAPONS[w.wid].type] || 1) + (w.rarity >= 5 ? 3 : 0); }
+function weaponScore(w) { return w.rarity + ({ shock: 1.4, katana: 2.0, ar: 2.2, shotgun: 2.1, smg: 1.6, sniper: 1.5, rocket: 1.2, pistol: 0.4 }[WEAPONS[w.wid].type] || 1) + (w.rarity >= 5 ? 3 : 0); }
 function botConsiderWeapon(a, w) {
   let same = -1, worst = -1, worstScore = 1e9, empty = -1, nW = 0;
   for (let i = 1; i < 6; i++) {

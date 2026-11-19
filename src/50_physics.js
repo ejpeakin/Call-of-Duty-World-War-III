@@ -139,7 +139,7 @@ function physicsActor(a, dt) {
   const snap = wasGround && a.vel.y <= 0 && a.pos.y - g < 0.7 && a.state === 'ground';
   if (a.pos.y <= g || snap) {
     if (a.state === 'sky' || a.state === 'glide') { a.state = 'ground'; onLand(a); }
-    else if (!wasGround && !a.inWater && a.vel.y < -23) damageActor(a, (-a.vel.y - 23) * 4.5, null, { raw: true, fall: true });
+    else if (!wasGround && !a.inWater && a.vel.y < -23 && !(a.noFallT > Match.time)) damageActor(a, (-a.vel.y - 23) * 4.5, null, { raw: true, fall: true });
     a.pos.y = g; if (a.vel.y < 0) a.vel.y = 0; a.onGround = true;
   } else a.onGround = false;
   // water
