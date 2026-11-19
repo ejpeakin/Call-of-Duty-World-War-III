@@ -28,7 +28,8 @@ Your session may be out of date: the other person can push while you work.
 | What | Files |
 |---|---|
 | Lobby (Play tab: Friends and Party panel on the right, mode picker + Unranked/Ranked + PLAY under it, party spots by your character; Locker, Shop, Pass) | `src/97_lobby.js`, `src/01_body.html`, `src/00_head.html` |
-| Building (walls, ramps, floors, cones) | `src/70_build.js` |
+| Building (walls, ramps, floors, cones): placing, health, collision | `src/70_build.js` |
+| How builds look: framed shapes, wood / brick / metal surfaces drawn in code, cracks as they lose health | `src/71_buildlook.js` |
 | Characters and their size | `src/40_actors.js`, `src/79_charmodel.js` |
 | Weapons and combat | `src/10_core.js` (weapon stats), `src/41_guns.js`, `src/60_combat.js` |
 | Match flow, bus, storm | `src/85_match.js` |

@@ -8,11 +8,7 @@ const BUILD_TIME = { wood: 1.4, brick: 2.0, metal: 2.6 }, FADE_STEPS = 12;
 const Build = {
   fades: {}, lines: {}, edgeGeo: {},
   // shared see-through copies of each material at a few opacity steps, so many pieces can fade without a material each
-  fadeMat(mat, i) {
-    const L = this.fades[mat] || (this.fades[mat] = []);
-    if (!L[i]) { const m = MAT[mat].clone(); m.transparent = true; m.depthWrite = false; m.opacity = 0.28 + 0.6 * i / (FADE_STEPS - 1); L[i] = m; }
-    return L[i];
-  },
+  fadeMat(mat, i) { return BuildLook.fade(mat, i, FADE_STEPS); },   // the look itself (shapes, surfaces, cracks) is in src/71_buildlook.js
   buildEdge(k, mat) {
     const g = this.edgeGeo[k] || (this.edgeGeo[k] = new THREE.EdgesGeometry(GEO[k], 25));
     const lm = this.lines[mat] || (this.lines[mat] = new THREE.LineBasicMaterial({ color: new THREE.Color(MATS[mat].color).lerp(new THREE.Color(0xffffff), 0.55), transparent: true, opacity: 0.85, depthWrite: false }));
@@ -20,6 +16,7 @@ const Build = {
   },
   active: false, piece: 'wall', pieces: [], map: new Map(), ghosts: null, tgt: null, lastKey: null, lastCol: null, placeCD: 0,
   init() {
+    BuildLook.init();
     this.ghosts = { wall: new THREE.Mesh(GEO.wall, MAT.ghost), floor: new THREE.Mesh(GEO.floor, MAT.ghost), rampX: new THREE.Mesh(GEO.rampX, MAT.ghost), rampZ: new THREE.Mesh(GEO.rampZ, MAT.ghost), cone: new THREE.Mesh(GEO.cone, MAT.ghost) };
     for (const k in this.ghosts) {
       const g = this.ghosts[k]; g.visible = false; g.renderOrder = 6; scene.add(g);
@@ -87,7 +84,7 @@ const Build = {
       a.mat = alt; if (a === player) HUD.dirty = true;
     }
     a.mats[a.mat] -= 10;
-    const k = this.geoKey(t), mesh = new THREE.Mesh(GEO[k], this.fadeMat(a.mat, 0)); this.pose(t, mesh);
+    const k = this.geoKey(t), mesh = new THREE.Mesh(BuildLook.geo(a.mat, k), this.fadeMat(a.mat, 0)); this.pose(t, mesh);
     mesh.castShadow = false; mesh.receiveShadow = true; mesh.scale.setScalar(0.4); mesh.renderOrder = 2; scene.add(mesh);
     const edge = this.buildEdge(k, a.mat); edge.renderOrder = 3; mesh.add(edge);   // bright outline while it is still see-through
     const y0 = t.gy * TH; let col;
@@ -107,6 +104,7 @@ const Build = {
   },
   damage(p, dmg, src) {
     if (p.dead) return; p.hp -= dmg;
+    if (p.hp > 0 && p.build >= 1 && p.mesh) p.mesh.material = BuildLook.solid(p);   // cracks show as it weakens
     if (Net.inMatch && !Net.applying) Net.emit({ k: 'bd', key: p.key, dmg: Math.round(dmg) });
     if (src === player) HUD.dmgNum(p.x, p.y + 1, p.z, Math.round(dmg), 'build');
     if (p.hp <= 0) this.remove(p, true);
@@ -126,7 +124,7 @@ const Build = {
       if (p.anim > 0) { p.anim -= dt; p.mesh.scale.setScalar(p.anim > 0 ? 1 - p.anim / 0.14 * 0.6 : 1); }
       if (p.build < 1) {   // see-through while it builds, then solid
         p.build = Math.min(1, p.build + dt / p.buildT);
-        if (p.build >= 1) { p.mesh.material = MAT[p.mat]; p.mesh.castShadow = true; p.mesh.renderOrder = 0; if (p.edge) { p.mesh.remove(p.edge); p.edge = null; } }
+        if (p.build >= 1) { p.mesh.material = BuildLook.solid(p); p.mesh.castShadow = true; p.mesh.renderOrder = 0; if (p.edge) { p.mesh.remove(p.edge); p.edge = null; } }
         else p.mesh.material = this.fadeMat(p.mat, Math.min(FADE_STEPS - 1, Math.floor(p.build * p.build * FADE_STEPS)));
       }
     }
