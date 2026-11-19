@@ -765,6 +765,7 @@ details.soc summary .w-k{display:flex;align-items:center;gap:6px}
 .soc-dot{width:8px;height:8px;border-radius:50%;background:rgba(168,194,234,.35);flex:none}
 .soc-dot.on{background:#7ef0a0;box-shadow:0 0 6px rgba(126,240,160,.8)}
 .soc-mail{font-size:12.5px;margin-top:4px}
+.soc-mail[hidden]{display:none}
 .soc-mail input{width:16px;height:16px}
 .soc-msg{font-size:12.5px;color:#9fe0ff;margin-top:6px}
 .soc-msg:empty{display:none}
@@ -842,7 +843,7 @@ details.soc summary .w-k{display:flex;align-items:center;gap:6px}
           <label class="soc-f"><span>Password</span><input id="socPass" type="password" autocomplete="current-password" placeholder="At least 8 characters"></label>
           <button class="buy equip soc-go" id="socGo" type="button">Sign in</button>
           <button class="soc-link" id="socForgot" type="button">Forgot your password?</button>
-          <p class="hint">Your email is only used to sign in and to tell you about friend requests and party invites. Other players never see it.</p>
+          <p class="hint" id="socAuthHint">Your email is only used to sign in. Other players never see it.</p>
         </div>
         <div class="soc-auth" id="socReset" hidden>
           <label class="soc-f"><span>New password</span><input id="socNewPass" type="password" autocomplete="new-password" placeholder="At least 8 characters"></label>
@@ -852,7 +853,7 @@ details.soc summary .w-k{display:flex;align-items:center;gap:6px}
           <div class="soc-find"><input id="socFind" maxlength="16" placeholder="Find a player by name" autocomplete="off" spellcheck="false"><button type="button" id="socFindBtn">Search</button></div>
           <div class="soc-list" id="socFound"></div>
           <div class="soc-list" id="socLists"></div>
-          <label class="check soc-mail"><input type="checkbox" id="socNotify"><span>Email me friend requests and party invites</span></label>
+          <label class="check soc-mail" id="socMailRow" hidden><input type="checkbox" id="socNotify"><span>Email me friend requests and party invites</span></label>
           <button class="soc-link" id="socOut" type="button">Sign out</button>
         </div>
         <div class="soc-msg" id="socMsg" role="status" aria-live="polite"></div>
@@ -1180,7 +1181,7 @@ details.soc summary .w-k{display:flex;align-items:center;gap:6px}
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js"></script>
 <script async src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>
-const BUILD_ID = '1119-1628';
+const BUILD_ID = '1119-1729';
 'use strict';
 // =====================================================================
 //  FORTDAY — core utilities, data tables, profile, audio
@@ -8445,6 +8446,7 @@ const SOCIAL = {
   url: '',   // Project URL, like https://abcdefgh.supabase.co (Supabase: Project Settings → Data API)
   key: '',   // the anon / publishable key. It is meant to be public. Never put the service_role key here.
   site: 'https://ejpeakin.github.io/FortDay/',   // where sign-up, password-reset and invite links send players
+  emails: false,   // true once emails are set up (supabase/SETUP.md, "Adding emails later"); until then requests and invites are in-game only
 };
 const SOC_NAME = /^[A-Za-z0-9_]{3,16}$/;
 
@@ -8540,7 +8542,7 @@ const Social = {
       if (!free.data) return this.say(name + ' is taken. Try another player name.', true);
       const { data, error } = await this.sb.auth.signUp({ email, password: pass, options: { data: { username: name }, emailRedirectTo: SOCIAL.site } });
       if (error) return this.say(this.why(error), true);
-      if (!data.session) { $('socPass').value = ''; this.mode = 'in'; this.say('Almost done! We emailed ' + email + '. Click the link in it to confirm, then sign in here.'); }
+      if (!data.session) { $('socPass').value = ''; this.mode = 'in'; this.say(SOCIAL.emails ? 'Almost done! We emailed ' + email + '. Click the link in it to confirm, then sign in here.' : 'Account made! Now sign in with your email and password.'); }
       return;
     }
     const { error } = await this.sb.auth.signInWithPassword({ email, password: pass });
@@ -8637,8 +8639,9 @@ const Social = {
       Net.join(code); Lobby.tab = 'play'; Lobby.refresh(); $('partyBox').open = true;
     });
   },
-  // send the email for a request or invite; false if it couldn't go out
+  // send the email for a request or invite; false if it couldn't go out, null when emails are switched off
   async email(kind, id) {
+    if (!SOCIAL.emails) return null;
     try { const { data, error } = await this.sb.functions.invoke('notify', { body: { kind, id } }); if (error) throw error; return !!(data && (data.sent || data.reason)); }
     catch (e) { console.warn('FortDay email', e); return false; }
   },
@@ -8704,7 +8707,9 @@ const Social = {
     $('socAuth').hidden = !!this.user || this.recovering; $('socReset').hidden = !this.recovering; $('socIn').hidden = !me || this.recovering;
     for (const b of $('socTabs').children) b.classList.toggle('on', b.dataset.socMode === this.mode);
     const up = this.mode === 'up';
-    $('socNameRow').hidden = !up; $('socGo').textContent = up ? 'Create account' : 'Sign in'; $('socForgot').hidden = up;
+    $('socNameRow').hidden = !up; $('socGo').textContent = up ? 'Create account' : 'Sign in'; $('socForgot').hidden = up || !SOCIAL.emails;
+    $('socMailRow').hidden = !SOCIAL.emails;
+    $('socAuthHint').textContent = SOCIAL.emails ? 'Your email is only used to sign in and to tell you about friend requests and party invites. Other players never see it.' : 'Your email is only used to sign in. Other players never see it.';
     $('socPass').setAttribute('autocomplete', up ? 'new-password' : 'current-password');
     $('socMsg').textContent = this.msg; $('socMsg').className = 'soc-msg' + (this.bad ? ' bad' : '');
     if (!me) return;

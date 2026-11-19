@@ -8,6 +8,7 @@ const SOCIAL = {
   url: '',   // Project URL, like https://abcdefgh.supabase.co (Supabase: Project Settings → Data API)
   key: '',   // the anon / publishable key. It is meant to be public. Never put the service_role key here.
   site: 'https://ejpeakin.github.io/FortDay/',   // where sign-up, password-reset and invite links send players
+  emails: false,   // true once emails are set up (supabase/SETUP.md, "Adding emails later"); until then requests and invites are in-game only
 };
 const SOC_NAME = /^[A-Za-z0-9_]{3,16}$/;
 
@@ -103,7 +104,7 @@ const Social = {
       if (!free.data) return this.say(name + ' is taken. Try another player name.', true);
       const { data, error } = await this.sb.auth.signUp({ email, password: pass, options: { data: { username: name }, emailRedirectTo: SOCIAL.site } });
       if (error) return this.say(this.why(error), true);
-      if (!data.session) { $('socPass').value = ''; this.mode = 'in'; this.say('Almost done! We emailed ' + email + '. Click the link in it to confirm, then sign in here.'); }
+      if (!data.session) { $('socPass').value = ''; this.mode = 'in'; this.say(SOCIAL.emails ? 'Almost done! We emailed ' + email + '. Click the link in it to confirm, then sign in here.' : 'Account made! Now sign in with your email and password.'); }
       return;
     }
     const { error } = await this.sb.auth.signInWithPassword({ email, password: pass });
@@ -200,8 +201,9 @@ const Social = {
       Net.join(code); Lobby.tab = 'play'; Lobby.refresh(); $('partyBox').open = true;
     });
   },
-  // send the email for a request or invite; false if it couldn't go out
+  // send the email for a request or invite; false if it couldn't go out, null when emails are switched off
   async email(kind, id) {
+    if (!SOCIAL.emails) return null;
     try { const { data, error } = await this.sb.functions.invoke('notify', { body: { kind, id } }); if (error) throw error; return !!(data && (data.sent || data.reason)); }
     catch (e) { console.warn('FortDay email', e); return false; }
   },
@@ -267,7 +269,9 @@ const Social = {
     $('socAuth').hidden = !!this.user || this.recovering; $('socReset').hidden = !this.recovering; $('socIn').hidden = !me || this.recovering;
     for (const b of $('socTabs').children) b.classList.toggle('on', b.dataset.socMode === this.mode);
     const up = this.mode === 'up';
-    $('socNameRow').hidden = !up; $('socGo').textContent = up ? 'Create account' : 'Sign in'; $('socForgot').hidden = up;
+    $('socNameRow').hidden = !up; $('socGo').textContent = up ? 'Create account' : 'Sign in'; $('socForgot').hidden = up || !SOCIAL.emails;
+    $('socMailRow').hidden = !SOCIAL.emails;
+    $('socAuthHint').textContent = SOCIAL.emails ? 'Your email is only used to sign in and to tell you about friend requests and party invites. Other players never see it.' : 'Your email is only used to sign in. Other players never see it.';
     $('socPass').setAttribute('autocomplete', up ? 'new-password' : 'current-password');
     $('socMsg').textContent = this.msg; $('socMsg').className = 'soc-msg' + (this.bad ? ' bad' : '');
     if (!me) return;

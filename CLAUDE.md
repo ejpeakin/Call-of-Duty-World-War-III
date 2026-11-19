@@ -49,6 +49,7 @@ Your session may be out of date: the other person can push while you work.
 - `SOCIAL.key` is the public anon / publishable key. Never put the `service_role` / secret key, the Gmail app password or the database password in this repo: `index.html` is public.
 - Editing `supabase/schema.sql` does **not** change the live database. Someone has to run it in Supabase's SQL Editor, so keep it safe to run again (`create … if not exists`, `create or replace`, `drop policy if exists`). Tell the user when it needs re-running.
 - Editing `supabase/functions/notify/index.ts` does nothing until it's deployed again in Supabase. Tell the user.
+- Emails are switched off for now (`SOCIAL.emails = false`): friend requests and party invites are in-game only, Supabase's "Confirm email" is off, and the Forgot-password link and email checkbox are hidden. Turning emails on is the "Adding emails later" section of `supabase/SETUP.md`.
 - Email addresses never reach the page. Only the `notify` function reads them. Players see each other's player names only.
 - To test schema changes in a cloud session, start the local Postgres 16 (`pg_ctlcluster 16 main start`) and mimic Supabase: an `auth.users` table, `auth.uid()` reading `current_setting('request.jwt.claim.sub', true)`, the `anon`, `authenticated` and `service_role` roles, and a `supabase_realtime` publication. Then run the schema and call the functions as different players with `set role authenticated` and `set request.jwt.claim.sub`.
 

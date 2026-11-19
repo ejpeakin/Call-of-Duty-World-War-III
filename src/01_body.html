@@ -59,7 +59,7 @@
           <label class="soc-f"><span>Password</span><input id="socPass" type="password" autocomplete="current-password" placeholder="At least 8 characters"></label>
           <button class="buy equip soc-go" id="socGo" type="button">Sign in</button>
           <button class="soc-link" id="socForgot" type="button">Forgot your password?</button>
-          <p class="hint">Your email is only used to sign in and to tell you about friend requests and party invites. Other players never see it.</p>
+          <p class="hint" id="socAuthHint">Your email is only used to sign in. Other players never see it.</p>
         </div>
         <div class="soc-auth" id="socReset" hidden>
           <label class="soc-f"><span>New password</span><input id="socNewPass" type="password" autocomplete="new-password" placeholder="At least 8 characters"></label>
@@ -69,7 +69,7 @@
           <div class="soc-find"><input id="socFind" maxlength="16" placeholder="Find a player by name" autocomplete="off" spellcheck="false"><button type="button" id="socFindBtn">Search</button></div>
           <div class="soc-list" id="socFound"></div>
           <div class="soc-list" id="socLists"></div>
-          <label class="check soc-mail"><input type="checkbox" id="socNotify"><span>Email me friend requests and party invites</span></label>
+          <label class="check soc-mail" id="socMailRow" hidden><input type="checkbox" id="socNotify"><span>Email me friend requests and party invites</span></label>
           <button class="soc-link" id="socOut" type="button">Sign out</button>
         </div>
         <div class="soc-msg" id="socMsg" role="status" aria-live="polite"></div>
